@@ -350,6 +350,7 @@
             font-weight: bold;
             font-size: 0.75rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 5;
         }
 
         /* --- Controls --- */
@@ -667,7 +668,8 @@
         }
 
         function createShoe() {
-            if (state.phase !== 'BETTING') return;
+            // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
+            if (state.isShuffling) return;
 
             state.shoe = [];
             state.runningCount = 0;
@@ -701,8 +703,8 @@
             ui.overlaySub.textContent = "Preparing Shoe...";
             ui.overlay.classList.add('show');
 
-            ui.seats.innerHTML = '';
-            renderSeats();
+            // Clear seats visually if not already done (usually cleared before calling this)
+            if(ui.seats.innerHTML === '') renderSeats();
 
             ui.shoeStack.style.height = '0%';
 
@@ -738,25 +740,42 @@
             ui.shoeStack.style.height = `${pct * 100}%`;
         }
 
-        /* --- GAME FLOW CONTROL (Fixes Bugs 1 & 2) --- */
+        /* --- GAME FLOW CONTROL --- */
 
-        // Centralized function to handle betting phase transitions and timer logic
         function updateGameFlow() {
             if (state.phase !== 'BETTING') return;
 
-            // Process bots logic independently (they might place bets)
             processAutoBets();
 
+            // --- NEW LOGIC: Check for immediate start condition ---
+            const seatedPlayers = state.players.filter(p => p); // Get all players who are seated (not null)
+            const allSeatedPlayersAreReady = seatedPlayers.length > 0 && seatedPlayers.every(p => p.isReady); // Check if there are seated players AND all of them are ready
+            const isThereAtLeastOneHuman = seatedPlayers.some(p => !p.autoPlay); // Check if at least one of the seated players is a human
+
+            if (allSeatedPlayersAreReady && isThereAtLeastOneHuman) {
+                // All seated players have placed their bets and at least one is a human.
+                // Expire the timer immediately.
+                if (state.timer) {
+                    clearInterval(state.timer);
+                    state.timer = null;
+                }
+                ui.overlay.classList.remove('show'); // Remove the timer display
+                dealHands(); // Start the round immediately
+                return; // Exit the function early since the round has started
+            }
+            // --- END OF NEW LOGIC ---
+
+            // Original logic continues only if the immediate start condition wasn't met
             const waitingPlayers = state.players.filter(p => p && p.isReady);
 
-            // If there are players with bets placed
             if (waitingPlayers.length > 0) {
-                // If timer isn't running, start it
                 if (!state.timer) {
-                    startTimer();
+                    startTimer(); // Start the timer if it wasn't already running and bets have been placed
                 }
+                // If timer is already running, this function might update the UI or perform other tasks
+                // related to the ongoing betting phase, though in the original code it doesn't do much more here.
             } else {
-                // If no one is waiting, stop and clear timer
+                // No one has placed a bet yet
                 if (state.timer) {
                     clearInterval(state.timer);
                     state.timer = null;
@@ -764,7 +783,6 @@
                 }
             }
 
-            // Re-render seats to show updated button states
             renderSeats();
         }
 
@@ -774,7 +792,6 @@
 
             state.players.forEach((p, idx) => {
                 if(p && p.autoPlay && p.autoBet && !p.isReady) {
-                    // Determine bet size based on Count
                     const decksRem = Math.max(1, state.shoe.length / 52);
                     const tc = state.runningCount / decksRem;
                     let betAmt = p.lastBet || 10;
@@ -801,7 +818,7 @@
             if (amt === 0) { return; }
 
             placeBetInternal(idx, amt);
-            updateGameFlow(); // Recalculate flow state
+            updateGameFlow();
         }
 
         function placeBetInternal(idx, amt) {
@@ -826,7 +843,7 @@
             p.currentBet = 0;
             p.isReady = false;
 
-            updateGameFlow(); // Centralized update handles timer cancellation if needed
+            updateGameFlow();
         }
 
         function toggleAuto(idx, type) {
@@ -842,10 +859,8 @@
             } else if (type === 'bet' && p.autoPlay) {
                 p.autoBet = !p.autoBet;
                 if (p.autoBet) {
-                    // If turning auto-bet on, process immediately
                     updateGameFlow();
                 } else {
-                    // If turning auto-bet off, clear bet if it was placed by bot
                     if (p.isReady) {
                         clearBet(idx);
                     }
@@ -855,7 +870,6 @@
         }
 
         function startTimer() {
-            // Determine timer length: 3 seconds minimum, 10 seconds if there is a sitting human player that hasn't bet yet
             const hasHumanSittingUnbet = state.players.some(p => p && !p.autoPlay);
             state.timerVal = hasHumanSittingUnbet ? BET_TIME : MIN_TIMER;
 
@@ -879,7 +893,6 @@
         /* --- GAME LOGIC --- */
 
         function dealHands() {
-            // Safety Check for empty shoe (Fix for Bug 3 edge case)
             if (state.shoe.length < 10) {
                 createShoe();
                 return;
@@ -888,7 +901,6 @@
             state.phase = 'DEALING';
             playSound('shuffle');
 
-            // Initialize Hands
             state.players.forEach(p => {
                 if(p && p.isReady) {
                     p.hands = [{ cards: [], bet: p.currentBet, result: null, status: 'playing' }];
@@ -902,15 +914,10 @@
 
             render();
 
-            // Deal Sequence
             let deals = [];
-            // Players 1st card
             state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
-            // Dealer 1st card
             deals.push({who:'d'});
-            // Players 2nd card
             state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
-            // Dealer 2nd card (Hidden)
             deals.push({who:'d', hidden:true});
 
             let i = 0;
@@ -924,8 +931,6 @@
                     const c = state.shoe.pop();
                     c.hidden = !!action.hidden;
                     state.dealer.hand.push(c);
-
-                    // FIX BUG 3: Check for Cut Card
                     if(c.isSplitCard) state.cutCardReached = true;
 
                     if(!c.hidden) {
@@ -937,8 +942,6 @@
                 } else {
                     const p = state.players[action.idx];
                     const c = state.shoe.pop();
-
-                    // FIX BUG 3: Check for Cut Card
                     if(c.isSplitCard) state.cutCardReached = true;
 
                     state.runningCount += c.count;
@@ -1037,6 +1040,7 @@
                 if (action === 'Hit') playerHit();
                 else if (action === 'Stand') playerStand();
                 else if (action === 'Double') {
+                    // Logic: Can only double on first 2 cards
                     if(p.chips >= h.bet && h.cards.length === 2) playerDouble();
                     else playerHit();
                 }
@@ -1100,8 +1104,10 @@
         function playerDouble() {
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
+
+            // Protection: Cannot double if not initial 2 cards
+            if(h.cards.length !== 2) { playSound('error'); return; }
             if(p.chips < h.bet) { playSound('error'); return; }
-            if(h.cards.length !== 2) return;
 
             playSound('chip');
             p.chips -= h.bet;
@@ -1269,12 +1275,19 @@
         }
 
         function finishRound() {
-            // FIX BUG 3: Shuffle if cut card was reached
             if(state.cutCardReached) {
-                setTimeout(() => {
-                    showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
-                    setTimeout(createShoe, 1500);
-                }, 1000);
+                // Requirement 4: Clear table immediately when shuffling starts
+                state.phase = 'SHUFFLING';
+
+                // Clear hands visually
+                state.players.forEach(p => { if(p) p.hands = []; });
+                state.dealer.hand = [];
+
+                // Force a render to show the empty table immediately
+                render();
+
+                showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
+                setTimeout(createShoe, 1500);
             } else {
                 endRound();
             }
@@ -1283,7 +1296,7 @@
         function endRound() {
             state.phase = 'BETTING';
             updateCountHint();
-            updateGameFlow(); // Triggers Auto-Bets and starts new timer if needed
+            updateGameFlow();
             render();
         }
 
@@ -1494,7 +1507,6 @@
             let classList = `seat ${state.turnIndex === idx && state.phase === 'PLAYING' ? 'turn' : ''}`;
             if(p.autoPlay) classList += ` auto`;
 
-            // Only disable seat controls if it's NOT their turn AND game is active
             const isMyTurn = (state.turnIndex === idx && state.phase === 'PLAYING');
             if(isGameActive && !isMyTurn) classList += ` disabled`;
 
@@ -1545,14 +1557,15 @@
             // Playing Phase Controls
             else if (state.phase === 'PLAYING' && isMyTurn) {
                 const h = p.hands[state.splitIndex];
-                const canSplit = (h.cards.length === 2 && h.cards[0].val === h.cards[1].val && p.chips >= h.bet);
+                // Bot/Human double check
+                const canDouble = (h.cards.length === 2 && h.cards[0].val === h.cards[1].val && p.chips >= h.bet);
 
                 controlsHTML = `
                     <div class="controls">
                         <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                         <button class="action-btn btn-stand" onclick="playerStand()">S</button>
                         <button class="action-btn btn-double" onclick="playerDouble()" ${p.chips < h.bet || h.cards.length !== 2 ? 'disabled' : ''}>D</button>
-                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
+                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canDouble ? 'disabled' : ''}>SP</button>
                     </div>
                 `;
             }
@@ -1586,6 +1599,16 @@
                 }
             }
 
+            // Requirement: Persistent Bet Bubble
+            // Logic: If Betting phase, use currentBet. If Playing/Resolving, sum hand bets.
+            let betAmount = 0;
+            if (state.phase === 'BETTING') {
+                betAmount = p.currentBet;
+            } else {
+                // Sum of all active hand bets
+                betAmount = p.hands.reduce((sum, h) => sum + (h ? h.bet : 0), 0);
+            }
+
             return `
                 <div class="seat ${classList}" id="seat-${idx}">
                     <div class="seat-info">
@@ -1602,7 +1625,7 @@
 
                         ${handsHTML}
 
-                        ${p.isReady ? `<div class="bet-bubble">Bet: $${p.currentBet}</div>` : ''}
+                        ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
                     </div>
 
                     ${controlsHTML}
