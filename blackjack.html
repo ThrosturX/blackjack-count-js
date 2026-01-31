@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casino Blackjack</title>
-    
-    <!-- =========================================
-         FILE: style.css
-    ========================================== -->
     <style>
         :root {
             --felt-color: #2d5e38;
@@ -72,6 +68,13 @@
             border: 1px solid #444;
         }
 
+        select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+
         /* --- Table Area --- */
         #table {
             position: relative;
@@ -124,7 +127,7 @@
         .msg-push { color: var(--blue); }
         .msg-bj { color: var(--gold); }
         .msg-shuffle { color: var(--gold); animation: pulse 1s infinite; }
-        
+
         @keyframes pulse {
             0% { opacity: 0.8; }
             50% { opacity: 1; }
@@ -133,7 +136,7 @@
 
         .msg-timer { color: rgba(255,255,255,0.3); }
         .msg-auto { color: var(--blue); }
-        
+
         .profit-indicator {
             display: block;
             font-size: 1.5rem;
@@ -146,7 +149,7 @@
         /* --- Visual Shoe (In Table, Right Side) --- */
         .shoe-container {
             position: absolute;
-            top: 15%; /* Center vertically relative to dealer/player area */
+            top: 15%;
             right: 20px;
             display: flex;
             flex-direction: row;
@@ -158,7 +161,7 @@
         .shoe-body {
             position: relative;
             width: 70px;
-            height: 100px; /* Dealer card height */
+            height: 100px;
             background: #111;
             border: 2px solid #555;
             border-radius: 4px;
@@ -166,26 +169,23 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-end; /* Cards stack from bottom */
+            justify-content: flex-end;
             padding-bottom: 5px;
         }
 
-        /* The Card Stack */
         .shoe-stack-cards {
             position: relative;
             width: 56px;
-            height: 0%; /* Controlled by JS */
-            /* Stacked effect with repeating gradient (Stripes) and borders */
+            height: 0%;
             background: repeating-linear-gradient(
                 to bottom,
                 var(--card-back-color),
-                var(--card-back-color) 4px, /* Card height */
+                var(--card-back-color) 4px,
                 transparent 4px,
-                transparent 5px, /* 1px gap between cards */
-                #000 5px, /* Border line */
-                #000 6px /* Reset */
+                transparent 5px,
+                #000 5px,
+                #000 6px
             );
-            /* Ensure it looks like a solid block of cards */
             border-left: 1px solid #333;
             border-right: 1px solid #333;
             max-height: 90px;
@@ -212,7 +212,7 @@
             flex-direction: column;
             align-items: center;
             z-index: 5;
-            padding-right: 100px; /* Offset for shoe */
+            padding-right: 100px;
         }
         .score-pill {
             background: rgba(0,0,0,0.6);
@@ -232,7 +232,7 @@
             justify-content: center;
             height: var(--card-h);
         }
-        
+
         .card {
             width: var(--card-w);
             height: var(--card-h);
@@ -240,7 +240,7 @@
             border-radius: 8px;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
             display: flex;
-            padding: 0; 
+            padding: 0;
             box-sizing: border-box;
             margin-left: -45px;
             transition: transform 0.2s;
@@ -250,40 +250,38 @@
         .card.red { color: var(--red); }
         .card.black { color: var(--black); }
 
-        /* Split / Cut Card Styling */
         .card.split-card {
-            background: #fffbf0; /* Off-white */
+            background: #fffbf0;
             border: none;
-            box-shadow: 0 0 0 2px #000, 2px 2px 5px rgba(0,0,0,0.3); /* Thicker look */
+            box-shadow: 0 0 0 2px #000, 2px 2px 5px rgba(0,0,0,0.3);
         }
 
-        .val-top { 
-            position: absolute; top: 4px; left: 4px; 
-            font-size: 1.1rem; font-weight: bold; line-height: 1; 
+        .val-top {
+            position: absolute; top: 4px; left: 4px;
+            font-size: 1.1rem; font-weight: bold; line-height: 1;
             display: flex; flex-direction: column; align-items: center;
         }
         .val-top small { font-size: 0.7rem; }
 
-        .suit-center { 
-            position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); font-size: 2.5rem; 
+        .suit-center {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); font-size: 2.5rem;
         }
-        
-        .val-bot { 
-            position: absolute; bottom: 4px; right: 4px; 
-            font-size: 1.1rem; font-weight: bold; line-height: 1; 
-            transform: rotate(180deg); 
+
+        .val-bot {
+            position: absolute; bottom: 4px; right: 4px;
+            font-size: 1.1rem; font-weight: bold; line-height: 1;
+            transform: rotate(180deg);
             display: flex; flex-direction: column; align-items: center;
         }
         .val-bot small { font-size: 0.7rem; }
 
         .card.hidden {
-            /* RESTORING STRIPES */
             background: repeating-linear-gradient(
-                45deg, 
-                #b71c1c, 
-                #b71c1c 10px, 
-                #c62828 10px, 
+                45deg,
+                #b71c1c,
+                #b71c1c 10px,
+                #c62828 10px,
                 #c62828 20px
             );
             border: 2px solid white;
@@ -312,6 +310,7 @@
             flex-direction: column;
             padding: 8px;
             position: relative;
+            transition: border-color 0.3s, opacity 0.3s;
         }
 
         .seat.turn { border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
@@ -319,7 +318,7 @@
         .seat.loser { border-color: var(--red); opacity: 0.8; }
         .seat.push { border-color: var(--blue); }
         .seat.auto { border-color: var(--blue); }
-        .seat.disabled { opacity: 0.5; }
+        .seat.disabled { opacity: 0.5; pointer-events: none; }
 
         .seat-info {
             width: 100%;
@@ -376,14 +375,17 @@
             font-size: 0.75rem;
             white-space: nowrap;
         }
+        button:disabled { cursor: not-allowed; opacity: 0.5; }
 
         .btn-sit { background: #444; color: white; width: 100%; padding: 10px; }
-        
-        .btn-standup { 
-            position: absolute; top: -25px; right: 0; 
-            background: #333; color: #888; font-size: 0.6rem; 
+        .btn-sit:hover:not(:disabled) { background: #555; }
+
+        .btn-standup {
+            position: absolute; top: -25px; right: 0;
+            background: #333; color: #888; font-size: 0.6rem;
             padding: 3px 6px; border-radius: 4px; border: 1px solid #555; z-index: 10;
         }
+        .btn-standup:hover { color: white; border-color: #888; }
 
         /* Toggles */
         .toggle-container {
@@ -433,9 +435,9 @@
 
 
         .bet-controls { display: flex; width: 100%; gap: 4px; align-items: center; }
-        
-        .bet-input { 
-            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #555; 
+
+        .bet-input {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #555;
             color: white; padding: 6px; text-align: center;
             -moz-appearance: textfield; appearance: none;
             font-size: 0.8rem;
@@ -444,19 +446,24 @@
         .bet-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
         .btn-bet { background: var(--gold); color: black; flex: 1; padding: 6px; height: 30px; }
-        .btn-bet:disabled { background: #555; color: #888; }
-        
-        .btn-clear { background: var(--red); color: white; padding: 6px 10px; height: 30px; width: auto; }
+        .btn-bet:hover:not(:disabled) { background: #e0b540; }
 
-        .action-btn { 
-            width: 32px; height: 32px; 
-            border-radius: 50%; font-weight: bold; font-size: 0.9rem; 
-            display: flex; align-items: center; justify-content: center; padding: 0; 
+        .btn-clear { background: var(--red); color: white; padding: 6px 10px; height: 30px; width: auto; }
+        .btn-clear:hover { background: #d32f2f; }
+
+        .action-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%; font-weight: bold; font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center; padding: 0;
         }
         .btn-hit { background: var(--green); color: white; }
+        .btn-hit:hover { background: #43a047; }
         .btn-stand { background: var(--red); color: white; }
+        .btn-stand:hover { background: #e53935; }
         .btn-double { background: #2196f3; color: white; }
+        .btn-double:hover { background: #1e88e5; }
         .btn-split { background: #9c27b0; color: white; }
+        .btn-split:hover { background: #8e24aa; }
 
         /* --- Split Hands --- */
         .split-container {
@@ -501,7 +508,7 @@
         }
         .hint-label { color: #888; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; }
         .hint-text { color: var(--gold); font-weight: bold; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
-        
+
         .count-hint {
             font-size: 0.85rem;
             margin-top: 4px;
@@ -513,19 +520,15 @@
         .ch-high { background: rgba(76, 175, 80, 0.2); color: var(--green); border: 1px solid var(--green); }
         .ch-low { background: rgba(235, 87, 87, 0.2); color: var(--red); border: 1px solid var(--red); }
         .ch-neutral { background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid #888; }
-
     </style>
 </head>
 <body>
 
-    <!-- =========================================
-         FILE: index.html
-    ========================================== -->
     <header>
         <h1>Blackjack</h1>
         <div class="game-controls">
-            <div class="stats">Seats: 
-                <select id="seat-select" style="background:#333; color:white;">
+            <div class="stats">Seats:
+                <select id="seat-select">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -537,8 +540,8 @@
                     <option value="9">9</option>
                 </select>
             </div>
-            <div class="stats">Decks: 
-                <select id="deck-select" style="background:#333; color:white;">
+            <div class="stats">Decks:
+                <select id="deck-select">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -549,14 +552,13 @@
                     <option value="8">8</option>
                 </select>
             </div>
-            
+
             <div class="stats">Cards: <span id="cards-left">0</span></div>
             <div class="stats">Count: <span id="run-count">0</span></div>
         </div>
     </header>
 
     <main id="table">
-        
         <!-- Center Overlay for Timer & Results -->
         <div id="center-overlay">
             <div id="overlay-main" class="overlay-text"></div>
@@ -590,16 +592,13 @@
         <span id="count-hint" class="count-hint ch-neutral"></span>
     </div>
 
-    <!-- =========================================
-         FILE: script.js
-    ========================================== -->
     <script>
         /* --- CONSTANTS --- */
         const SUITS = ['♥', '♦', '♣', '♠'];
         const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
         const BET_TIME = 10;
-        const MIN_TIMER = 3; 
-        const PENETRATION = 0.75; 
+        const MIN_TIMER = 3;
+        const PENETRATION = 0.75;
 
         /* --- STATE --- */
         const state = {
@@ -608,10 +607,9 @@
             shoe: [],
             totalInitialCards: 0,
             cutCardReached: false,
-            cutCardIndex: -1,
             runningCount: 0,
             dealer: { hand: [] },
-            players: [], 
+            players: [],
             phase: 'BETTING', // BETTING, SHUFFLING, DEALING, PLAYING, RESOLVING
             turnIndex: -1,
             splitIndex: -1,
@@ -665,7 +663,7 @@
         /* --- INITIALIZATION --- */
         function init() {
             state.players = Array(state.seatCount).fill(null);
-            createShoe(); 
+            createShoe();
         }
 
         function createShoe() {
@@ -674,7 +672,6 @@
             state.shoe = [];
             state.runningCount = 0;
             state.cutCardReached = false;
-            state.cutCardIndex = -1;
             state.totalInitialCards = 0;
             state.isShuffling = true;
             state.phase = 'SHUFFLING';
@@ -688,27 +685,27 @@
                     }
                 }
             }
-            // Fisher-Yates
+            // Fisher-Yates Shuffle
             for (let i = state.shoe.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [state.shoe[i], state.shoe[j]] = [state.shoe[j], state.shoe[i]];
             }
 
-            // Determine Cut Card
-            state.cutCardIndex = Math.floor(state.totalInitialCards * (1 - PENETRATION));
-            state.shoe[state.cutCardIndex].isSplitCard = true;
+            // Determine Cut Card Position
+            const cutIndex = Math.floor(state.totalInitialCards * (1 - PENETRATION));
+            state.shoe[cutIndex].isSplitCard = true;
 
             // UI Updates
             ui.overlayMain.className = 'overlay-text msg-shuffle';
             ui.overlayMain.textContent = "Shuffling";
             ui.overlaySub.textContent = "Preparing Shoe...";
             ui.overlay.classList.add('show');
-            
-            ui.seats.innerHTML = ''; 
-            renderSeats(); 
+
+            ui.seats.innerHTML = '';
+            renderSeats();
 
             ui.shoeStack.style.height = '0%';
-            
+
             // Animation Sequence
             setTimeout(() => {
                 const fillAnim = setInterval(() => {
@@ -728,11 +725,7 @@
             state.isShuffling = false;
             state.phase = 'BETTING';
             ui.overlay.classList.remove('show');
-            
-            // Trigger Auto-Bets for new round
-            processAutoBets();
-            
-            render();
+            updateGameFlow(); // Check for auto-bets immediately
         }
 
         function updateStats() {
@@ -745,8 +738,40 @@
             ui.shoeStack.style.height = `${pct * 100}%`;
         }
 
+        /* --- GAME FLOW CONTROL (Fixes Bugs 1 & 2) --- */
+
+        // Centralized function to handle betting phase transitions and timer logic
+        function updateGameFlow() {
+            if (state.phase !== 'BETTING') return;
+
+            // Process bots logic independently (they might place bets)
+            processAutoBets();
+
+            const waitingPlayers = state.players.filter(p => p && p.isReady);
+
+            // If there are players with bets placed
+            if (waitingPlayers.length > 0) {
+                // If timer isn't running, start it
+                if (!state.timer) {
+                    startTimer();
+                }
+            } else {
+                // If no one is waiting, stop and clear timer
+                if (state.timer) {
+                    clearInterval(state.timer);
+                    state.timer = null;
+                    ui.overlay.classList.remove('show');
+                }
+            }
+
+            // Re-render seats to show updated button states
+            renderSeats();
+        }
+
         function processAutoBets() {
             if(state.phase !== 'BETTING') return;
+            let madeChanges = false;
+
             state.players.forEach((p, idx) => {
                 if(p && p.autoPlay && p.autoBet && !p.isReady) {
                     // Determine bet size based on Count
@@ -757,122 +782,135 @@
                     else if (tc <= -2) betAmt = 10;
                     else betAmt = 20;
                     if (betAmt > p.chips) betAmt = p.chips;
-                    placeBet(idx, betAmt);
+
+                    placeBetInternal(idx, betAmt);
+                    madeChanges = true;
                 }
             });
         }
 
-        /* --- GAME LOGIC --- */
+        /* --- BETTING LOGIC --- */
 
         function placeBet(idx, amt) {
             if (state.phase !== 'BETTING') return;
             const p = state.players[idx];
             if (!p) return;
-            
+
             if (isNaN(amt) || amt < 1) { playSound('error'); return; }
             if (amt > p.chips) { amt = p.chips; }
             if (amt === 0) { return; }
 
+            placeBetInternal(idx, amt);
+            updateGameFlow(); // Recalculate flow state
+        }
+
+        function placeBetInternal(idx, amt) {
+            const p = state.players[idx];
+            if(!p) return;
+
             playSound('chip');
             p.currentBet = amt;
-            p.lastBet = amt; 
+            p.lastBet = amt;
             p.chips -= amt;
-            p.isReady = true; 
-
-            renderSeat(idx); 
-            setTimeout(() => {
-                const active = state.players.filter(p => p !== null);
-                if(state.phase === 'BETTING' && active.length > 0 && active.every(p => p.isReady)) {
-                    startTimer();
-                }
-            }, 100);
+            p.isReady = true;
+            renderSeat(idx);
         }
 
         function clearBet(idx) {
             if (state.phase !== 'BETTING') return;
             const p = state.players[idx];
             if (!p || !p.isReady) return;
-            
+
             playSound('chip');
             p.chips += p.currentBet;
             p.currentBet = 0;
             p.isReady = false;
-            renderSeat(idx);
+
+            updateGameFlow(); // Centralized update handles timer cancellation if needed
         }
 
-function toggleAuto(idx, type) {
-    if (state.phase !== 'BETTING') return;
-    const p = state.players[idx];
-    if (!p) return;
+        function toggleAuto(idx, type) {
+            if (state.phase !== 'BETTING') return;
+            const p = state.players[idx];
+            if (!p) return;
 
-    if (type === 'play') {
-        p.autoPlay = !p.autoPlay;
-        if (!p.autoPlay) {
-            p.autoBet = false;
-        }
-    } else if (type === 'bet' && p.autoPlay) {
-        p.autoBet = !p.autoBet;
-        if (p.autoBet) {
-            // Enable auto-bet: place bet immediately
-            processAutoBets();
-        } else {
-            // Disable auto-bet: clear any existing bet and cancel timer
-            clearBet(idx);
-            if (state.timer) {
-                clearInterval(state.timer);
-                state.timer = null;
+            if (type === 'play') {
+                p.autoPlay = !p.autoPlay;
+                if (!p.autoPlay) {
+                    p.autoBet = false;
+                }
+            } else if (type === 'bet' && p.autoPlay) {
+                p.autoBet = !p.autoBet;
+                if (p.autoBet) {
+                    // If turning auto-bet on, process immediately
+                    updateGameFlow();
+                } else {
+                    // If turning auto-bet off, clear bet if it was placed by bot
+                    if (p.isReady) {
+                        clearBet(idx);
+                    }
+                }
             }
+            updateGameFlow();
         }
-    }
-    renderSeat(idx);
-}
 
-function startTimer() {
-    if(state.timer) clearInterval(state.timer);
-    state.timer = null;
-    
-    // Determine timer length: 3 seconds minimum, 10 seconds if there is a sitting human player that hasn't bet yet
-    const hasHumanSittingUnbet = state.players.some(p => p && !p.autoPlay && !p.isReady);
-    state.timerVal = hasHumanSittingUnbet ? BET_TIME : MIN_TIMER;
-    
-    ui.overlayMain.className = 'overlay-text msg-timer';
-    ui.overlayMain.textContent = state.timerVal;
-    ui.overlaySub.textContent = "Starting...";
-    ui.overlay.classList.add('show');
-    
-    state.timer = setInterval(() => {
-        state.timerVal--;
-        ui.overlayMain.textContent = state.timerVal;
-        if (state.timerVal <= 0) {
-            clearInterval(state.timer);
-            state.timer = null;
-            ui.overlay.classList.remove('show');
-            dealHands();
+        function startTimer() {
+            // Determine timer length: 3 seconds minimum, 10 seconds if there is a sitting human player that hasn't bet yet
+            const hasHumanSittingUnbet = state.players.some(p => p && !p.autoPlay);
+            state.timerVal = hasHumanSittingUnbet ? BET_TIME : MIN_TIMER;
+
+            ui.overlayMain.className = 'overlay-text msg-timer';
+            ui.overlayMain.textContent = state.timerVal;
+            ui.overlaySub.textContent = "Starting...";
+            ui.overlay.classList.add('show');
+
+            state.timer = setInterval(() => {
+                state.timerVal--;
+                ui.overlayMain.textContent = state.timerVal;
+                if (state.timerVal <= 0) {
+                    clearInterval(state.timer);
+                    state.timer = null;
+                    ui.overlay.classList.remove('show');
+                    dealHands();
+                }
+            }, 1000);
         }
-    }, 1000);
-}
+
+        /* --- GAME LOGIC --- */
 
         function dealHands() {
+            // Safety Check for empty shoe (Fix for Bug 3 edge case)
+            if (state.shoe.length < 10) {
+                createShoe();
+                return;
+            }
+
             state.phase = 'DEALING';
             playSound('shuffle');
-            
+
+            // Initialize Hands
             state.players.forEach(p => {
                 if(p && p.isReady) {
                     p.hands = [{ cards: [], bet: p.currentBet, result: null, status: 'playing' }];
                     p.currentBet = 0;
                     p.isReady = false;
                 } else if (p) {
-                    p.hands = []; 
+                    p.hands = [];
                 }
             });
             state.dealer.hand = [];
 
             render();
-            
+
+            // Deal Sequence
             let deals = [];
+            // Players 1st card
             state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
+            // Dealer 1st card
             deals.push({who:'d'});
+            // Players 2nd card
             state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
+            // Dealer 2nd card (Hidden)
             deals.push({who:'d', hidden:true});
 
             let i = 0;
@@ -886,6 +924,10 @@ function startTimer() {
                     const c = state.shoe.pop();
                     c.hidden = !!action.hidden;
                     state.dealer.hand.push(c);
+
+                    // FIX BUG 3: Check for Cut Card
+                    if(c.isSplitCard) state.cutCardReached = true;
+
                     if(!c.hidden) {
                         state.runningCount += c.count;
                         updateStats();
@@ -895,6 +937,10 @@ function startTimer() {
                 } else {
                     const p = state.players[action.idx];
                     const c = state.shoe.pop();
+
+                    // FIX BUG 3: Check for Cut Card
+                    if(c.isSplitCard) state.cutCardReached = true;
+
                     state.runningCount += c.count;
                     updateStats();
                     playSound('card');
@@ -917,7 +963,7 @@ function startTimer() {
                     const s = calcScore(h.cards);
                     if (s === 21) {
                         h.status = 'blackjack';
-                        h.result = 'win'; 
+                        h.result = 'win';
                         if (dScore === 21) h.result = 'push';
                     } else {
                         playing = true;
@@ -953,19 +999,19 @@ function startTimer() {
                         state.turnIndex = i;
                         state.splitIndex = hIdx;
                         found = true;
-                        
+
                         const score = calcScore(p.hands[hIdx].cards);
                         if(score === 21) {
                             setTimeout(playerStand, 500);
                         } else {
                             render();
                             updateStrategyHint();
-                            
+
                             if(p.autoPlay) {
-                                setTimeout(runAutoPlay, 800); 
+                                setTimeout(runAutoPlay, 800);
                             }
                         }
-                        return; 
+                        return;
                     }
                 }
             }
@@ -979,20 +1025,20 @@ function startTimer() {
             if (!p || !p.autoPlay) return;
 
             const h = p.hands[state.splitIndex];
-            if (h.status !== 'playing') return; 
+            if (h.status !== 'playing') return;
 
             const d = state.dealer.hand[0];
             const action = getStrategyHint(d, h.cards);
-            
+
             showOverlay(`Player ${p.id+1}`, `Auto: ${action.toUpperCase()}`, "", "msg-auto");
-            playSound('card'); 
-            
+            playSound('card');
+
             setTimeout(() => {
                 if (action === 'Hit') playerHit();
                 else if (action === 'Stand') playerStand();
                 else if (action === 'Double') {
-                    if(p.chips >= h.bet) playerDouble();
-                    else playerHit(); 
+                    if(p.chips >= h.bet && h.cards.length === 2) playerDouble();
+                    else playerHit();
                 }
                 else if (action === 'Split') playerSplit();
             }, 1000);
@@ -1001,13 +1047,13 @@ function startTimer() {
         function playerHit() {
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
-            
+
             const c = state.shoe.pop();
             state.runningCount += c.count;
             updateStats();
             playSound('card');
             h.cards.push(c);
-            
+
             ui.overlay.classList.remove('show');
             renderSeat(state.turnIndex);
 
@@ -1016,10 +1062,10 @@ function startTimer() {
                     h.status = 'bust';
                     h.result = 'lose';
                     playSound('lose');
-                    ui.strategyText.textContent = ""; 
+                    ui.strategyText.textContent = "";
                     setTimeout(nextTurn, 800);
                 } else if (calcScore(h.cards) === 21) {
-                    ui.strategyText.textContent = ""; 
+                    ui.strategyText.textContent = "";
                     setTimeout(playerStand, 500);
                 } else {
                     updateStrategyHint();
@@ -1036,7 +1082,7 @@ function startTimer() {
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
             h.status = 'stand';
-            
+
             const nextSplit = p.hands.findIndex((hand, idx) => idx > state.splitIndex && hand.status === 'playing');
             if(nextSplit !== -1) {
                 state.splitIndex = nextSplit;
@@ -1060,14 +1106,14 @@ function startTimer() {
             playSound('chip');
             p.chips -= h.bet;
             h.bet *= 2;
-            
+
             const c = state.shoe.pop();
             state.runningCount += c.count;
             updateStats();
             playSound('card');
             h.cards.push(c);
             h.status = 'stand';
-            
+
             ui.overlay.classList.remove('show');
             ui.strategyText.textContent = "";
             renderSeat(state.turnIndex);
@@ -1077,7 +1123,7 @@ function startTimer() {
         function playerSplit() {
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
-            
+
             if(p.chips < h.bet) { playSound('error'); return; }
             const c1 = h.cards[0];
             const c2 = h.cards[1];
@@ -1088,7 +1134,7 @@ function startTimer() {
 
             const newHand = {
                 cards: [c2],
-                bet: h.bet, 
+                bet: h.bet,
                 status: 'playing',
                 result: null
             };
@@ -1116,7 +1162,7 @@ function startTimer() {
         function dealerTurn() {
             state.phase = 'RESOLVING';
             state.turnIndex = -1;
-            
+
             const hole = state.dealer.hand[1];
             hole.hidden = false;
             state.runningCount += hole.count;
@@ -1125,7 +1171,7 @@ function startTimer() {
             renderDealer();
 
             let score = calcScore(state.dealer.hand);
-            
+
             function loop() {
                 if(score < 17) {
                     const c = state.shoe.pop();
@@ -1145,16 +1191,15 @@ function startTimer() {
 
         function resolveRound() {
             const dScore = calcScore(state.dealer.hand);
-            
+
             if (dScore > 21) {
                 showOverlay("Dealer Busts!", "All Active Hands Win", "", "msg-win");
                 playSound('win');
                 setTimeout(finishRound, 1500);
             } else {
                 ui.overlay.classList.remove('show');
-                // Sequential Result Loop
                 let pIndex = 0;
-                
+
                 function processNextPlayer() {
                     if (pIndex >= state.players.length) {
                         finishRound();
@@ -1170,7 +1215,7 @@ function startTimer() {
                     }
 
                     let hasAction = false;
-                    
+
                     p.hands.forEach(h => {
                         if (h.result !== null) {
                              if (h.status === 'blackjack') {
@@ -1188,7 +1233,7 @@ function startTimer() {
                         }
 
                         const pScore = calcScore(h.cards);
-                        
+
                         if(pScore > dScore) {
                             h.status = 'win';
                             h.result = 'win';
@@ -1218,31 +1263,31 @@ function startTimer() {
                         processNextPlayer();
                     }
                 }
-                
+
                 processNextPlayer();
             }
         }
 
-function finishRound() {
-    if(state.cutCardReached) {
-        setTimeout(() => {
-            showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
-            setTimeout(createShoe, 1500);
-        }, 1000);
-    } else {
-        state.phase = 'BETTING';
-        // Trigger Auto-Bets for new round
-        processAutoBets();
-        render();
-    }
-}
+        function finishRound() {
+            // FIX BUG 3: Shuffle if cut card was reached
+            if(state.cutCardReached) {
+                setTimeout(() => {
+                    showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
+                    setTimeout(createShoe, 1500);
+                }, 1000);
+            } else {
+                endRound();
+            }
+        }
 
-function endRound() {
-    state.phase = 'BETTING';
-    // Trigger Auto-Bets for new round
-    processAutoBets();
-    render();
-}
+        function endRound() {
+            state.phase = 'BETTING';
+            updateCountHint();
+            updateGameFlow(); // Triggers Auto-Bets and starts new timer if needed
+            render();
+        }
+
+        /* --- HELPERS --- */
 
         function calcScore(cards) {
             let s = 0;
@@ -1273,7 +1318,7 @@ function endRound() {
                 if(c.val === 'A') aces++;
             }
             if (aces > 0) {
-                let s = score - (aces - 1) - 10; 
+                let s = score - (aces - 1) - 10;
                 if (s <= 21) return true;
             }
             return false;
@@ -1283,12 +1328,12 @@ function endRound() {
             const dVal = dCard.num;
             const pScore = calcScore(pCards);
             const soft = isSoftHand(pCards);
-            
+
             if (pCards.length === 2 && pCards[0].val === pCards[1].val) {
                 const c = pCards[0].val;
                 if (c === 'A' || c === '8') return "Split";
                 if (c === '10' || c === '5') return soft ? "Stand" : (pScore >= 12 ? "Stand" : "Hit");
-                if (c === '9') return (dVal !== 7 && dVal <= 9) ? "Split" : "Stand"; 
+                if (c === '9') return (dVal !== 7 && dVal <= 9) ? "Split" : "Stand";
                 if (c === '7') return (dVal <= 7) ? "Split" : "Hit";
                 if (c === '6') return (dVal <= 6) ? "Split" : "Hit";
                 if (c === '4') return (dVal === 5 || dVal === 6) ? "Split" : "Hit";
@@ -1322,14 +1367,20 @@ function endRound() {
             }
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
-            const d = state.dealer.hand[0]; 
-            
+            const d = state.dealer.hand[0];
+
             const hint = getStrategyHint(d, h.cards);
             ui.strategyText.textContent = hint;
+        }
+
+        function updateCountHint() {
+            if (state.phase !== 'BETTING') {
+                return;
+            }
 
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = (state.runningCount / decksRem);
-            
+
             let countHintText = "";
             let countClass = "ch-neutral";
 
@@ -1350,16 +1401,16 @@ function endRound() {
         function showOverlay(main, sub, amount, colorClass) {
             ui.overlayMain.className = `overlay-text ${colorClass}`;
             ui.overlayMain.textContent = main;
-            
+
             let subHtml = sub;
             if(amount) {
                 const color = amount.startsWith('+') ? 'profit-green' : 'profit-red';
                 subHtml += `<span class="profit-indicator ${color}">${amount}</span>`;
             }
             ui.overlaySub.innerHTML = subHtml;
-            
+
             ui.overlay.classList.add('show');
-            
+
             if(colorClass === 'msg-win' || colorClass === 'msg-lose' || colorClass === 'msg-push' || colorClass === 'msg-auto' || colorClass === 'msg-bj') {
                 setTimeout(() => { ui.overlay.classList.remove('show'); }, 1200);
             }
@@ -1380,7 +1431,7 @@ function endRound() {
         function renderDealer() {
             ui.dealerCards.innerHTML = '';
             state.dealer.hand.forEach(c => ui.dealerCards.appendChild(createCardEl(c)));
-            
+
             const hasHidden = state.dealer.hand.some(c => c.hidden);
             if(hasHidden && state.phase !== 'RESOLVING') {
                 ui.dealerScore.textContent = state.dealer.hand[0].num;
@@ -1389,10 +1440,48 @@ function endRound() {
             }
         }
 
+        function sit(idx) {
+            state.players[idx] = {
+                id: idx,
+                chips: 1000,
+                currentBet: 0,
+                lastBet: 10,
+                hands: [],
+                isReady: false,
+                autoPlay: false,
+                autoBet: false
+            };
+            updateGameFlow();
+        }
+
+        function standUp(idx) {
+            state.players[idx] = null;
+            updateGameFlow();
+        }
+
+        function renderSeat(idx) {
+            const el = document.getElementById(`seat-${idx}`);
+            if(!el) return;
+            el.outerHTML = getSeatHTML(idx);
+        }
+
+        function renderSeats() {
+            ui.seats.innerHTML = '';
+            for(let i=0; i<state.seatCount; i++) {
+                ui.seats.innerHTML += getSeatHTML(i);
+            }
+        }
+
+        function render() {
+            renderDealer();
+            renderSeats();
+            updateStats();
+        }
+
         function getSeatHTML(idx) {
             const p = state.players[idx];
             const isGameActive = (state.phase === 'DEALING' || state.phase === 'PLAYING' || state.phase === 'RESOLVING');
-            
+
             if(!p) {
                 return `
                     <div class="seat" id="seat-${idx}" style="justify-content: flex-end;">
@@ -1404,32 +1493,34 @@ function endRound() {
 
             let classList = `seat ${state.turnIndex === idx && state.phase === 'PLAYING' ? 'turn' : ''}`;
             if(p.autoPlay) classList += ` auto`;
-            
-            // Only disable seat controls if it's NOT their turn AND game is active.
-            // This fixes Issue 3
+
+            // Only disable seat controls if it's NOT their turn AND game is active
             const isMyTurn = (state.turnIndex === idx && state.phase === 'PLAYING');
             if(isGameActive && !isMyTurn) classList += ` disabled`;
+
+            let statusClass = '';
+            let statusText = '';
 
             if(state.phase === 'BETTING' || state.phase === 'RESOLVING') {
                 const wins = p.hands.filter(h => h.result === 'win').length;
                 const loses = p.hands.filter(h => h.result === 'lose').length;
                 const pushes = p.hands.filter(h => h.result === 'push').length;
-                
-                if(wins > 0 && loses === 0 && pushes === 0) classList += ' winner';
-                else if (loses > 0 && wins === 0 && pushes === 0) classList += ' loser';
-                else if (pushes > 0 && wins === 0 && loses === 0) classList += ' push';
+
+                if(wins > 0 && loses === 0 && pushes === 0) { statusClass = 'winner'; statusText = 'WINNER'; }
+                else if (loses > 0 && wins === 0 && pushes === 0) { statusClass = 'loser'; statusText = 'LOSER'; }
+                else if (pushes > 0 && wins === 0 && loses === 0) { statusClass = 'push'; statusText = 'PUSH'; }
             }
 
-            let handHTML = '';
+            if(statusClass) classList += ` ${statusClass}`;
+
             let controlsHTML = '';
 
-            const infoHTML = `<div class="seat-info"><span>P${idx+1}${p.autoPlay?' (Auto)':''}</span><span class="chip-stack">$${p.chips}</span></div>`;
-
-            if(state.phase === 'BETTING') {
+            // Betting Phase Controls
+            if (state.phase === 'BETTING') {
                 controlsHTML = `
-                    <button class="btn-standup" onclick="stand(${idx})">X</button>
+                    <button class="btn-standup" onclick="standUp(${idx})">Stand Up</button>
                     <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
-                        <span class="toggle-label">Auto-Play</span>
+                        <span class="toggle-label">Auto Play</span>
                         <label class="toggle-switch">
                             <input type="checkbox" ${p.autoPlay ? 'checked' : ''} disabled>
                             <span class="slider"></span>
@@ -1437,138 +1528,103 @@ function endRound() {
                     </div>
                     ${p.autoPlay ? `
                     <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
-                        <span class="toggle-label">Auto-Bet</span>
+                        <span class="toggle-label">Auto Bet</span>
                         <label class="toggle-switch auto-bet">
                             <input type="checkbox" ${p.autoBet ? 'checked' : ''} disabled>
                             <span class="slider"></span>
                         </label>
                     </div>` : ''}
-                    ${!p.isReady ? `
+
                     <div class="bet-controls">
-                        <input type="number" class="bet-input" id="bet-input-${idx}" value="${p.lastBet || 10}" min="10">
-                        <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-input-${idx}').value))">Bet</button>
-                    </div>` : `
-                    <button class="btn-clear" onclick="clearBet(${idx})">Clear Bet</button>
-                    `}
+                        <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || 10}" min="10" step="10">
+                        <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
+                        <button class="btn-clear" onclick="clearBet(${idx})">Clear</button>
+                    </div>
                 `;
-            } 
-            else if(state.phase === 'PLAYING' && isMyTurn) {
+            }
+            // Playing Phase Controls
+            else if (state.phase === 'PLAYING' && isMyTurn) {
                 const h = p.hands[state.splitIndex];
                 const canSplit = (h.cards.length === 2 && h.cards[0].val === h.cards[1].val && p.chips >= h.bet);
-                const canDouble = (h.cards.length === 2 && p.chips >= h.bet);
-                
+
                 controlsHTML = `
                     <div class="controls">
                         <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                         <button class="action-btn btn-stand" onclick="playerStand()">S</button>
-                        ${canDouble ? `<button class="action-btn btn-double" onclick="playerDouble()">D</button>` : ''}
-                        ${canSplit ? `<button class="action-btn btn-split" onclick="playerSplit()">Sp</button>` : ''}
-                        <button class="btn-standup" onclick="stand(${idx})">X</button>
-                    </div>
-                `;
-            } else {
-                controlsHTML = `
-                    <div class="controls" style="justify-content: flex-end;">
-                        <button class="btn-standup" onclick="stand(${idx})">X</button>
+                        <button class="action-btn btn-double" onclick="playerDouble()" ${p.chips < h.bet || h.cards.length !== 2 ? 'disabled' : ''}>D</button>
+                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
                     </div>
                 `;
             }
 
-            if(p.hands.length === 0 && !p.isReady) {
-                handHTML = '<div style="color:#aaa; font-style:italic;">Waiting...</div>';
-            } else if (p.hands.length === 1 && !p.isReady) {
-                const h = p.hands[0];
-                handHTML = `
-                    ${p.isReady ? `<div class="bet-bubble">$${p.currentBet}</div>` : ''}
-                    ${h.status==='bust' ? '<div style="color:red; font-weight:bold; margin-bottom:5px;">BUST</div>' : ''}
-                    <div class="cards">${h.cards.map(c => createCardEl(c).outerHTML).join('')}</div>
-                    <div style="margin-top:5px; font-size:0.9rem;">${getScoreDisplay(h.cards)}</div>
-                `;
-            } else if (p.hands.length > 1) {
-                handHTML = `<div class="split-container">`;
-                p.hands.forEach((h, hIdx) => {
-                    const isAct = (state.turnIndex === idx && state.splitIndex === hIdx);
-                    handHTML += `
-                        <div class="mini-hand ${isAct ? 'active-split' : ''}">
-                            <div style="font-size:0.7rem; margin-bottom:2px;">Bet:${h.bet}</div>
-                            <div class="cards">${h.cards.map(c => createCardEl(c).outerHTML).join('')}</div>
-                            <div style="text-align:center; font-size:0.8rem;">${getScoreDisplay(h.cards)}</div>
+            // Hand Rendering
+            let handsHTML = '';
+            if (p.hands.length > 0) {
+                if (p.hands.length > 1) {
+                    // Split view
+                    handsHTML = `<div class="split-container">`;
+                    p.hands.forEach((h, hIdx) => {
+                        const isActive = (state.splitIndex === hIdx) ? 'active-split' : '';
+                        handsHTML += `
+                            <div class="mini-hand ${isActive}">
+                                <div class="score-pill" style="font-size:0.7rem; padding:2px 6px;">${getScoreDisplay(h.cards)}</div>
+                                <div class="cards">
+                                    ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    handsHTML += `</div>`;
+                } else {
+                    // Single hand view
+                    const h = p.hands[0];
+                    handsHTML = `
+                        <div class="cards" style="transform: scale(0.8);">
+                            ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
                         </div>
                     `;
-                });
-                handHTML += `</div>`;
+                }
             }
 
             return `
                 <div class="seat ${classList}" id="seat-${idx}">
-                    ${infoHTML}
-                    <div class="player-hand-area">${handHTML}</div>
-                    <div class="controls">${controlsHTML}</div>
+                    <div class="seat-info">
+                        <span>Player ${idx+1} ${p.autoPlay ? '(Bot)' : ''}</span>
+                        <span class="chip-stack">$${p.chips}</span>
+                    </div>
+
+                    <div class="player-hand-area">
+                        ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10;">${statusText}</div>` : ''}
+
+                        ${p.hands.length > 0 && state.phase !== 'BETTING'
+                            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+                            : ''}
+
+                        ${handsHTML}
+
+                        ${p.isReady ? `<div class="bet-bubble">Bet: $${p.currentBet}</div>` : ''}
+                    </div>
+
+                    ${controlsHTML}
                 </div>
             `;
         }
 
-        function renderSeat(idx) {
-            const old = document.getElementById(`seat-${idx}`);
-            if(!old) return renderSeats(); 
-            old.outerHTML = getSeatHTML(idx);
-        }
-
-        function renderSeats() {
-            ui.seats.innerHTML = '';
-            state.players.forEach((_, i) => {
-                ui.seats.innerHTML += getSeatHTML(i);
-            });
-        }
-
-        function render() {
+        // Event Listeners for Settings
+        ui.seatSelect.addEventListener('change', (e) => {
+            state.seatCount = parseInt(e.target.value);
+            state.players = Array(state.seatCount).fill(null);
             renderSeats();
-        }
-
-        window.sit = function(idx) {
-            playSound('sit');
-            state.players[idx] = { id: idx, chips: 1000, hands: [], currentBet: 0, isReady: false, lastBet: 10, autoPlay: false, autoBet: false };
-            renderSeat(idx);
-        }
-        window.stand = function(idx) {
-            if(state.phase !== 'BETTING') return;
-            playSound('sit');
-            state.players[idx] = null;
-            renderSeats();
-        }
-
-        const originalPop = state.shoe.pop;
-        state.shoe.pop = function() {
-            const r = originalPop.apply(this);
-            if (this.length === state.cutCardIndex) {
-                state.cutCardReached = true;
-            }
-            return r;
-        }
-
-        ui.deckSelect.addEventListener('change', () => {
-            if(state.phase === 'BETTING') {
-                state.deckCount = parseInt(ui.deckSelect.value);
-                createShoe();
-            }
         });
 
-        ui.seatSelect.addEventListener('change', () => {
-            if(state.phase === 'BETTING') {
-                const newVal = parseInt(ui.seatSelect.value);
-                if (newVal < state.players.length) {
-                    state.players = state.players.slice(0, newVal);
-                } else {
-                    for(let i = state.players.length; i < newVal; i++) {
-                        state.players.push(null);
-                    }
-                }
-                state.seatCount = newVal;
-                render();
-            }
+        ui.deckSelect.addEventListener('change', (e) => {
+            state.deckCount = parseInt(e.target.value);
+            createShoe();
         });
 
+        // Start
         init();
+
     </script>
 </body>
 </html>
