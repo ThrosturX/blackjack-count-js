@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,7 +51,13 @@
             gap: 10px;
         }
 
-        h1 { margin: 0; color: var(--gold); font-size: 1.4rem; width: 100%; text-align: center; }
+        h1 {
+            margin: 0;
+            color: var(--gold);
+            font-size: 1.4rem;
+            width: 100%;
+            text-align: center;
+        }
 
         .game-controls {
             display: flex;
@@ -85,7 +92,7 @@
             background: radial-gradient(circle, #357a44 0%, var(--felt-color) 90%);
             border-radius: 100px;
             border: 12px solid var(--felt-border);
-            box-shadow: inset 0 0 60px rgba(0,0,0,0.7);
+            box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.7);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -105,15 +112,19 @@
             z-index: 30;
             width: 100%;
         }
-        #center-overlay.show { opacity: 1; }
+
+        #center-overlay.show {
+            opacity: 1;
+        }
 
         .overlay-text {
             font-size: 3rem;
             font-weight: 900;
             text-transform: uppercase;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
             line-height: 1.1;
         }
+
         .overlay-sub {
             font-size: 1.5rem;
             text-transform: uppercase;
@@ -122,20 +133,48 @@
             font-weight: bold;
         }
 
-        .msg-win { color: var(--green); }
-        .msg-lose { color: var(--red); }
-        .msg-push { color: var(--blue); }
-        .msg-bj { color: var(--gold); }
-        .msg-shuffle { color: var(--gold); animation: pulse 1s infinite; }
-
-        @keyframes pulse {
-            0% { opacity: 0.8; }
-            50% { opacity: 1; }
-            100% { opacity: 0.8; }
+        .msg-win {
+            color: var(--green);
         }
 
-        .msg-timer { color: rgba(255,255,255,0.3); }
-        .msg-auto { color: var(--blue); }
+        .msg-lose {
+            color: var(--red);
+        }
+
+        .msg-push {
+            color: var(--blue);
+        }
+
+        .msg-bj {
+            color: var(--gold);
+        }
+
+        .msg-shuffle {
+            color: var(--gold);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+        .msg-timer {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .msg-auto {
+            color: var(--blue);
+        }
 
         .profit-indicator {
             display: block;
@@ -143,8 +182,14 @@
             margin-top: 5px;
             font-family: monospace;
         }
-        .profit-green { color: var(--green); }
-        .profit-red { color: var(--red); }
+
+        .profit-green {
+            color: var(--green);
+        }
+
+        .profit-red {
+            color: var(--red);
+        }
 
         /* --- Visual Shoe (In Table, Right Side) --- */
         .shoe-container {
@@ -158,98 +203,114 @@
             pointer-events: none;
         }
 
-        .shoe-body {
-            position: relative;
-            width: 76px;
-            height: 110px;
-            background: #222;
-            border: 2px solid #444;
-            border-radius: 6px 6px 4px 4px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.7), 2px 2px 5px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            padding-bottom: 5px;
-            overflow: hidden;
-        }
+/* --- Ultra-thin Realistic Shoe --- */
+.shoe-body {
+    position: relative;
+    width: 72px;
+    height: 140px; /* Fixed height, we'll scale content within */
+    background: #111;
+    border: 2px solid #444;
+    border-radius: 6px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.95), 
+                3px 3px 10px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding: 0;
+}
 
-        .card-stack {
-            position: absolute;
-            bottom: 5px;
-            width: 70px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1px;
-            transition: all 0.3s ease;
-        }
+.card-stack {
+    position: absolute;
+    bottom: 4px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0px; /* NO gap between cards */
+    transition: transform 0.3s ease;
+    transform-origin: bottom;
+}
 
-        .visual-card {
-            width: 66px;
-            height: 16px;
-            background: var(--card-back-color);
-            border-radius: 3px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.3);
-            position: relative;
-            transition: transform 0.2s;
-        }
+.card-back {
+    width: 66px;
+    height: 1px !important; /* Base height - VERY thin */
+    background: repeating-linear-gradient(
+        45deg,
+        #8b0000,
+        #8b0000 2px,
+        #a50000 2px,
+        #a50000 4px
+    );
+    flex-shrink: 0;
+    position: relative;
+}
 
-        .visual-card:first-child {
-            height: 20px;
-            background: #c62828;
-            box-shadow: 0 2px 3px rgba(0,0,0,0.5);
-            z-index: 2;
-        }
+/* Top visible card has border color */
+.card-back:last-child {
+    height: 2px !important;
+    background: 
+        linear-gradient(to bottom, 
+            rgba(255,255,255,0.1) 0%,
+            transparent 50%),
+        repeating-linear-gradient(
+            45deg,
+            #a71c1c,
+            #a71c1c 2px,
+            #b71c1c 2px,
+            #b71c1c 4px,
+            #c62828 4px,
+            #c62828 6px
+        );
+    box-shadow: 0 0 3px rgba(0,0,0,0.5);
+}
 
-        .visual-card.separator {
-            background: linear-gradient(45deg, #ffeb3b 25%, #ffc107 25%, #ffc107 50%, #ffeb3b 50%, #ffeb3b 75%, #ffc107 75%);
-            background-size: 10px 10px;
-            border: 1px solid #ff9800;
-            height: 18px;
-            z-index: 1;
-        }
+/* Separator card - thicker and yellow */
+.card-back.separator {
+    height: 3px !important;
+    background: repeating-linear-gradient(
+        45deg,
+        #ffcc00,
+        #ffcc00 1px,
+        #ffaa00 1px,
+        #ffaa00 2px
+    );
+    box-shadow: 
+        0 0 4px rgba(255,204,0,0.5),
+        inset 0 0 2px rgba(0,0,0,0.3);
+    z-index: 5;
+}
 
-        .visual-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                -45deg,
-                transparent,
-                transparent 5px,
-                rgba(0,0,0,0.1) 5px,
-                rgba(0,0,0,0.1) 6px
-            );
-            border-radius: 3px;
-        }
+/* Card below separator (to make it stand out) */
+.card-back.separator + .card-back {
+    height: 2px !important;
+}
 
-        .shoe-lip {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 12px;
-            background: linear-gradient(to bottom, #333, #111);
-            border-bottom: 2px solid #555;
-            border-radius: 4px 4px 0 0;
-            z-index: 3;
-        }
+.shoe-lip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: linear-gradient(to bottom, #333, #222);
+    border-bottom: 2px solid #666;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    z-index: 20;
+    border-radius: 4px 4px 0 0;
+}
 
-        .shoe-base {
-            /* Keep existing but adjust positioning */
-            position: absolute;
-            bottom: -8px;
-            width: 90px;
-            height: 12px;
-            background: #111;
-            border: 2px solid #444;
-            border-radius: 4px;
-            z-index: -1;
-        }
+.shoe-base {
+    position: absolute;
+    bottom: -10px;
+    width: 86px;
+    height: 12px;
+    background: #222;
+    border: 2px solid #666;
+    border-radius: 4px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    z-index: -1;
+}
 
         /* --- Dealer --- */
         #dealer-area {
@@ -262,8 +323,9 @@
             z-index: 5;
             padding-right: 100px;
         }
+
         .score-pill {
-            background: rgba(0,0,0,0.6);
+            background: rgba(0, 0, 0, 0.6);
             padding: 4px 12px;
             border-radius: 20px;
             color: white;
@@ -286,7 +348,7 @@
             height: var(--card-h);
             background: white;
             border-radius: 8px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
             display: flex;
             padding: 0;
             box-sizing: border-box;
@@ -294,47 +356,78 @@
             transition: transform 0.2s;
             position: relative;
         }
-        .card:first-child { margin-left: 0; }
-        .card.red { color: var(--red); }
-        .card.black { color: var(--black); }
+
+        .card:first-child {
+            margin-left: 0;
+        }
+
+        .card.red {
+            color: var(--red);
+        }
+
+        .card.black {
+            color: var(--black);
+        }
 
         .card.split-card {
             background: #fffbf0;
             border: none;
-            box-shadow: 0 0 0 2px #000, 2px 2px 5px rgba(0,0,0,0.3);
+            box-shadow: 0 0 0 2px #000, 2px 2px 5px rgba(0, 0, 0, 0.3);
         }
 
         .val-top {
-            position: absolute; top: 4px; left: 4px;
-            font-size: 1.1rem; font-weight: bold; line-height: 1;
-            display: flex; flex-direction: column; align-items: center;
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            line-height: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .val-top small { font-size: 0.7rem; }
+
+        .val-top small {
+            font-size: 0.7rem;
+        }
 
         .suit-center {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); font-size: 2.5rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
         }
 
         .val-bot {
-            position: absolute; bottom: 4px; right: 4px;
-            font-size: 1.1rem; font-weight: bold; line-height: 1;
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            line-height: 1;
             transform: rotate(180deg);
-            display: flex; flex-direction: column; align-items: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .val-bot small { font-size: 0.7rem; }
+
+        .val-bot small {
+            font-size: 0.7rem;
+        }
 
         .card.hidden {
-            background: repeating-linear-gradient(
-                45deg,
-                #b71c1c,
-                #b71c1c 10px,
-                #c62828 10px,
-                #c62828 20px
-            );
+            background: repeating-linear-gradient(45deg,
+                    #b71c1c,
+                    #b71c1c 10px,
+                    #c62828 10px,
+                    #c62828 20px);
             border: 2px solid white;
         }
-        .card.hidden * { display: none; }
+
+        .card.hidden * {
+            display: none;
+        }
 
         /* --- Players --- */
         #seats {
@@ -351,9 +444,9 @@
             width: 16%;
             min-width: 130px;
             height: 280px;
-            background: rgba(0,0,0,0.15);
+            background: rgba(0, 0, 0, 0.15);
             border-radius: 12px;
-            border: 2px solid rgba(255,255,255,0.1);
+            border: 2px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             padding: 8px;
@@ -361,12 +454,32 @@
             transition: border-color 0.3s, opacity 0.3s;
         }
 
-        .seat.turn { border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
-        .seat.winner { border-color: var(--green); }
-        .seat.loser { border-color: var(--red); opacity: 0.8; }
-        .seat.push { border-color: var(--blue); }
-        .seat.auto { border-color: var(--blue); }
-        .seat.disabled { opacity: 0.5; pointer-events: none; }
+        .seat.turn {
+            border-color: var(--gold);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
+        .seat.winner {
+            border-color: var(--green);
+        }
+
+        .seat.loser {
+            border-color: var(--red);
+            opacity: 0.8;
+        }
+
+        .seat.push {
+            border-color: var(--blue);
+        }
+
+        .seat.auto {
+            border-color: var(--blue);
+        }
+
+        .seat.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
 
         .seat-info {
             width: 100%;
@@ -376,7 +489,11 @@
             font-size: 0.8rem;
             color: #ddd;
         }
-        .chip-stack { color: var(--gold); font-weight: bold; }
+
+        .chip-stack {
+            color: var(--gold);
+            font-weight: bold;
+        }
 
         .player-hand-area {
             flex-grow: 1;
@@ -397,7 +514,7 @@
             border-radius: 10px;
             font-weight: bold;
             font-size: 0.75rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             z-index: 5;
         }
 
@@ -424,17 +541,40 @@
             font-size: 0.75rem;
             white-space: nowrap;
         }
-        button:disabled { cursor: not-allowed; opacity: 0.5; }
 
-        .btn-sit { background: #444; color: white; width: 100%; padding: 10px; }
-        .btn-sit:hover:not(:disabled) { background: #555; }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .btn-sit {
+            background: #444;
+            color: white;
+            width: 100%;
+            padding: 10px;
+        }
+
+        .btn-sit:hover:not(:disabled) {
+            background: #555;
+        }
 
         .btn-standup {
-            position: absolute; top: -25px; right: 0;
-            background: #333; color: #888; font-size: 0.6rem;
-            padding: 3px 6px; border-radius: 4px; border: 1px solid #555; z-index: 10;
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background: #333;
+            color: #888;
+            font-size: 0.6rem;
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            z-index: 10;
         }
-        .btn-standup:hover { color: white; border-color: #888; }
+
+        .btn-standup:hover {
+            color: white;
+            border-color: #888;
+        }
 
         /* Toggles */
         .toggle-container {
@@ -445,28 +585,40 @@
             margin-bottom: 4px;
             cursor: pointer;
         }
+
         .toggle-label {
             font-size: 0.6rem;
             color: #aaa;
             margin-right: 4px;
             text-transform: uppercase;
         }
+
         .toggle-switch {
             position: relative;
             display: inline-block;
             width: 28px;
             height: 16px;
         }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
         .slider {
             position: absolute;
             cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background-color: #333;
             transition: .4s;
             border-radius: 34px;
             border: 1px solid #555;
         }
+
         .slider:before {
             position: absolute;
             content: "";
@@ -478,41 +630,116 @@
             transition: .4s;
             border-radius: 50%;
         }
-        input:checked + .slider { background-color: var(--blue); }
-        input:checked + .slider:before { transform: translateX(12px); }
-        .toggle-switch.auto-bet input:checked + .slider { background-color: var(--gold); }
+
+        input:checked+.slider {
+            background-color: var(--blue);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(12px);
+        }
+
+        .toggle-switch.auto-bet input:checked+.slider {
+            background-color: var(--gold);
+        }
 
 
-        .bet-controls { display: flex; width: 100%; gap: 4px; align-items: center; }
+        .bet-controls {
+            display: flex;
+            width: 100%;
+            gap: 4px;
+            align-items: center;
+        }
 
         .bet-input {
-            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #555;
-            color: white; padding: 6px; text-align: center;
-            -moz-appearance: textfield; appearance: none;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #555;
+            color: white;
+            padding: 6px;
+            text-align: center;
+            -moz-appearance: textfield;
+            appearance: none;
             font-size: 0.8rem;
         }
+
         .bet-input::-webkit-outer-spin-button,
-        .bet-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .bet-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
 
-        .btn-bet { background: var(--gold); color: black; flex: 1; padding: 6px; height: 30px; }
-        .btn-bet:hover:not(:disabled) { background: #e0b540; }
+        .btn-bet {
+            background: var(--gold);
+            color: black;
+            flex: 1;
+            padding: 6px;
+            height: 30px;
+        }
 
-        .btn-clear { background: var(--red); color: white; padding: 6px 10px; height: 30px; width: auto; }
-        .btn-clear:hover { background: #d32f2f; }
+        .btn-bet:hover:not(:disabled) {
+            background: #e0b540;
+        }
+
+        .btn-clear {
+            background: var(--red);
+            color: white;
+            padding: 6px 10px;
+            height: 30px;
+            width: auto;
+        }
+
+        .btn-clear:hover {
+            background: #d32f2f;
+        }
 
         .action-btn {
-            width: 32px; height: 32px;
-            border-radius: 50%; font-weight: bold; font-size: 0.9rem;
-            display: flex; align-items: center; justify-content: center; padding: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
         }
-        .btn-hit { background: var(--green); color: white; }
-        .btn-hit:hover { background: #43a047; }
-        .btn-stand { background: var(--red); color: white; }
-        .btn-stand:hover { background: #e53935; }
-        .btn-double { background: #2196f3; color: white; }
-        .btn-double:hover { background: #1e88e5; }
-        .btn-split { background: #9c27b0; color: white; }
-        .btn-split:hover { background: #8e24aa; }
+
+        .btn-hit {
+            background: var(--green);
+            color: white;
+        }
+
+        .btn-hit:hover {
+            background: #43a047;
+        }
+
+        .btn-stand {
+            background: var(--red);
+            color: white;
+        }
+
+        .btn-stand:hover {
+            background: #e53935;
+        }
+
+        .btn-double {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-double:hover {
+            background: #1e88e5;
+        }
+
+        .btn-split {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .btn-split:hover {
+            background: #8e24aa;
+        }
 
         /* --- Split Hands --- */
         .split-container {
@@ -521,22 +748,52 @@
             width: 100%;
             justify-content: center;
         }
+
         .mini-hand {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 4px;
             padding: 2px;
         }
-        .mini-hand.active-split { border: 1px solid var(--gold); }
-        .mini-hand .cards { height: 45px; }
-        .mini-hand .card { width: 25px; height: 38px; margin-left: -15px; font-size: 0.5rem; }
-        .mini-hand .suit-center { font-size: 1rem; }
-        .mini-hand .val-top { font-size: 0.6rem; top: 2px; left: 2px; }
-        .mini-hand .val-bot { font-size: 0.6rem; bottom: 2px; right: 2px; }
-        .mini-hand .val-top small, .mini-hand .val-bot small { display: none; }
+
+        .mini-hand.active-split {
+            border: 1px solid var(--gold);
+        }
+
+        .mini-hand .cards {
+            height: 45px;
+        }
+
+        .mini-hand .card {
+            width: 25px;
+            height: 38px;
+            margin-left: -15px;
+            font-size: 0.5rem;
+        }
+
+        .mini-hand .suit-center {
+            font-size: 1rem;
+        }
+
+        .mini-hand .val-top {
+            font-size: 0.6rem;
+            top: 2px;
+            left: 2px;
+        }
+
+        .mini-hand .val-bot {
+            font-size: 0.6rem;
+            bottom: 2px;
+            right: 2px;
+        }
+
+        .mini-hand .val-top small,
+        .mini-hand .val-bot small {
+            display: none;
+        }
 
         /* --- Strategy Hint --- */
         #strategy-bar {
@@ -555,8 +812,21 @@
             align-items: center;
             gap: 4px;
         }
-        .hint-label { color: #888; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; }
-        .hint-text { color: var(--gold); font-weight: bold; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
+
+        .hint-label {
+            color: #888;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+        }
+
+        .hint-text {
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
 
         .count-hint {
             font-size: 0.85rem;
@@ -566,11 +836,27 @@
             text-transform: none;
             font-weight: normal;
         }
-        .ch-high { background: rgba(76, 175, 80, 0.2); color: var(--green); border: 1px solid var(--green); }
-        .ch-low { background: rgba(235, 87, 87, 0.2); color: var(--red); border: 1px solid var(--red); }
-        .ch-neutral { background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid #888; }
+
+        .ch-high {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .ch-low {
+            background: rgba(235, 87, 87, 0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        .ch-neutral {
+            background: rgba(255, 255, 255, 0.1);
+            color: #aaa;
+            border: 1px solid #888;
+        }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -700,13 +986,13 @@
                 this.isSplitCard = false;
             }
             get num() {
-                if (['J','Q','K'].includes(this.val)) return 10;
+                if (['J', 'Q', 'K'].includes(this.val)) return 10;
                 if (this.val === 'A') return 11;
                 return parseInt(this.val);
             }
             get count() {
-                if (['10','J','Q','K','A'].includes(this.val)) return -1;
-                if (['2','3','4','5','6'].includes(this.val)) return 1;
+                if (['10', 'J', 'Q', 'K', 'A'].includes(this.val)) return -1;
+                if (['2', '3', '4', '5', '6'].includes(this.val)) return 1;
                 return 0;
             }
             get color() { return (this.suit === '♥' || this.suit === '♦') ? 'red' : 'black'; }
@@ -716,6 +1002,7 @@
         function init() {
             state.players = Array(state.seatCount).fill(null);
             createShoe();
+            setTimeout(updateShoeVisual, 100);
         }
 
         function createShoe() {
@@ -755,19 +1042,28 @@
             ui.overlay.classList.add('show');
 
             // Clear seats visually if not already done (usually cleared before calling this)
-            if(ui.seats.innerHTML === '') renderSeats();
+            if (ui.seats.innerHTML === '') renderSeats();
 
             // reset the count hint since we just shuffled
             updateCountHint();
 
             // Remove the old fill animation code and replace with:
             updateShoeVisual();
-            
+
             // Show shuffling message for a moment
             setTimeout(() => {
                 state.isShuffling = false;
                 state.phase = 'BETTING';
                 ui.overlay.classList.remove('show');
+                updateGameFlow();
+            }, 800);
+
+            // Update shoe visual after shuffle
+            setTimeout(() => {
+                state.isShuffling = false;
+                state.phase = 'BETTING';
+                ui.overlay.classList.remove('show');
+                updateShoeVisual(); // Show full stack
                 updateGameFlow();
             }, 800);
         }
@@ -785,83 +1081,145 @@
             const decksRem = Math.max(1, state.shoe.length / 52);
             const trueCount = (state.runningCount / decksRem).toFixed(1);
             ui.runCount.textContent = `${state.runningCount} (TC:${trueCount})`;
-            
+
             // Update shoe visualization
             updateShoeVisual();
         }
 
-        /* --- Improved Shoe Visualization --- */
-        function updateShoeVisual() {
-            const cardStack = document.getElementById('card-stack');
-            if (!cardStack) return;
-            
-            // Clear existing visual cards
-            cardStack.innerHTML = '';
-            
-            // Don't show visual when shoe is empty (during shuffle)
-            if (state.shoe.length === 0 || state.isShuffling) {
-                return;
-            }
-            
-            // Calculate how many visual cards to show
-            // 1 visual card = ~5 real cards (adjustable)
-            const cardsPerVisual = 5;
-            const totalVisualCards = Math.min(30, Math.ceil(state.shoe.length / cardsPerVisual));
-            
-            // Find the separator position
-            const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
-            const visualSeparatorIndex = Math.floor(separatorIndex / cardsPerVisual);
-            
-            // Create visual cards
-            for (let i = 0; i < totalVisualCards; i++) {
-                const card = document.createElement('div');
-                card.className = 'visual-card';
-                
-                // First card (top) gets special styling
-                if (i === 0) {
-                    card.style.transform = 'translateY(-2px)';
-                }
-                
-                // Add separator styling if this visual card contains the separator
-                if (i === visualSeparatorIndex) {
-                    card.classList.add('separator');
-                }
-                
-                // Calculate opacity for depth effect (bottom cards are darker)
-                const opacity = 0.7 + (i / totalVisualCards) * 0.3;
-                card.style.opacity = opacity;
-                
-                // Add slight horizontal offset for stacked look
-                const offset = (totalVisualCards - i) * 0.3;
-                card.style.transform += ` translateX(${i % 2 === 0 ? offset : -offset}px)`;
-                
-                cardStack.appendChild(card);
-            }
-            
-            // Adjust card stack height based on number of cards
-            const maxHeight = 100; // Max visual height in pixels
-            const stackHeight = Math.min(maxHeight, totalVisualCards * 18);
-            cardStack.style.height = `${stackHeight}px`;
-            cardStack.style.bottom = '5px';
+function updateShoeVisual() {
+    const cardStack = document.getElementById('card-stack');
+    if (!cardStack) return;
+    
+    requestAnimationFrame(() => {
+        cardStack.innerHTML = '';
+        
+        if (state.shoe.length === 0 || state.isShuffling) {
+            return;
         }
+        
+        const totalCards = state.shoe.length;
+        
+        // Calculate scale factor based on deck count
+        // For 1 deck (52 cards): scale = 1.0
+        // For 8 decks (416 cards): scale = 0.125 (1/8)
+        const maxCardsForFullHeight = 52; // 1 deck fills the shoe
+        const scale = Math.min(1, maxCardsForFullHeight / totalCards);
+        
+        // Create ALL cards (but we'll cap at 416 for 8 decks performance)
+        const cardsToCreate = Math.min(totalCards, 416);
+        
+        // Find separator position
+        const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
+        let separatorCreated = false;
+        
+        for (let i = 0; i < cardsToCreate; i++) {
+            // Map visual index to real index (we might skip some for performance in large shoes)
+            const realIndex = Math.floor((i / cardsToCreate) * totalCards);
+            
+            const card = document.createElement('div');
+            card.className = 'card-back';
+            
+            // Check if this visual position should show separator
+            if (!separatorCreated && realIndex >= separatorIndex) {
+                card.classList.add('separator');
+                separatorCreated = true;
+            }
+            
+            // Top card (last one)
+            if (i === cardsToCreate - 1) {
+                // Already styled by CSS :last-child
+            }
+            
+            // Calculate brightness - cards at bottom are darker
+            const depth = i / cardsToCreate;
+            const brightness = 50 + (depth * 50); // 50% to 100%
+            card.style.filter = `brightness(${brightness}%)`;
+            
+            // Very subtle horizontal offset for natural stack look
+            if (i > 0 && i < cardsToCreate - 1) {
+                const offset = ((i % 3) - 1) * 0.3;
+                card.style.transform = `translateX(${offset}px)`;
+            }
+            
+            cardStack.appendChild(card);
+        }
+        
+        // Scale the entire stack to fit in shoe
+        const cardHeight = 1; // Base card height in pixels
+        const topCardExtra = 1; // Top card is 2px total (1px base + 1px extra)
+        const separatorExtra = 2; // Separator is 3px total (1px base + 2px extra)
+        
+        // Calculate total visual height
+        let visualHeight = (cardsToCreate * cardHeight) + topCardExtra;
+        
+        // Apply scale to make it fit in shoe
+        const maxVisibleHeight = 120; // Max pixels visible in shoe
+        const scaleToFit = Math.min(1, maxVisibleHeight / visualHeight);
+        const finalScale = scale * scaleToFit;
+        
+        cardStack.style.transform = `scaleY(${finalScale})`;
+        
+        // Position the stack
+        cardStack.style.bottom = '4px';
+    });
+}
 
-        function animateCardDraw() {
-            const cardStack = document.getElementById('card-stack');
-            if (!cardStack || cardStack.children.length === 0) return;
-            
-            // Animate the top card being drawn
-            const topCard = cardStack.children[0];
-            topCard.style.transform = 'translateY(-30px) rotate(-5deg)';
-            topCard.style.opacity = '0';
-            
-            // Remove the card after animation
-            setTimeout(() => {
-                if (topCard.parentNode === cardStack) {
-                    cardStack.removeChild(topCard);
-                    updateShoeVisual(); // Re-render to adjust positions
-                }
-            }, 300);
-        }
+function animateCardDraw() {
+    const cardStack = document.getElementById('card-stack');
+    if (!cardStack || cardStack.children.length === 0) return;
+    
+    // Get and remove top card
+    const topCard = cardStack.lastElementChild;
+    if (!topCard) return;
+    
+    // Remove immediately
+    cardStack.removeChild(topCard);
+    
+    // Create flying animation
+    const flyingCard = document.createElement('div');
+    flyingCard.className = 'card-back';
+    flyingCard.style.position = 'fixed';
+    flyingCard.style.width = '66px';
+    flyingCard.style.height = '30px'; // Tall for animation visibility
+    flyingCard.style.zIndex = '1000';
+    flyingCard.style.transition = 'all 0.3s ease-out';
+    flyingCard.style.pointerEvents = 'none';
+    flyingCard.style.opacity = '0.8';
+    flyingCard.style.borderRadius = '3px';
+    flyingCard.style.boxShadow = '0 3px 6px rgba(0,0,0,0.5)';
+    
+    // Set gradient background
+    if (topCard.classList.contains('separator')) {
+        flyingCard.style.background = 'repeating-linear-gradient(45deg, #ffcc00, #ffcc00 1px, #ffaa00 1px, #ffaa00 2px)';
+    } else {
+        flyingCard.style.background = 'repeating-linear-gradient(45deg, #a71c1c, #a71c1c 2px, #b71c1c 2px, #b71c1c 4px, #c62828 4px, #c62828 6px)';
+    }
+    
+    // Position at shoe
+    const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();
+    flyingCard.style.left = `${shoeRect.left + 3}px`;
+    flyingCard.style.top = `${shoeRect.top + 10}px`;
+    
+    document.body.appendChild(flyingCard);
+    
+    // Animate to dealer
+    setTimeout(() => {
+        const dealerArea = document.getElementById('dealer-area');
+        const dealerRect = dealerArea.getBoundingClientRect();
+        
+        flyingCard.style.left = `${dealerRect.left + 80}px`;
+        flyingCard.style.top = `${dealerRect.top + 40}px`;
+        flyingCard.style.opacity = '0';
+        flyingCard.style.transform = 'rotate(20deg) scale(0.5)';
+        
+        setTimeout(() => {
+            if (flyingCard.parentNode) {
+                flyingCard.parentNode.removeChild(flyingCard);
+            }
+            updateShoeVisual();
+        }, 300);
+    }, 10);
+}
 
         /* --- GAME FLOW CONTROL --- */
 
@@ -910,11 +1268,11 @@
         }
 
         function processAutoBets() {
-            if(state.phase !== 'BETTING') return;
+            if (state.phase !== 'BETTING') return;
             let madeChanges = false;
 
             state.players.forEach((p, idx) => {
-                if(p && p.autoPlay && p.autoBet && !p.isReady) {
+                if (p && p.autoPlay && p.autoBet && !p.isReady) {
                     const decksRem = Math.max(1, state.shoe.length / 52);
                     const tc = state.runningCount / decksRem;
                     let betAmt = p.lastBet || 10;
@@ -946,7 +1304,7 @@
 
         function placeBetInternal(idx, amt) {
             const p = state.players[idx];
-            if(!p) return;
+            if (!p) return;
 
             playSound('chip');
             p.currentBet = amt;
@@ -1019,16 +1377,16 @@
             if (state.shoe.length === 0) {
                 // Emergency shuffle mid-hand
                 console.warn("Shoe empty! Emergency shuffle.");
-                
+
                 // Save current game state
                 const currentPhase = state.phase;
                 const currentTurnIndex = state.turnIndex;
                 const currentSplitIndex = state.splitIndex;
-                
+
                 // Create new shoe without changing phase to SHUFFLING
                 const tempShoe = [];
                 state.runningCount = 0;
-                
+
                 // Create cards
                 for (let i = 0; i < state.deckCount; i++) {
                     for (let s of SUITS) {
@@ -1037,40 +1395,46 @@
                         }
                     }
                 }
-                
+
                 // Fisher-Yates Shuffle
                 for (let i = tempShoe.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [tempShoe[i], tempShoe[j]] = [tempShoe[j], tempShoe[i]];
                 }
-                
+
                 // Add to existing shoe (for continuous play)
                 state.shoe = state.shoe.concat(tempShoe);
                 state.totalInitialCards = state.shoe.length;
-                
+
                 // Reset cut card
                 const cutIndex = Math.floor(state.totalInitialCards * (1 - PENETRATION));
                 state.shoe[cutIndex].isSplitCard = true;
                 state.cutCardReached = false;
-                
+
                 // Restore phase
                 state.phase = currentPhase;
                 state.turnIndex = currentTurnIndex;
                 state.splitIndex = currentSplitIndex;
-                
+
                 // Show brief notification
                 showOverlay("Reshuffling", "Mid-hand", "", "msg-shuffle");
                 playSound('shuffle');
             }
-            
+
             const card = state.shoe.pop();
             if (card.isSplitCard) {
                 state.cutCardReached = true;
             }
 
-            // Animate card draw from shoe
-            if (state.phase !== 'SHUFFLING') {
+            // Update count
+            updateStats();
+            
+            // Animate or just update
+            if (state.phase === 'PLAYING' || (state.phase === 'DEALING' && state.dealer.hand.length + state.dealer.hand.length < 4)) {
                 animateCardDraw();
+            } else {
+                // Batch update during dealing
+                setTimeout(updateShoeVisual, 50);
             }
 
             return card;
@@ -1086,7 +1450,7 @@
             playSound('shuffle');
 
             state.players.forEach(p => {
-                if(p && p.isReady) {
+                if (p && p.isReady) {
                     p.hands = [{ cards: [], bet: p.currentBet, result: null, status: 'playing' }];
                     p.currentBet = 0;
                     p.isReady = false;
@@ -1099,25 +1463,25 @@
             render();
 
             let deals = [];
-            state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
-            deals.push({who:'d'});
-            state.players.forEach((p, i) => { if(p && p.hands.length) deals.push({who:'p', idx:i, hand:0}); });
-            deals.push({who:'d', hidden:true});
+            state.players.forEach((p, i) => { if (p && p.hands.length) deals.push({ who: 'p', idx: i, hand: 0 }); });
+            deals.push({ who: 'd' });
+            state.players.forEach((p, i) => { if (p && p.hands.length) deals.push({ who: 'p', idx: i, hand: 0 }); });
+            deals.push({ who: 'd', hidden: true });
 
             let i = 0;
             function nextDeal() {
-                if(i >= deals.length) {
+                if (i >= deals.length) {
                     checkBlackjack();
                     return;
                 }
                 const action = deals[i];
-                if(action.who === 'd') {
+                if (action.who === 'd') {
                     const c = drawCard();
                     c.hidden = !!action.hidden;
                     state.dealer.hand.push(c);
-                    if(c.isSplitCard) state.cutCardReached = true;
+                    if (c.isSplitCard) state.cutCardReached = true;
 
-                    if(!c.hidden) {
+                    if (!c.hidden) {
                         state.runningCount += c.count;
                         updateStats();
                         playSound('card');
@@ -1126,7 +1490,7 @@
                 } else {
                     const p = state.players[action.idx];
                     const c = drawCard();
-                    if(c.isSplitCard) state.cutCardReached = true;
+                    if (c.isSplitCard) state.cutCardReached = true;
 
                     state.runningCount += c.count;
                     updateStats();
@@ -1178,23 +1542,23 @@
 
         function nextTurn() {
             let found = false;
-            for(let i=0; i<state.players.length; i++) {
+            for (let i = 0; i < state.players.length; i++) {
                 const p = state.players[i];
-                if(p && p.hands.length) {
+                if (p && p.hands.length) {
                     const hIdx = p.hands.findIndex(h => h.status === 'playing');
-                    if(hIdx !== -1) {
+                    if (hIdx !== -1) {
                         state.turnIndex = i;
                         state.splitIndex = hIdx;
                         found = true;
 
                         const score = calcScore(p.hands[hIdx].cards);
-                        if(score === 21) {
+                        if (score === 21) {
                             setTimeout(playerStand, 500);
                         } else {
                             render();
                             updateStrategyHint();
 
-                            if(p.autoPlay) {
+                            if (p.autoPlay) {
                                 setTimeout(runAutoPlay, 800);
                             }
                         }
@@ -1202,7 +1566,7 @@
                     }
                 }
             }
-            if(!found) {
+            if (!found) {
                 dealerTurn();
             }
         }
@@ -1217,7 +1581,7 @@
             const d = state.dealer.hand[0];
             const action = getStrategyHint(d, h.cards);
 
-            showOverlay(`Player ${p.id+1}`, `Auto: ${action.toUpperCase()}`, "", "msg-auto");
+            showOverlay(`Player ${p.id + 1}`, `Auto: ${action.toUpperCase()}`, "", "msg-auto");
             playSound('card');
 
             setTimeout(() => {
@@ -1225,7 +1589,7 @@
                 else if (action === 'Stand') playerStand();
                 else if (action === 'Double') {
                     // Logic: Can only double on first 2 cards
-                    if(p.chips >= h.bet && h.cards.length === 2) playerDouble();
+                    if (p.chips >= h.bet && h.cards.length === 2) playerDouble();
                     else playerHit();
                 }
                 else if (action === 'Split') playerSplit();
@@ -1246,7 +1610,7 @@
             renderSeat(state.turnIndex);
 
             setTimeout(() => {
-                if(calcScore(h.cards) > 21) {
+                if (calcScore(h.cards) > 21) {
                     h.status = 'bust';
                     h.result = 'lose';
                     playSound('lose');
@@ -1257,7 +1621,7 @@
                     setTimeout(playerStand, 500);
                 } else {
                     updateStrategyHint();
-                    if(state.players[state.turnIndex].autoPlay) {
+                    if (state.players[state.turnIndex].autoPlay) {
                         setTimeout(runAutoPlay, 500);
                     }
                 }
@@ -1272,13 +1636,13 @@
             h.status = 'stand';
 
             const nextSplit = p.hands.findIndex((hand, idx) => idx > state.splitIndex && hand.status === 'playing');
-            if(nextSplit !== -1) {
+            if (nextSplit !== -1) {
                 state.splitIndex = nextSplit;
                 render();
                 updateStrategyHint();
                 setTimeout(() => {
-                     if(calcScore(p.hands[nextSplit].cards) === 21) playerStand();
-                     else if(p.autoPlay) setTimeout(runAutoPlay, 500);
+                    if (calcScore(p.hands[nextSplit].cards) === 21) playerStand();
+                    else if (p.autoPlay) setTimeout(runAutoPlay, 500);
                 }, 500);
             } else {
                 nextTurn();
@@ -1290,8 +1654,8 @@
             const h = p.hands[state.splitIndex];
 
             // Protection: Cannot double if not initial 2 cards
-            if(h.cards.length !== 2) { playSound('error'); return; }
-            if(p.chips < h.bet) { playSound('error'); return; }
+            if (h.cards.length !== 2) { playSound('error'); return; }
+            if (p.chips < h.bet) { playSound('error'); return; }
 
             playSound('chip');
             p.chips -= h.bet;
@@ -1314,10 +1678,10 @@
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
 
-            if(p.chips < h.bet) { playSound('error'); return; }
+            if (p.chips < h.bet) { playSound('error'); return; }
             const c1 = h.cards[0];
             const c2 = h.cards[1];
-            if(c1.val !== c2.val) { playSound('error'); return; }
+            if (c1.val !== c2.val) { playSound('error'); return; }
 
             playSound('chip');
             p.chips -= h.bet;
@@ -1346,7 +1710,7 @@
 
             renderSeat(state.turnIndex);
             updateStrategyHint();
-            if(p.autoPlay) setTimeout(runAutoPlay, 500);
+            if (p.autoPlay) setTimeout(runAutoPlay, 500);
         }
 
         function dealerTurn() {
@@ -1363,7 +1727,7 @@
             let score = calcScore(state.dealer.hand);
 
             function loop() {
-                if(score < 17) {
+                if (score < 17) {
                     const c = drawCard();
                     state.runningCount += c.count;
                     updateStats();
@@ -1406,40 +1770,40 @@
 
                 p.hands.forEach(h => {
                     if (h.result !== null) {
-                            if (h.status === 'blackjack') {
+                        if (h.status === 'blackjack') {
                             const profit = h.bet * 1.5;
                             p.chips += h.bet + profit;
-                            showOverlay(`Player ${p.id+1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
+                            showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
                             playSound('win');
                             hasAction = true;
-                            } else if (h.status === 'bust') {
-                            showOverlay(`Player ${p.id+1}`, "Bust", `-$${h.bet}`, "msg-lose");
+                        } else if (h.status === 'bust') {
+                            showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
                             playSound('lose');
                             hasAction = true;
-                            }
-                            return;
+                        }
+                        return;
                     }
 
                     const pScore = calcScore(h.cards);
 
-                    if(pScore > dScore || dScore > 21) {
+                    if (pScore > dScore || dScore > 21) {
                         h.status = 'win';
                         h.result = 'win';
                         p.chips += h.bet * 2;
-                        showOverlay(`Player ${p.id+1}`, `Won`, `+$${h.bet}`, "msg-win");
+                        showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
                         playSound('win');
                         hasAction = true;
                     } else if (pScore < dScore) {
                         h.status = 'lose';
                         h.result = 'lose';
-                        showOverlay(`Player ${p.id+1}`, `Lost`, `-$${h.bet}`, "msg-lose");
+                        showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
                         playSound('lose');
                         hasAction = true;
                     } else {
                         h.status = 'push';
                         h.result = 'push';
                         p.chips += h.bet;
-                        showOverlay(`Player ${p.id+1}`, `Push`, "", "msg-push");
+                        showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
                         hasAction = true;
                     }
                 });
@@ -1456,12 +1820,12 @@
         }
 
         function finishRound() {
-            if(state.cutCardReached) {
+            if (state.cutCardReached) {
                 // Requirement 4: Clear table immediately when shuffling starts
                 state.phase = 'SHUFFLING';
 
                 // Clear hands visually
-                state.players.forEach(p => { if(p) p.hands = []; });
+                state.players.forEach(p => { if (p) p.hands = []; });
                 state.dealer.hand = [];
 
                 // Force a render to show the empty table immediately
@@ -1487,11 +1851,11 @@
             let s = 0;
             let a = 0;
             cards.forEach(c => {
-                if(c.hidden) return;
+                if (c.hidden) return;
                 s += c.num;
-                if(c.val === 'A') a++;
+                if (c.val === 'A') a++;
             });
-            while(s > 21 && a > 0) { s-=10; a--; }
+            while (s > 21 && a > 0) { s -= 10; a--; }
             return s;
         }
 
@@ -1507,9 +1871,9 @@
             let score = 0;
             let aces = 0;
             for (let c of cards) {
-                if(c.hidden) continue;
+                if (c.hidden) continue;
                 score += c.num;
-                if(c.val === 'A') aces++;
+                if (c.val === 'A') aces++;
             }
             if (aces > 0) {
                 let s = score - (aces - 1) - 10;
@@ -1593,7 +1957,7 @@
             ui.overlayMain.textContent = main;
 
             let subHtml = sub;
-            if(amount) {
+            if (amount) {
                 const color = amount.startsWith('+') ? 'profit-green' : 'profit-red';
                 subHtml += `<span class="profit-indicator ${color}">${amount}</span>`;
             }
@@ -1601,7 +1965,7 @@
 
             ui.overlay.classList.add('show');
 
-            if(colorClass === 'msg-win' || colorClass === 'msg-lose' || colorClass === 'msg-push' || colorClass === 'msg-auto' || colorClass === 'msg-bj') {
+            if (colorClass === 'msg-win' || colorClass === 'msg-lose' || colorClass === 'msg-push' || colorClass === 'msg-auto' || colorClass === 'msg-bj') {
                 setTimeout(() => { ui.overlay.classList.remove('show'); }, 1200);
             }
         }
@@ -1610,7 +1974,7 @@
         function createCardEl(card) {
             const div = document.createElement('div');
             div.className = `card ${card.color} ${card.hidden ? 'hidden' : ''} ${card.isSplitCard ? 'split-card' : ''}`;
-            if(!card.hidden) {
+            if (!card.hidden) {
                 div.innerHTML = `<div class="val-top">${card.val}<small>${card.suit}</small></div>`;
                 div.innerHTML += `<div class="suit-center">${card.suit}</div>`;
                 div.innerHTML += `<div class="val-bot">${card.val}<small>${card.suit}</small></div>`;
@@ -1623,7 +1987,7 @@
             state.dealer.hand.forEach(c => ui.dealerCards.appendChild(createCardEl(c)));
 
             const hasHidden = state.dealer.hand.some(c => c.hidden);
-            if(hasHidden && state.phase !== 'RESOLVING') {
+            if (hasHidden && state.phase !== 'RESOLVING') {
                 ui.dealerScore.textContent = state.dealer.hand[0].num;
             } else {
                 ui.dealerScore.textContent = calcScore(state.dealer.hand);
@@ -1651,13 +2015,13 @@
 
         function renderSeat(idx) {
             const el = document.getElementById(`seat-${idx}`);
-            if(!el) return;
+            if (!el) return;
             el.outerHTML = getSeatHTML(idx);
         }
 
         function renderSeats() {
             ui.seats.innerHTML = '';
-            for(let i=0; i<state.seatCount; i++) {
+            for (let i = 0; i < state.seatCount; i++) {
                 ui.seats.innerHTML += getSeatHTML(i);
             }
         }
@@ -1672,7 +2036,7 @@
             const p = state.players[idx];
             const isGameActive = (state.phase === 'DEALING' || state.phase === 'PLAYING' || state.phase === 'RESOLVING');
 
-            if(!p) {
+            if (!p) {
                 return `
                     <div class="seat" id="seat-${idx}" style="justify-content: flex-end;">
                         <div style="color:#aaa; margin-bottom:auto;">Empty</div>
@@ -1682,25 +2046,25 @@
             }
 
             let classList = `seat ${state.turnIndex === idx && state.phase === 'PLAYING' ? 'turn' : ''}`;
-            if(p.autoPlay) classList += ` auto`;
+            if (p.autoPlay) classList += ` auto`;
 
             const isMyTurn = (state.turnIndex === idx && state.phase === 'PLAYING');
-            if(isGameActive && !isMyTurn) classList += ` disabled`;
+            if (isGameActive && !isMyTurn) classList += ` disabled`;
 
             let statusClass = '';
             let statusText = '';
 
-            if(state.phase === 'BETTING' || state.phase === 'RESOLVING') {
+            if (state.phase === 'BETTING' || state.phase === 'RESOLVING') {
                 const wins = p.hands.filter(h => h.result === 'win').length;
                 const loses = p.hands.filter(h => h.result === 'lose').length;
                 const pushes = p.hands.filter(h => h.result === 'push').length;
 
-                if(wins > 0 && loses === 0 && pushes === 0) { statusClass = 'winner'; statusText = 'WINNER'; }
+                if (wins > 0 && loses === 0 && pushes === 0) { statusClass = 'winner'; statusText = 'WINNER'; }
                 else if (loses > 0 && wins === 0 && pushes === 0) { statusClass = 'loser'; statusText = 'LOSER'; }
                 else if (pushes > 0 && wins === 0 && loses === 0) { statusClass = 'push'; statusText = 'PUSH'; }
             }
 
-            if(statusClass) classList += ` ${statusClass}`;
+            if (statusClass) classList += ` ${statusClass}`;
 
             let controlsHTML = '';
 
@@ -1789,7 +2153,7 @@
             return `
                 <div class="seat ${classList}" id="seat-${idx}">
                     <div class="seat-info">
-                        <span>Player ${idx+1} ${p.autoPlay ? '(Bot)' : ''}</span>
+                        <span>Player ${idx + 1} ${p.autoPlay ? '(Bot)' : ''}</span>
                         <span class="chip-stack">$${p.chips}</span>
                     </div>
 
@@ -1797,8 +2161,8 @@
                         ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10;">${statusText}</div>` : ''}
 
                         ${p.hands.length > 0 && state.phase !== 'BETTING'
-                            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
-                            : ''}
+                    ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+                    : ''}
 
                         ${handsHTML}
 
@@ -1827,4 +2191,5 @@
 
     </script>
 </body>
+
 </html>
