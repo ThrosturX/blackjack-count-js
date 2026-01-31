@@ -203,112 +203,112 @@
             pointer-events: none;
         }
 
-/* --- Ultra-thin Realistic Shoe --- */
+/* --- Realistic Deck Shoe --- */
 .shoe-body {
     position: relative;
-    width: 72px;
-    height: 140px; /* Fixed height, we'll scale content within */
-    background: #111;
-    border: 2px solid #444;
-    border-radius: 6px;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.95), 
-                3px 3px 10px rgba(0,0,0,0.7);
+    width: 80px;
+    height: 120px;
+    background: linear-gradient(to bottom, #2c2c2c, #1a1a1a);
+    border: 3px solid #444;
+    border-radius: 8px;
+    box-shadow: 
+        inset 0 0 10px rgba(0,0,0,0.8),
+        0 5px 15px rgba(0,0,0,0.6);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    overflow: hidden;
+    overflow: visible;
     padding: 0;
 }
 
 .card-stack {
     position: absolute;
-    bottom: 4px;
+    bottom: 8px;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0px; /* NO gap between cards */
+    gap: 0;
     transition: transform 0.3s ease;
     transform-origin: bottom;
+    max-height: 100px;
 }
 
 .card-back {
-    width: 66px;
-    height: 1px !important; /* Base height - VERY thin */
-    background: repeating-linear-gradient(
-        45deg,
-        #8b0000,
-        #8b0000 2px,
-        #a50000 2px,
-        #a50000 4px
-    );
-    flex-shrink: 0;
-    position: relative;
-}
-
-/* Top visible card has border color */
-.card-back:last-child {
-    height: 2px !important;
+    width: 70px;
+    height: 95px;
     background: 
-        linear-gradient(to bottom, 
-            rgba(255,255,255,0.1) 0%,
-            transparent 50%),
-        repeating-linear-gradient(
-            45deg,
-            #a71c1c,
-            #a71c1c 2px,
-            #b71c1c 2px,
-            #b71c1c 4px,
-            #c62828 4px,
-            #c62828 6px
-        );
-    box-shadow: 0 0 3px rgba(0,0,0,0.5);
-}
-
-/* Separator card - thicker and yellow */
-.card-back.separator {
-    height: 3px !important;
-    background: repeating-linear-gradient(
-        45deg,
-        #ffcc00,
-        #ffcc00 1px,
-        #ffaa00 1px,
-        #ffaa00 2px
-    );
+        linear-gradient(135deg, #8B0000 25%, #A00000 25%, #A00000 50%, #8B0000 50%, #8B0000 75%, #A00000 75%),
+        #b71c1c;
+    background-size: 10px 10px;
+    border: 2px solid #fff;
+    border-radius: 6px;
     box-shadow: 
-        0 0 4px rgba(255,204,0,0.5),
-        inset 0 0 2px rgba(0,0,0,0.3);
-    z-index: 5;
+        0 1px 3px rgba(0,0,0,0.3),
+        inset 0 0 10px rgba(0,0,0,0.2);
+    position: relative;
+    margin-top: -90px; /* Overlap significantly for realistic stack */
+    opacity: 0.95;
+    transform: translateY(0);
+    transition: transform 0.1s ease;
 }
 
-/* Card below separator (to make it stand out) */
-.card-back.separator + .card-back {
-    height: 2px !important;
+/* Top visible card has different styling */
+.card-back:last-child {
+    z-index: 10;
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 8px rgba(0,0,0,0.4),
+        inset 0 0 10px rgba(255,255,255,0.1);
+    border: 2px solid #ffd700;
 }
 
+/* Separator card - golden card to indicate cut card */
+.card-back.separator {
+    background: 
+        linear-gradient(135deg, #FFD700 25%, #FFA500 25%, #FFA500 50%, #FFD700 50%, #FFD700 75%, #FFA500 75%),
+        #ffcc00;
+    background-size: 8px 8px;
+    z-index: 8;
+    border: 2px solid #ff8c00;
+    box-shadow: 
+        0 2px 8px rgba(255, 215, 0, 0.5),
+        inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Slightly rotate cards for more natural look */
+.card-back:nth-child(even) {
+    transform: translateY(0) rotate(-0.5deg);
+}
+
+.card-back:nth-child(odd) {
+    transform: translateY(0) rotate(0.5deg);
+}
+
+/* Lip and base */
 .shoe-lip {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 16px;
-    background: linear-gradient(to bottom, #333, #222);
-    border-bottom: 2px solid #666;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    height: 18px;
+    background: linear-gradient(to bottom, #444, #333);
+    border-bottom: 2px solid #555;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.7);
     z-index: 20;
-    border-radius: 4px 4px 0 0;
+    border-radius: 6px 6px 0 0;
 }
 
 .shoe-base {
     position: absolute;
-    bottom: -10px;
-    width: 86px;
-    height: 12px;
-    background: #222;
-    border: 2px solid #666;
+    bottom: -8px;
+    width: 90px;
+    height: 10px;
+    background: linear-gradient(to bottom, #333, #222);
+    border: 2px solid #555;
     border-radius: 4px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
     z-index: -1;
 }
 
@@ -1099,68 +1099,33 @@ function updateShoeVisual() {
         
         const totalCards = state.shoe.length;
         
-        // Calculate scale factor based on deck count
-        // For 1 deck (52 cards): scale = 1.0
-        // For 8 decks (416 cards): scale = 0.125 (1/8)
-        const maxCardsForFullHeight = 52; // 1 deck fills the shoe
-        const scale = Math.min(1, maxCardsForFullHeight / totalCards);
-        
-        // Create ALL cards (but we'll cap at 416 for 8 decks performance)
-        const cardsToCreate = Math.min(totalCards, 416);
+        // Show only a representative sample of cards to avoid performance issues
+        // But ensure we show enough to represent the stack visually
+        const maxVisibleCards = 20; // Show at most 20 cards in the visual stack
+        const cardsToShow = Math.min(totalCards, maxVisibleCards);
         
         // Find separator position
         const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
-        let separatorCreated = false;
         
-        for (let i = 0; i < cardsToCreate; i++) {
-            // Map visual index to real index (we might skip some for performance in large shoes)
-            const realIndex = Math.floor((i / cardsToCreate) * totalCards);
+        // Create the cards from bottom to top (bottom cards appear first in DOM, on bottom layer)
+        for (let i = 0; i < cardsToShow; i++) {
+            // Calculate which card in the actual shoe this represents
+            // We want to show the bottom cards of the shoe (the ones that would actually be visible)
+            const realIndex = totalCards - cardsToShow + i; // Start from bottom of shoe
             
             const card = document.createElement('div');
             card.className = 'card-back';
             
-            // Check if this visual position should show separator
-            if (!separatorCreated && realIndex >= separatorIndex) {
+            // Check if this card is the separator card
+            if (realIndex === separatorIndex) {
                 card.classList.add('separator');
-                separatorCreated = true;
             }
             
-            // Top card (last one)
-            if (i === cardsToCreate - 1) {
-                // Already styled by CSS :last-child
-            }
-            
-            // Calculate brightness - cards at bottom are darker
-            const depth = i / cardsToCreate;
-            const brightness = 50 + (depth * 50); // 50% to 100%
-            card.style.filter = `brightness(${brightness}%)`;
-            
-            // Very subtle horizontal offset for natural stack look
-            if (i > 0 && i < cardsToCreate - 1) {
-                const offset = ((i % 3) - 1) * 0.3;
-                card.style.transform = `translateX(${offset}px)`;
-            }
+            // Add slight rotation for more natural look (CSS handles even/odd rotations)
+            card.style.zIndex = i; // Lower cards have lower z-index
             
             cardStack.appendChild(card);
         }
-        
-        // Scale the entire stack to fit in shoe
-        const cardHeight = 1; // Base card height in pixels
-        const topCardExtra = 1; // Top card is 2px total (1px base + 1px extra)
-        const separatorExtra = 2; // Separator is 3px total (1px base + 2px extra)
-        
-        // Calculate total visual height
-        let visualHeight = (cardsToCreate * cardHeight) + topCardExtra;
-        
-        // Apply scale to make it fit in shoe
-        const maxVisibleHeight = 120; // Max pixels visible in shoe
-        const scaleToFit = Math.min(1, maxVisibleHeight / visualHeight);
-        const finalScale = scale * scaleToFit;
-        
-        cardStack.style.transform = `scaleY(${finalScale})`;
-        
-        // Position the stack
-        cardStack.style.bottom = '4px';
     });
 }
 
@@ -1179,26 +1144,24 @@ function animateCardDraw() {
     const flyingCard = document.createElement('div');
     flyingCard.className = 'card-back';
     flyingCard.style.position = 'fixed';
-    flyingCard.style.width = '66px';
-    flyingCard.style.height = '30px'; // Tall for animation visibility
+    flyingCard.style.width = '70px';
+    flyingCard.style.height = '95px';
     flyingCard.style.zIndex = '1000';
     flyingCard.style.transition = 'all 0.3s ease-out';
     flyingCard.style.pointerEvents = 'none';
-    flyingCard.style.opacity = '0.8';
-    flyingCard.style.borderRadius = '3px';
-    flyingCard.style.boxShadow = '0 3px 6px rgba(0,0,0,0.5)';
+    flyingCard.style.opacity = '0.95';
+    flyingCard.style.borderRadius = '6px';
+    flyingCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
+    flyingCard.style.border = '2px solid #ffd700';
     
-    // Set gradient background
-    if (topCard.classList.contains('separator')) {
-        flyingCard.style.background = 'repeating-linear-gradient(45deg, #ffcc00, #ffcc00 1px, #ffaa00 1px, #ffaa00 2px)';
-    } else {
-        flyingCard.style.background = 'repeating-linear-gradient(45deg, #a71c1c, #a71c1c 2px, #b71c1c 2px, #b71c1c 4px, #c62828 4px, #c62828 6px)';
-    }
+    // Copy the background and other styles from the top card
+    flyingCard.style.background = window.getComputedStyle(topCard).background;
+    flyingCard.style.border = window.getComputedStyle(topCard).border;
     
     // Position at shoe
     const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();
-    flyingCard.style.left = `${shoeRect.left + 3}px`;
-    flyingCard.style.top = `${shoeRect.top + 10}px`;
+    flyingCard.style.left = `${shoeRect.left + 5}px`;
+    flyingCard.style.top = `${shoeRect.top + 15}px`;
     
     document.body.appendChild(flyingCard);
     
@@ -1210,7 +1173,7 @@ function animateCardDraw() {
         flyingCard.style.left = `${dealerRect.left + 80}px`;
         flyingCard.style.top = `${dealerRect.top + 40}px`;
         flyingCard.style.opacity = '0';
-        flyingCard.style.transform = 'rotate(20deg) scale(0.5)';
+        flyingCard.style.transform = 'rotate(20deg) scale(0.7)';
         
         setTimeout(() => {
             if (flyingCard.parentNode) {
@@ -1218,6 +1181,8 @@ function animateCardDraw() {
             }
             updateShoeVisual();
         }, 300);
+    }, 150);
+}
     }, 10);
 }
 
