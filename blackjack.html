@@ -160,44 +160,92 @@
 
         .shoe-body {
             position: relative;
-            width: 70px;
-            height: 100px;
-            background: #111;
-            border: 2px solid #555;
-            border-radius: 4px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            width: 76px;
+            height: 110px;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 6px 6px 4px 4px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.7), 2px 2px 5px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
             padding-bottom: 5px;
+            overflow: hidden;
         }
 
-        .shoe-stack-cards {
+        .card-stack {
+            position: absolute;
+            bottom: 5px;
+            width: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .visual-card {
+            width: 66px;
+            height: 16px;
+            background: var(--card-back-color);
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.3);
             position: relative;
-            width: 56px;
-            height: 0%;
+            transition: transform 0.2s;
+        }
+
+        .visual-card:first-child {
+            height: 20px;
+            background: #c62828;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+
+        .visual-card.separator {
+            background: linear-gradient(45deg, #ffeb3b 25%, #ffc107 25%, #ffc107 50%, #ffeb3b 50%, #ffeb3b 75%, #ffc107 75%);
+            background-size: 10px 10px;
+            border: 1px solid #ff9800;
+            height: 18px;
+            z-index: 1;
+        }
+
+        .visual-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: repeating-linear-gradient(
-                to bottom,
-                var(--card-back-color),
-                var(--card-back-color) 4px,
-                transparent 4px,
+                -45deg,
+                transparent,
                 transparent 5px,
-                #000 5px,
-                #000 6px
+                rgba(0,0,0,0.1) 5px,
+                rgba(0,0,0,0.1) 6px
             );
-            border-left: 1px solid #333;
-            border-right: 1px solid #333;
-            max-height: 90px;
-            transition: height 0.3s linear;
+            border-radius: 3px;
+        }
+
+        .shoe-lip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 12px;
+            background: linear-gradient(to bottom, #333, #111);
+            border-bottom: 2px solid #555;
+            border-radius: 4px 4px 0 0;
+            z-index: 3;
         }
 
         .shoe-base {
+            /* Keep existing but adjust positioning */
             position: absolute;
-            bottom: 0;
-            width: 80px;
-            height: 15px;
-            background: #000;
+            bottom: -8px;
+            width: 90px;
+            height: 12px;
+            background: #111;
             border: 2px solid #444;
             border-radius: 4px;
             z-index: -1;
@@ -568,8 +616,12 @@
 
         <!-- Visual Shoe (Right Side) -->
         <div class="shoe-container">
+            <!-- Replace the existing .shoe-body content with this -->
             <div class="shoe-body">
-                <div class="shoe-stack-cards" id="shoe-stack-visual"></div>
+                <div class="card-stack" id="card-stack">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+                <div class="shoe-lip"></div>
             </div>
             <div class="shoe-base"></div>
         </div>
@@ -632,7 +684,6 @@
             seatSelect: document.getElementById('seat-select'),
             strategyText: document.getElementById('strategy-text'),
             countHint: document.getElementById('count-hint'),
-            shoeStack: document.getElementById('shoe-stack-visual')
         };
 
         /* --- AUDIO STUB --- */
@@ -706,27 +757,26 @@
             // Clear seats visually if not already done (usually cleared before calling this)
             if(ui.seats.innerHTML === '') renderSeats();
 
-            ui.shoeStack.style.height = '0%';
+            // reset the count hint since we just shuffled
+            updateCountHint();
 
-            // Animation Sequence
+            // Remove the old fill animation code and replace with:
+            updateShoeVisual();
+            
+            // Show shuffling message for a moment
             setTimeout(() => {
-                const fillAnim = setInterval(() => {
-                    let currentH = parseInt(ui.shoeStack.style.height) || 0;
-                    if (currentH >= 100) {
-                        clearInterval(fillAnim);
-                        finishShuffle();
-                    } else {
-                        currentH += 5;
-                        ui.shoeStack.style.height = `${currentH}%`;
-                    }
-                }, 20);
-            }, 100);
+                state.isShuffling = false;
+                state.phase = 'BETTING';
+                ui.overlay.classList.remove('show');
+                updateGameFlow();
+            }, 800);
         }
 
         function finishShuffle() {
             state.isShuffling = false;
             state.phase = 'BETTING';
             ui.overlay.classList.remove('show');
+            updateShoeVisual();
             updateGameFlow(); // Check for auto-bets immediately
         }
 
@@ -735,9 +785,82 @@
             const decksRem = Math.max(1, state.shoe.length / 52);
             const trueCount = (state.runningCount / decksRem).toFixed(1);
             ui.runCount.textContent = `${state.runningCount} (TC:${trueCount})`;
+            
+            // Update shoe visualization
+            updateShoeVisual();
+        }
 
-            const pct = (state.shoe.length / state.totalInitialCards);
-            ui.shoeStack.style.height = `${pct * 100}%`;
+        /* --- Improved Shoe Visualization --- */
+        function updateShoeVisual() {
+            const cardStack = document.getElementById('card-stack');
+            if (!cardStack) return;
+            
+            // Clear existing visual cards
+            cardStack.innerHTML = '';
+            
+            // Don't show visual when shoe is empty (during shuffle)
+            if (state.shoe.length === 0 || state.isShuffling) {
+                return;
+            }
+            
+            // Calculate how many visual cards to show
+            // 1 visual card = ~5 real cards (adjustable)
+            const cardsPerVisual = 5;
+            const totalVisualCards = Math.min(30, Math.ceil(state.shoe.length / cardsPerVisual));
+            
+            // Find the separator position
+            const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
+            const visualSeparatorIndex = Math.floor(separatorIndex / cardsPerVisual);
+            
+            // Create visual cards
+            for (let i = 0; i < totalVisualCards; i++) {
+                const card = document.createElement('div');
+                card.className = 'visual-card';
+                
+                // First card (top) gets special styling
+                if (i === 0) {
+                    card.style.transform = 'translateY(-2px)';
+                }
+                
+                // Add separator styling if this visual card contains the separator
+                if (i === visualSeparatorIndex) {
+                    card.classList.add('separator');
+                }
+                
+                // Calculate opacity for depth effect (bottom cards are darker)
+                const opacity = 0.7 + (i / totalVisualCards) * 0.3;
+                card.style.opacity = opacity;
+                
+                // Add slight horizontal offset for stacked look
+                const offset = (totalVisualCards - i) * 0.3;
+                card.style.transform += ` translateX(${i % 2 === 0 ? offset : -offset}px)`;
+                
+                cardStack.appendChild(card);
+            }
+            
+            // Adjust card stack height based on number of cards
+            const maxHeight = 100; // Max visual height in pixels
+            const stackHeight = Math.min(maxHeight, totalVisualCards * 18);
+            cardStack.style.height = `${stackHeight}px`;
+            cardStack.style.bottom = '5px';
+        }
+
+        function animateCardDraw() {
+            const cardStack = document.getElementById('card-stack');
+            if (!cardStack || cardStack.children.length === 0) return;
+            
+            // Animate the top card being drawn
+            const topCard = cardStack.children[0];
+            topCard.style.transform = 'translateY(-30px) rotate(-5deg)';
+            topCard.style.opacity = '0';
+            
+            // Remove the card after animation
+            setTimeout(() => {
+                if (topCard.parentNode === cardStack) {
+                    cardStack.removeChild(topCard);
+                    updateShoeVisual(); // Re-render to adjust positions
+                }
+            }, 300);
         }
 
         /* --- GAME FLOW CONTROL --- */
@@ -892,8 +1015,69 @@
 
         /* --- GAME LOGIC --- */
 
+        function drawCard() {
+            if (state.shoe.length === 0) {
+                // Emergency shuffle mid-hand
+                console.warn("Shoe empty! Emergency shuffle.");
+                
+                // Save current game state
+                const currentPhase = state.phase;
+                const currentTurnIndex = state.turnIndex;
+                const currentSplitIndex = state.splitIndex;
+                
+                // Create new shoe without changing phase to SHUFFLING
+                const tempShoe = [];
+                state.runningCount = 0;
+                
+                // Create cards
+                for (let i = 0; i < state.deckCount; i++) {
+                    for (let s of SUITS) {
+                        for (let v of VALUES) {
+                            tempShoe.push(new Card(s, v));
+                        }
+                    }
+                }
+                
+                // Fisher-Yates Shuffle
+                for (let i = tempShoe.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tempShoe[i], tempShoe[j]] = [tempShoe[j], tempShoe[i]];
+                }
+                
+                // Add to existing shoe (for continuous play)
+                state.shoe = state.shoe.concat(tempShoe);
+                state.totalInitialCards = state.shoe.length;
+                
+                // Reset cut card
+                const cutIndex = Math.floor(state.totalInitialCards * (1 - PENETRATION));
+                state.shoe[cutIndex].isSplitCard = true;
+                state.cutCardReached = false;
+                
+                // Restore phase
+                state.phase = currentPhase;
+                state.turnIndex = currentTurnIndex;
+                state.splitIndex = currentSplitIndex;
+                
+                // Show brief notification
+                showOverlay("Reshuffling", "Mid-hand", "", "msg-shuffle");
+                playSound('shuffle');
+            }
+            
+            const card = state.shoe.pop();
+            if (card.isSplitCard) {
+                state.cutCardReached = true;
+            }
+
+            // Animate card draw from shoe
+            if (state.phase !== 'SHUFFLING') {
+                animateCardDraw();
+            }
+
+            return card;
+        }
+
         function dealHands() {
-            if (state.shoe.length < 10) {
+            if (state.shoe.length === 0) {
                 createShoe();
                 return;
             }
@@ -928,7 +1112,7 @@
                 }
                 const action = deals[i];
                 if(action.who === 'd') {
-                    const c = state.shoe.pop();
+                    const c = drawCard();
                     c.hidden = !!action.hidden;
                     state.dealer.hand.push(c);
                     if(c.isSplitCard) state.cutCardReached = true;
@@ -941,7 +1125,7 @@
                     renderDealer();
                 } else {
                     const p = state.players[action.idx];
-                    const c = state.shoe.pop();
+                    const c = drawCard();
                     if(c.isSplitCard) state.cutCardReached = true;
 
                     state.runningCount += c.count;
@@ -1052,7 +1236,7 @@
             const p = state.players[state.turnIndex];
             const h = p.hands[state.splitIndex];
 
-            const c = state.shoe.pop();
+            const c = drawCard();
             state.runningCount += c.count;
             updateStats();
             playSound('card');
@@ -1113,7 +1297,7 @@
             p.chips -= h.bet;
             h.bet *= 2;
 
-            const c = state.shoe.pop();
+            const c = drawCard();
             state.runningCount += c.count;
             updateStats();
             playSound('card');
@@ -1148,13 +1332,13 @@
             h.cards = [c1];
             p.hands.splice(state.splitIndex + 1, 0, newHand);
 
-            const cFirst = state.shoe.pop();
+            const cFirst = drawCard();
             state.runningCount += cFirst.count;
             updateStats();
             playSound('card');
             h.cards.push(cFirst);
 
-            const cSecond = state.shoe.pop();
+            const cSecond = drawCard();
             state.runningCount += cSecond.count;
             updateStats();
             playSound('card');
@@ -1180,7 +1364,7 @@
 
             function loop() {
                 if(score < 17) {
-                    const c = state.shoe.pop();
+                    const c = drawCard();
                     state.runningCount += c.count;
                     updateStats();
                     playSound('card');
@@ -1198,80 +1382,77 @@
         function resolveRound() {
             const dScore = calcScore(state.dealer.hand);
 
-            if (dScore > 21) {
+            if (dScore > 21 && false) {
                 showOverlay("Dealer Busts!", "All Active Hands Win", "", "msg-win");
-                playSound('win');
-                setTimeout(finishRound, 1500);
-            } else {
-                ui.overlay.classList.remove('show');
-                let pIndex = 0;
+            }
+            ui.overlay.classList.remove('show');
+            let pIndex = 0;
 
-                function processNextPlayer() {
-                    if (pIndex >= state.players.length) {
-                        finishRound();
-                        return;
-                    }
-
-                    const p = state.players[pIndex];
-                    pIndex++;
-
-                    if (!p || !p.hands.length) {
-                        processNextPlayer();
-                        return;
-                    }
-
-                    let hasAction = false;
-
-                    p.hands.forEach(h => {
-                        if (h.result !== null) {
-                             if (h.status === 'blackjack') {
-                                const profit = h.bet * 1.5;
-                                p.chips += h.bet + profit;
-                                showOverlay(`Player ${p.id+1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
-                                playSound('win');
-                                hasAction = true;
-                             } else if (h.status === 'bust') {
-                                showOverlay(`Player ${p.id+1}`, "Bust", `-$${h.bet}`, "msg-lose");
-                                playSound('lose');
-                                hasAction = true;
-                             }
-                             return;
-                        }
-
-                        const pScore = calcScore(h.cards);
-
-                        if(pScore > dScore) {
-                            h.status = 'win';
-                            h.result = 'win';
-                            p.chips += h.bet * 2;
-                            showOverlay(`Player ${p.id+1}`, `Won`, `+$${h.bet}`, "msg-win");
-                            playSound('win');
-                            hasAction = true;
-                        } else if (pScore < dScore) {
-                            h.status = 'lose';
-                            h.result = 'lose';
-                            showOverlay(`Player ${p.id+1}`, `Lost`, `-$${h.bet}`, "msg-lose");
-                            playSound('lose');
-                            hasAction = true;
-                        } else {
-                            h.status = 'push';
-                            h.result = 'push';
-                            p.chips += h.bet;
-                            showOverlay(`Player ${p.id+1}`, `Push`, "", "msg-push");
-                            hasAction = true;
-                        }
-                    });
-
-                    renderSeat(pIndex - 1);
-                    if (hasAction) {
-                        setTimeout(processNextPlayer, 1200);
-                    } else {
-                        processNextPlayer();
-                    }
+            function processNextPlayer() {
+                if (pIndex >= state.players.length) {
+                    finishRound();
+                    return;
                 }
 
-                processNextPlayer();
+                const p = state.players[pIndex];
+                pIndex++;
+
+                if (!p || !p.hands.length) {
+                    processNextPlayer();
+                    return;
+                }
+
+                let hasAction = false;
+
+                p.hands.forEach(h => {
+                    if (h.result !== null) {
+                            if (h.status === 'blackjack') {
+                            const profit = h.bet * 1.5;
+                            p.chips += h.bet + profit;
+                            showOverlay(`Player ${p.id+1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
+                            playSound('win');
+                            hasAction = true;
+                            } else if (h.status === 'bust') {
+                            showOverlay(`Player ${p.id+1}`, "Bust", `-$${h.bet}`, "msg-lose");
+                            playSound('lose');
+                            hasAction = true;
+                            }
+                            return;
+                    }
+
+                    const pScore = calcScore(h.cards);
+
+                    if(pScore > dScore || dScore > 21) {
+                        h.status = 'win';
+                        h.result = 'win';
+                        p.chips += h.bet * 2;
+                        showOverlay(`Player ${p.id+1}`, `Won`, `+$${h.bet}`, "msg-win");
+                        playSound('win');
+                        hasAction = true;
+                    } else if (pScore < dScore) {
+                        h.status = 'lose';
+                        h.result = 'lose';
+                        showOverlay(`Player ${p.id+1}`, `Lost`, `-$${h.bet}`, "msg-lose");
+                        playSound('lose');
+                        hasAction = true;
+                    } else {
+                        h.status = 'push';
+                        h.result = 'push';
+                        p.chips += h.bet;
+                        showOverlay(`Player ${p.id+1}`, `Push`, "", "msg-push");
+                        hasAction = true;
+                    }
+                });
+
+                renderSeat(pIndex - 1);
+                if (hasAction) {
+                    setTimeout(processNextPlayer, 1200);
+                } else {
+                    processNextPlayer();
+                }
             }
+
+            processNextPlayer();
         }
 
         function finishRound() {
@@ -1387,10 +1568,6 @@
         }
 
         function updateCountHint() {
-            if (state.phase !== 'BETTING') {
-                return;
-            }
-
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = (state.runningCount / decksRem);
 
