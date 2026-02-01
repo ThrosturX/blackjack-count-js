@@ -211,7 +211,7 @@
     background: linear-gradient(to bottom, #2c2c2c, #1a1a1a);
     border: 3px solid #444;
     border-radius: 8px;
-    box-shadow: 
+    box-shadow:
         inset 0 0 10px rgba(0,0,0,0.8),
         0 5px 15px rgba(0,0,0,0.6);
     display: flex;
@@ -374,8 +374,23 @@
                     #c62828 20px);
             border: 2px solid white;
         }
-        
-        /* New improved card back styling for the shoe */
+
+        /* Thin line representations for card backs and edges */
+        .card-back-line {
+            position: absolute;
+            width: 70px;
+            height: 1px;
+            background: linear-gradient(90deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
+        }
+
+        .card-edge-line {
+            position: absolute;
+            width: 70px;
+            height: 1px;
+            background-color: #888;
+        }
+
+        /* Card back styling for regular cards (when used elsewhere) */
         .card-back {
             width: 70px;
             height: 95px;
@@ -386,7 +401,7 @@
                     #c62828 20px);
             border: 2px solid white;
             border-radius: 6px;
-            box-shadow: 
+            box-shadow:
                 0 1px 3px rgba(0,0,0,0.3),
                 inset 0 0 10px rgba(0,0,0,0.2);
             position: relative;
@@ -400,7 +415,7 @@
         .card-back:last-child {
             z-index: 10;
             transform: translateY(0);
-            box-shadow: 
+            box-shadow:
                 0 2px 8px rgba(0,0,0,0.4),
                 inset 0 0 10px rgba(255,255,255,0.1);
             border: 2px solid #ffd700;
@@ -413,7 +428,7 @@
             background-size: 8px 8px;
             z-index: 8 !important;
             border: 3px solid #ff8c00;
-            box-shadow: 
+            box-shadow:
                 0 3px 12px rgba(255, 215, 0, 0.7),
                 inset 0 0 15px rgba(0,0,0,0.3);
             height: 105px; /* Thicker than regular cards */
@@ -1084,74 +1099,91 @@
 function updateShoeVisual() {
     const cardStack = document.getElementById('card-stack');
     if (!cardStack) return;
-    
+
     requestAnimationFrame(() => {
         cardStack.innerHTML = '';
-        
+
         if (state.shoe.length === 0 || state.isShuffling) {
             return;
         }
-        
+
         const totalCards = state.shoe.length;
-        
+
         // Show a proportional number of cards based on remaining cards
-        // Use a logarithmic scale to make the difference more visible
         const maxVisibleCards = 40; // Maximum cards to show when full
         const minVisibleCards = 3;  // Minimum cards to always show
         let cardsToShow;
-        
+
         // Calculate proportional representation
         if (state.totalInitialCards > 0) {
             const percentageRemaining = totalCards / state.totalInitialCards;
-            cardsToShow = Math.max(minVisibleCards, Math.min(maxVisibleCards, 
+            cardsToShow = Math.max(minVisibleCards, Math.min(maxVisibleCards,
                 Math.ceil(percentageRemaining * maxVisibleCards)));
         } else {
             cardsToShow = Math.min(totalCards, maxVisibleCards);
         }
-        
+
         // Find separator position
         const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
-        
-        // Create the cards from bottom to top (bottom cards appear first in DOM, on bottom layer)
+
+        // Create thin lines representing card backs and edges
         for (let i = 0; i < cardsToShow; i++) {
             // Calculate which card in the actual shoe this represents
-            // We want to show the bottom cards of the shoe (the ones that would actually be visible)
             const realIndex = totalCards - cardsToShow + i; // Start from bottom of shoe
-            
-            const card = document.createElement('div');
-            card.className = 'card-back';
-            
-            // Check if this card is the separator card
+
+            // Card back line (gradient representing the card back pattern)
+            const cardBackLine = document.createElement('div');
+            cardBackLine.className = 'card-back-line';
+            cardBackLine.style.cssText = `
+                position: absolute;
+                width: 70px;
+                height: 1px;
+                background: linear-gradient(90deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
+                bottom: ${i * 2}px;
+                z-index: ${i * 2};
+            `;
+
+            // Check if this position corresponds to the separator card
             if (realIndex === separatorIndex) {
-                card.classList.add('separator');
+                cardBackLine.style.height = '2px'; // Make separator card back line slightly thicker
+                cardBackLine.style.backgroundColor = '#FFD700';
+                cardBackLine.style.background = 'linear-gradient(90deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)';
+                cardBackLine.style.zIndex = 100; // Ensure separator is visible
             }
-            
-            // Adjust vertical spacing based on number of cards to show
-            const spacing = Math.max(0.5, 2 - (cardsToShow / 20));
-            card.style.marginTop = `-${90 - (spacing * i)}px`; // Stack with variable overlap
-            
-            card.style.zIndex = i; // Lower cards have lower z-index
-            card.style.transform = `translateY(${i * 0.2}px) rotate(${i % 2 === 0 ? -0.3 : 0.3}deg)`; // Slight rotation variation
-            
-            cardStack.appendChild(card);
+
+            cardStack.appendChild(cardBackLine);
+
+            // Card edge line (representing the physical edge of the card)
+            const cardEdgeLine = document.createElement('div');
+            cardEdgeLine.className = 'card-edge-line';
+            cardEdgeLine.style.cssText = `
+                position: absolute;
+                width: 70px;
+                height: 1px;
+                background-color: #888;
+                bottom: ${i * 2 + 1}px;
+                z-index: ${i * 2 + 1};
+            `;
+
+            // Make separator card edge line more prominent
+            if (realIndex === separatorIndex) {
+                cardEdgeLine.style.height = '3px'; // Much thicker for separator
+                cardEdgeLine.style.backgroundColor = '#ff8c00';
+                cardEdgeLine.style.zIndex = 101; // Ensure separator edge is very visible
+            }
+
+            cardStack.appendChild(cardEdgeLine);
         }
     });
 }
 
 function animateCardDraw() {
     const cardStack = document.getElementById('card-stack');
-    if (!cardStack || cardStack.children.length === 0) return;
-    
-    // Get and remove top card
-    const topCard = cardStack.lastElementChild;
-    if (!topCard) return;
-    
-    // Remove immediately
-    cardStack.removeChild(topCard);
-    
-    // Create flying animation
+    if (!cardStack) return;
+
+    // Create flying card animation using the same style as the hole card
     const flyingCard = document.createElement('div');
-    flyingCard.className = 'card-back';
+    flyingCard.className = 'card hidden'; // Use the same styling as hidden cards
     flyingCard.style.position = 'fixed';
     flyingCard.style.width = '70px';
     flyingCard.style.height = '95px';
@@ -1162,38 +1194,32 @@ function animateCardDraw() {
     flyingCard.style.borderRadius = '6px';
     flyingCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
     flyingCard.style.border = '2px solid #ffd700';
-    
-    // Copy the background and other styles from the top card
-    flyingCard.style.background = window.getComputedStyle(topCard).background;
-    flyingCard.style.border = window.getComputedStyle(topCard).border;
-    
+
     // Position at shoe
     const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();
     flyingCard.style.left = `${shoeRect.left + 5}px`;
     flyingCard.style.top = `${shoeRect.top + 15}px`;
-    
+
     document.body.appendChild(flyingCard);
-    
+
     // Animate to dealer's hand area (center top of table)
     setTimeout(() => {
         const tableRect = document.getElementById('table').getBoundingClientRect();
         const centerX = tableRect.left + tableRect.width / 2;
         const centerY = tableRect.top + 80; // Upper center of table
-        
+
         flyingCard.style.left = `${centerX}px`;
         flyingCard.style.top = `${centerY}px`;
         flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
         flyingCard.style.opacity = '0.7';
-        
+
         setTimeout(() => {
             if (flyingCard.parentNode) {
                 flyingCard.parentNode.removeChild(flyingCard);
             }
             updateShoeVisual();
-
         }, 400);
     }, 10);
-
 }
 
         /* --- GAME FLOW CONTROL --- */
@@ -1403,7 +1429,7 @@ function animateCardDraw() {
 
             // Update count
             updateStats();
-            
+
             // Animate or just update
             if (state.phase === 'PLAYING' || (state.phase === 'DEALING' && state.dealer.hand.length + state.dealer.hand.length < 4)) {
                 animateCardDraw();
