@@ -1366,10 +1366,12 @@
                         const decksRem = Math.max(1, state.shoe.length / 52);
                         const tc = state.runningCount / decksRem;
                         let betAmt = p.lastBet || 10;
-                        if (tc >= 2) betAmt = 50;
+                        if (tc >= 3) betAmt = 100;
+                        else if (tc >= 2) betAmt = 50;
                         else if (tc <= -2) betAmt = 10;
                         else betAmt = 20;
                         if (betAmt > p.chips) betAmt = p.chips;
+
 
                         placeBetInternal(idx, betAmt);
                         madeChanges = true;
@@ -1957,18 +1959,26 @@
             }
 
             function isSoftHand(cards) {
-                let score = 0;
-                let aces = 0;
+                let minScore = 0;
+                let hasAce = false;
+
                 for (let c of cards) {
                     if (c.hidden) continue;
-                    score += c.num;
-                    if (c.val === 'A') aces++;
+                    
+                    // Calculate the absolute minimum value (Aces = 1)
+                    if (c.val === 'A') {
+                        minScore += 1;
+                        hasAce = true;
+                    } else {
+                        // Ensure we use the card's blackjack value (10 for J, Q, K)
+                        minScore += Math.min(10, c.num); 
+                    }
                 }
-                if (aces > 0) {
-                    let s = score - (aces - 1) - 10;
-                    if (s <= 21) return true;
-                }
-                return false;
+
+                // A hand is "Soft" ONLY if:
+                // 1. It has at least one Ace
+                // 2. Changing ONE Ace from 1 to 11 (adding 10) stays at or under 21
+                return hasAce && (minScore + 10 <= 21);
             }
 
             function getStrategyHint(dCard, pCards) {
