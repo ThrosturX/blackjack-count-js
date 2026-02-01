@@ -762,6 +762,12 @@ function runAutoPlay() {
 function playerHit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
+    
+    // Prevent hitting if hand is not in playing status (already busted, stood, etc.)
+    if (h.status !== 'playing') {
+        playSound('error');
+        return;
+    }
 
     const c = drawCard(false, state.turnIndex);
     state.runningCount += c.count;
@@ -796,6 +802,12 @@ function playerStand() {
     ui.strategyText.textContent = "";
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
+    
+    // Prevent standing if hand is not in playing status
+    if (h.status !== 'playing') {
+        playSound('error');
+        return;
+    }
     h.status = 'stand';
 
     const nextSplit = p.hands.findIndex((hand, idx) => idx > state.splitIndex && hand.status === 'playing');
@@ -815,6 +827,12 @@ function playerStand() {
 function playerDouble() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
+    
+    // Prevent doubling if hand is not in playing status
+    if (h.status !== 'playing') {
+        playSound('error');
+        return;
+    }
 
     // Protection: Cannot double if not initial 2 cards
     if (h.cards.length !== 2) { playSound('error'); return; }
@@ -840,6 +858,12 @@ function playerDouble() {
 function playerSplit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
+    
+    // Prevent splitting if hand is not in playing status
+    if (h.status !== 'playing') {
+        playSound('error');
+        return;
+    }
 
     if (p.chips < h.bet) { playSound('error'); return; }
     const c1 = h.cards[0];
