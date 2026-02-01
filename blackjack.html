@@ -991,26 +991,29 @@
             
             function preloadAudio() {
                 const soundFiles = {
-                    'card': 'audio/card3.wav',
-                    'shuffle': 'audio/shuffle.wav',
-                    'chip': 'audio/chip.wav',
-                    'win': 'audio/win.wav',
-                    'lose': 'audio/lose.wav',
-                    'bust': 'audio/bust.wav',
-                    'blackjack': 'audio/blackjack.wav',
-                    'error': 'audio/error.wav'
+                    'card': ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav', 'card5.wav'],
+                    'shuffle': ['shuffle.wav'],
+                    'chip': ['chip.wav', 'chips.wav'],
+                    'win': ['win.wav', 'nice.wav', 'youwin.wav', 'winner.wav'],
+                    'lose': ['lose.wav', 'noluck.wav', 'itiswhatis.wav', 'nextluck.wav', 'lucknext.wav'],
+                    'bust': ['bust.wav', 'lose.wav'],
+                    'blackjack': ['blackjack.wav', 'nice.wav'],
+                    'error': ['error.wav']
                 };
                 
-                for (const [type, filepath] of Object.entries(soundFiles)) {
-                    const audio = new Audio();
-                    audio.preload = 'auto';
-                    audio.src = filepath;
-                    audio.load(); // Start loading
-                    audioAssets[type] = audio;
-                    
-                    // Add error handling for when the audio file doesn't exist
-                    audio.addEventListener('error', function(e) {
-                        console.warn(`Could not load audio file: ${filepath}`);
+                for (const [type, filepaths] of Object.entries(soundFiles)) {
+                    // audioAssets[type] will now hold an array of Audio objects
+                    audioAssets[type] = filepaths.map(path => {
+                        const audio = new Audio();
+                        audio.preload = 'auto';
+                        audio.src = 'audio/' + path;
+                        audio.load();
+                        
+                        audio.addEventListener('error', () => {
+                            console.warn(`Could not load audio file: ${path}`);
+                        });
+                        
+                        return audio;
                     });
                 }
             }
@@ -1020,9 +1023,13 @@
 
             function playSound(type) {
                 if (audioAssets[type]) {
+                    const sounds = audioAssets[type]
+
+                    const audioChoice = sounds[Math.floor(Math.random() * sounds.length)];
                     // Create a new instance to allow overlapping sounds
-                    const audio = new Audio(audioAssets[type].src);
-                    if (type === 'card') {
+                    const audio = new Audio(audioChoice.src);
+                    audio.volume = 0.05; // Set volume low
+                    if (type === 'card' || type === 'chip') {
                         audio.volume = 0.3; // Set volume to 30%
                     }
                     audio.play().catch(e => {
@@ -1065,6 +1072,7 @@
             function createShoe() {
                 // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
                 if (state.isShuffling) return;
+                playSound('shuffle');
 
                 state.shoe = [];
                 state.runningCount = 0;
@@ -1529,7 +1537,6 @@
                 }
 
                 state.phase = 'DEALING';
-                playSound('shuffle');
 
                 state.players.forEach(p => {
                     if (p && p.isReady) {
@@ -1597,6 +1604,7 @@
                         if (s === 21) {
                             h.status = 'blackjack';
                             h.result = 'win';
+                            playSound('blackjack')
                             if (dScore === 21) h.result = 'push';
                         } else {
                             playing = true;
@@ -1695,7 +1703,7 @@
                     if (calcScore(h.cards) > 21) {
                         h.status = 'bust';
                         h.result = 'lose';
-                        playSound('lose');
+                        playSound('bust');
                         ui.strategyText.textContent = "";
                         setTimeout(nextTurn, 800);
                     } else if (calcScore(h.cards) === 21) {
@@ -1856,11 +1864,10 @@
                                 const profit = h.bet * 1.5;
                                 p.chips += h.bet + profit;
                                 showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
-                                playSound('win');
                                 hasAction = true;
                             } else if (h.status === 'bust') {
                                 showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
-                                playSound('lose');
+//                              playSound('bust');
                                 hasAction = true;
                             }
                             return;
