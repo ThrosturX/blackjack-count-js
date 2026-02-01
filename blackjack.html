@@ -235,56 +235,6 @@
     max-height: 100px;
 }
 
-.card-back {
-    width: 70px;
-    height: 95px;
-    background: 
-        linear-gradient(135deg, #8B0000 25%, #A00000 25%, #A00000 50%, #8B0000 50%, #8B0000 75%, #A00000 75%),
-        #b71c1c;
-    background-size: 10px 10px;
-    border: 2px solid #fff;
-    border-radius: 6px;
-    box-shadow: 
-        0 1px 3px rgba(0,0,0,0.3),
-        inset 0 0 10px rgba(0,0,0,0.2);
-    position: relative;
-    margin-top: -90px; /* Overlap significantly for realistic stack */
-    opacity: 0.95;
-    transform: translateY(0);
-    transition: transform 0.1s ease;
-}
-
-/* Top visible card has different styling */
-.card-back:last-child {
-    z-index: 10;
-    transform: translateY(0);
-    box-shadow: 
-        0 2px 8px rgba(0,0,0,0.4),
-        inset 0 0 10px rgba(255,255,255,0.1);
-    border: 2px solid #ffd700;
-}
-
-/* Separator card - golden card to indicate cut card */
-.card-back.separator {
-    background: 
-        linear-gradient(135deg, #FFD700 25%, #FFA500 25%, #FFA500 50%, #FFD700 50%, #FFD700 75%, #FFA500 75%),
-        #ffcc00;
-    background-size: 8px 8px;
-    z-index: 8;
-    border: 2px solid #ff8c00;
-    box-shadow: 
-        0 2px 8px rgba(255, 215, 0, 0.5),
-        inset 0 0 10px rgba(0,0,0,0.2);
-}
-
-/* Slightly rotate cards for more natural look */
-.card-back:nth-child(even) {
-    transform: translateY(0) rotate(-0.5deg);
-}
-
-.card-back:nth-child(odd) {
-    transform: translateY(0) rotate(0.5deg);
-}
 
 /* Lip and base */
 .shoe-lip {
@@ -423,6 +373,51 @@
                     #c62828 10px,
                     #c62828 20px);
             border: 2px solid white;
+        }
+        
+        /* New improved card back styling for the shoe */
+        .card-back {
+            width: 70px;
+            height: 95px;
+            background: repeating-linear-gradient(45deg,
+                    #b71c1c,
+                    #b71c1c 10px,
+                    #c62828 10px,
+                    #c62828 20px);
+            border: 2px solid white;
+            border-radius: 6px;
+            box-shadow: 
+                0 1px 3px rgba(0,0,0,0.3),
+                inset 0 0 10px rgba(0,0,0,0.2);
+            position: relative;
+            margin-top: -90px; /* Overlap significantly for realistic stack */
+            opacity: 0.95;
+            transform: translateY(0);
+            transition: transform 0.1s ease;
+        }
+
+        /* Top visible card has different styling */
+        .card-back:last-child {
+            z-index: 10;
+            transform: translateY(0);
+            box-shadow: 
+                0 2px 8px rgba(0,0,0,0.4),
+                inset 0 0 10px rgba(255,255,255,0.1);
+            border: 2px solid #ffd700;
+        }
+
+        /* Separator card - golden thick card to indicate cut card */
+        .card-back.separator {
+            background: #ffcc00;
+            background: linear-gradient(135deg, #FFD700 25%, #FFA500 25%, #FFA500 50%, #FFD700 50%, #FFD700 75%, #FFA500 75%);
+            background-size: 8px 8px;
+            z-index: 8 !important;
+            border: 3px solid #ff8c00;
+            box-shadow: 
+                0 3px 12px rgba(255, 215, 0, 0.7),
+                inset 0 0 15px rgba(0,0,0,0.3);
+            height: 105px; /* Thicker than regular cards */
+            width: 75px; /* Slightly wider */
         }
 
         .card.hidden * {
@@ -1099,10 +1094,20 @@ function updateShoeVisual() {
         
         const totalCards = state.shoe.length;
         
-        // Show only a representative sample of cards to avoid performance issues
-        // But ensure we show enough to represent the stack visually
-        const maxVisibleCards = 20; // Show at most 20 cards in the visual stack
-        const cardsToShow = Math.min(totalCards, maxVisibleCards);
+        // Show a proportional number of cards based on remaining cards
+        // Use a logarithmic scale to make the difference more visible
+        const maxVisibleCards = 40; // Maximum cards to show when full
+        const minVisibleCards = 3;  // Minimum cards to always show
+        let cardsToShow;
+        
+        // Calculate proportional representation
+        if (state.totalInitialCards > 0) {
+            const percentageRemaining = totalCards / state.totalInitialCards;
+            cardsToShow = Math.max(minVisibleCards, Math.min(maxVisibleCards, 
+                Math.ceil(percentageRemaining * maxVisibleCards)));
+        } else {
+            cardsToShow = Math.min(totalCards, maxVisibleCards);
+        }
         
         // Find separator position
         const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
@@ -1121,8 +1126,12 @@ function updateShoeVisual() {
                 card.classList.add('separator');
             }
             
-            // Add slight rotation for more natural look (CSS handles even/odd rotations)
+            // Adjust vertical spacing based on number of cards to show
+            const spacing = Math.max(0.5, 2 - (cardsToShow / 20));
+            card.style.marginTop = `-${90 - (spacing * i)}px`; // Stack with variable overlap
+            
             card.style.zIndex = i; // Lower cards have lower z-index
+            card.style.transform = `translateY(${i * 0.2}px) rotate(${i % 2 === 0 ? -0.3 : 0.3}deg)`; // Slight rotation variation
             
             cardStack.appendChild(card);
         }
@@ -1147,7 +1156,7 @@ function animateCardDraw() {
     flyingCard.style.width = '70px';
     flyingCard.style.height = '95px';
     flyingCard.style.zIndex = '1000';
-    flyingCard.style.transition = 'all 0.3s ease-out';
+    flyingCard.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
     flyingCard.style.pointerEvents = 'none';
     flyingCard.style.opacity = '0.95';
     flyingCard.style.borderRadius = '6px';
@@ -1165,24 +1174,23 @@ function animateCardDraw() {
     
     document.body.appendChild(flyingCard);
     
-    // Animate to dealer
+    // Animate to dealer's hand area (center top of table)
     setTimeout(() => {
-        const dealerArea = document.getElementById('dealer-area');
-        const dealerRect = dealerArea.getBoundingClientRect();
+        const tableRect = document.getElementById('table').getBoundingClientRect();
+        const centerX = tableRect.left + tableRect.width / 2;
+        const centerY = tableRect.top + 80; // Upper center of table
         
-        flyingCard.style.left = `${dealerRect.left + 80}px`;
-        flyingCard.style.top = `${dealerRect.top + 40}px`;
-        flyingCard.style.opacity = '0';
-        flyingCard.style.transform = 'rotate(20deg) scale(0.7)';
+        flyingCard.style.left = `${centerX}px`;
+        flyingCard.style.top = `${centerY}px`;
+        flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
+        flyingCard.style.opacity = '0.7';
         
         setTimeout(() => {
             if (flyingCard.parentNode) {
                 flyingCard.parentNode.removeChild(flyingCard);
             }
             updateShoeVisual();
-        }, 300);
-    }, 150);
-}
+        }, 400);
     }, 10);
 }
 
