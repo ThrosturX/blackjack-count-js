@@ -985,9 +985,53 @@
                 countHint: document.getElementById('count-hint'),
             };
 
-            /* --- AUDIO STUB --- */
+            /* --- AUDIO HANDLING --- */
+            // Preload audio assets
+            const audioAssets = {};
+            
+            function preloadAudio() {
+                const soundFiles = {
+                    'card': 'audio/card3.wav',
+                    'shuffle': 'audio/shuffle.wav',
+                    'chip': 'audio/chip.wav',
+                    'win': 'audio/win.wav',
+                    'lose': 'audio/lose.wav',
+                    'bust': 'audio/bust.wav',
+                    'blackjack': 'audio/blackjack.wav',
+                    'error': 'audio/error.wav'
+                };
+                
+                for (const [type, filepath] of Object.entries(soundFiles)) {
+                    const audio = new Audio();
+                    audio.preload = 'auto';
+                    audio.src = filepath;
+                    audio.load(); // Start loading
+                    audioAssets[type] = audio;
+                    
+                    // Add error handling for when the audio file doesn't exist
+                    audio.addEventListener('error', function(e) {
+                        console.warn(`Could not load audio file: ${filepath}`);
+                    });
+                }
+            }
+
+            // Initialize audio at startup
+            preloadAudio();
+
             function playSound(type) {
-                console.log("NOTE: Implement audio for: " + type);
+                if (audioAssets[type]) {
+                    // Create a new instance to allow overlapping sounds
+                    const audio = new Audio(audioAssets[type].src);
+                    if (type === 'card') {
+                        audio.volume = 0.3; // Set volume to 30%
+                    }
+                    audio.play().catch(e => {
+                        console.warn(`Could not play ${type} sound:`, e.message);
+                    });
+                } else {
+                    // For all other sound types, print warning without erroring
+                    console.warn("Audio not implemented for: " + type);
+                }
             }
 
             /* --- CARD CLASS --- */
