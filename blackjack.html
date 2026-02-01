@@ -202,6 +202,8 @@
             z-index: 20;
             pointer-events: none;
         }
+        
+
 
 /* --- Realistic Deck Shoe --- */
 .shoe-body {
@@ -1098,7 +1100,11 @@
 
 function updateShoeVisual() {
     const cardStack = document.getElementById('card-stack');
-    if (!cardStack) return;
+    const shoeContainer = document.querySelector('.shoe-container');
+    if (!cardStack || !shoeContainer) return;
+
+    // Remove horizontal class to keep only vertical orientation
+    shoeContainer.classList.remove('horizontal');
 
     requestAnimationFrame(() => {
         cardStack.innerHTML = '';
@@ -1109,22 +1115,11 @@ function updateShoeVisual() {
 
         const totalCards = state.shoe.length;
 
-        // Show a proportional number of cards based on remaining cards
-        const maxVisibleCards = 40; // Maximum cards to show when full
-        const minVisibleCards = 3;  // Minimum cards to always show
-        let cardsToShow;
-
-        // Calculate proportional representation
-        if (state.totalInitialCards > 0) {
-            const percentageRemaining = totalCards / state.totalInitialCards;
-            cardsToShow = Math.max(minVisibleCards, Math.min(maxVisibleCards,
-                Math.ceil(percentageRemaining * maxVisibleCards)));
-        } else {
-            cardsToShow = Math.min(totalCards, maxVisibleCards);
-        }
-
         // Find separator position
         const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
+
+        // Show all cards without artificial limits
+        const cardsToShow = totalCards;
 
         // Create thin lines representing card backs and edges
         for (let i = 0; i < cardsToShow; i++) {
@@ -1134,19 +1129,20 @@ function updateShoeVisual() {
             // Card back line (gradient representing the card back pattern)
             const cardBackLine = document.createElement('div');
             cardBackLine.className = 'card-back-line';
+            
+            // Vertical orientation only (no horizontal mode)
             cardBackLine.style.cssText = `
                 position: absolute;
                 width: 70px;
                 height: 1px;
                 background: linear-gradient(90deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
-                bottom: ${i * 2}px;
+                bottom: ${i * 1.5}px;
                 z-index: ${i * 2};
             `;
 
             // Check if this position corresponds to the separator card
             if (realIndex === separatorIndex) {
                 cardBackLine.style.height = '2px'; // Make separator card back line slightly thicker
-                cardBackLine.style.backgroundColor = '#FFD700';
                 cardBackLine.style.background = 'linear-gradient(90deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)';
                 cardBackLine.style.zIndex = 100; // Ensure separator is visible
             }
@@ -1156,12 +1152,14 @@ function updateShoeVisual() {
             // Card edge line (representing the physical edge of the card)
             const cardEdgeLine = document.createElement('div');
             cardEdgeLine.className = 'card-edge-line';
+            
+            // Vertical orientation only (original)
             cardEdgeLine.style.cssText = `
                 position: absolute;
                 width: 70px;
                 height: 1px;
                 background-color: #888;
-                bottom: ${i * 2 + 1}px;
+                bottom: ${i * 1.5 + 0.5}px;
                 z-index: ${i * 2 + 1};
             `;
 

@@ -1,1 +1,72 @@
-Nothing needs to be added to .gitignore since only a single HTML file was modified and no build artifacts, dependencies, or temporary files were detected in the changes.
+```
+# IDE and editor files
+.vscode/
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Compression and archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.gz
+*.rar
+*.7z
+*.bz2
+*.xz
+*.tgz
+*.tar
+*.Z
+*.lz
+*.lzo
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.zst
+```
