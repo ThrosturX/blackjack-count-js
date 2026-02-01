@@ -1397,7 +1397,7 @@
                 if (!p) return;
 
                 playSound('chip');
-                p.currentBet = amt;
+                p.currentBet += amt;
                 p.lastBet = amt;
                 p.chips -= amt;
                 p.isReady = true;
