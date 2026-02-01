@@ -1141,22 +1141,28 @@
                         cardsToShow = totalCards;
                     }
 
+                    // Flip the shoe horizontally: draw from right to left (dealer draws from right/end of shoe)
+                    const totalWidth = cardsToShow * 2; // Each card takes 2px (back line + edge line)
+
                     // Create thin lines representing card backs and edges
                     for (let i = 0; i < cardsToShow; i++) {
                         // Calculate which card in the actual shoe this represents
-                        const realIndex = Math.floor(totalCards - cardsToShow + i * reductionFactor); // Start from bottom of shoe
+                        // Since we're flipping horizontally, we want the top card (last drawn) to be on the right
+                        const realIndex = Math.floor(i * reductionFactor); // Start from beginning of shoe (top cards)
 
                         // Card back line (representing the visible part of the card back)
                         const cardBackLine = document.createElement('div');
                         cardBackLine.className = 'card-back-line';
 
-                        // Horizontal orientation
+                        // Horizontal orientation - flip by calculating position from the right
+                        const positionFromRight = totalWidth - (i * 2);
+                        
                         cardBackLine.style.cssText = `
                 position: absolute;
                 width: 2px;
                 height: 70px;
                 background: linear-gradient(0deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
-                left: ${i * 2}px;
+                left: ${positionFromRight}px;
                 z-index: ${i * 2};
             `;
 
@@ -1174,13 +1180,15 @@
                         const cardEdgeLine = document.createElement('div');
                         cardEdgeLine.className = 'card-edge-line';
 
-                        // Horizontal orientation
+                        // Horizontal orientation - flip by calculating position from the right
+                        const edgePositionFromRight = totalWidth - (i * 2 + 1);
+                        
                         cardEdgeLine.style.cssText = `
                 position: absolute;
                 width: 2px;
                 height: 70px;
                 background-color: #888;
-                left: ${i * 2 + 1}px;
+                left: ${edgePositionFromRight}px;
                 z-index: ${i * 2 + 1};
             `;
 
@@ -1192,6 +1200,36 @@
                         }
 
                         cardStack.appendChild(cardEdgeLine);
+                    }
+                    
+                    // Ensure the separator card is always visible by adding it explicitly if needed
+                    if (separatorIndex !== -1 && totalCards > 0) {
+                        // Calculate where the separator should appear in the visual representation
+                        // Since we're showing the shoe flipped horizontally (dealer draws from right), 
+                        // the separator card (which is at 25% from start of full shoe) should appear 
+                        // at the corresponding position from the LEFT side of the visual representation
+                        const separatorVisualPos = Math.floor((separatorIndex / state.totalInitialCards) * cardsToShow);
+                        const positionFromRight = totalWidth - (separatorVisualPos * 2);
+                        
+                        // Add an explicit separator card if it wasn't properly represented in the loop above
+                        // Only add if it's within our rendered range and not already properly shown
+                        if (separatorVisualPos < cardsToShow) {
+                            // Create an extra separator card element to ensure visibility
+                            const separatorCard = document.createElement('div');
+                            separatorCard.className = 'card-back-line';
+                            
+                            separatorCard.style.cssText = `
+                position: absolute;
+                width: 4px;
+                height: 75px;
+                background: linear-gradient(0deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+                left: ${positionFromRight}px;
+                z-index: 200; // Very high z-index to ensure visibility
+                border: 1px solid #ff8c00;
+            `;
+                            
+                            cardStack.appendChild(separatorCard);
+                        }
                     }
                 });
             }
