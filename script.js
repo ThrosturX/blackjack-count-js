@@ -319,7 +319,7 @@ function updateShoeVisual() {
     });
 }
 
-function animateCardDraw() {
+function animateCardDraw(toDealer = true, seatIndex = null) {
     const cardStack = document.getElementById('card-stack');
     if (!cardStack) return;
 
@@ -344,14 +344,32 @@ function animateCardDraw() {
 
     document.body.appendChild(flyingCard);
 
-    // Animate  (NOTE: Only animates to dealer, should animate to player hands too)
+    // Determine destination based on parameters
     setTimeout(() => {
-        const tableRect = document.getElementById('table').getBoundingClientRect();
-        const centerX = tableRect.left + tableRect.width / 2 + 36;
-        const centerY = tableRect.top + 60; // Upper center of table
+        let destX, destY;
+        
+        if (!toDealer && seatIndex !== null) {
+            // Animate to specific player seat
+            const seatElement = document.getElementById(`seat-${seatIndex}`);
+            if (seatElement) {
+                const seatRect = seatElement.getBoundingClientRect();
+                destX = seatRect.left + seatRect.width / 2;
+                destY = seatRect.top + seatRect.height / 2;
+            } else {
+                // Fallback to dealer if seat element not found
+                const tableRect = document.getElementById('table').getBoundingClientRect();
+                destX = tableRect.left + tableRect.width / 2 + 36;
+                destY = tableRect.top + 60;
+            }
+        } else {
+            // Animate to dealer
+            const tableRect = document.getElementById('table').getBoundingClientRect();
+            destX = tableRect.left + tableRect.width / 2 + 36;
+            destY = tableRect.top + 60;
+        }
 
-        flyingCard.style.left = `${centerX}px`;
-        flyingCard.style.top = `${centerY}px`;
+        flyingCard.style.left = `${destX}px`;
+        flyingCard.style.top = `${destY}px`;
         flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
         flyingCard.style.opacity = '0.7';
 
@@ -518,7 +536,7 @@ function startTimer() {
 
 /* --- GAME LOGIC --- */
 
-function drawCard() {
+function drawCard(toDealer = true, seatIndex = null) {
     if (state.shoe.length === 0) {
         // Emergency shuffle mid-hand
         console.warn("Shoe empty! Emergency shuffle.");
@@ -576,7 +594,7 @@ function drawCard() {
 
     // Animate or just update
     if (state.phase === 'PLAYING' || (state.phase === 'DEALING' && state.dealer.hand.length + state.dealer.hand.length < 4)) {
-        animateCardDraw();
+        animateCardDraw(toDealer, seatIndex);
     } else {
         // Batch update during dealing
         setTimeout(updateShoeVisual, 50);
@@ -620,7 +638,7 @@ function dealHands() {
         }
         const action = deals[i];
         if (action.who === 'd') {
-            const c = drawCard();
+            const c = drawCard(true, null);
             c.hidden = !!action.hidden;
             state.dealer.hand.push(c);
             if (c.isSplitCard) state.cutCardReached = true;
@@ -633,7 +651,7 @@ function dealHands() {
             renderDealer();
         } else {
             const p = state.players[action.idx];
-            const c = drawCard();
+            const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
             state.runningCount += c.count;
@@ -745,7 +763,7 @@ function playerHit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
 
-    const c = drawCard();
+    const c = drawCard(false, state.turnIndex);
     state.runningCount += c.count;
     updateStats();
     playSound('card');
@@ -806,7 +824,7 @@ function playerDouble() {
     p.chips -= h.bet;
     h.bet *= 2;
 
-    const c = drawCard();
+    const c = drawCard(false, state.turnIndex);
     state.runningCount += c.count;
     updateStats();
     playSound('card');
@@ -841,13 +859,13 @@ function playerSplit() {
     h.cards = [c1];
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
-    const cFirst = drawCard();
+    const cFirst = drawCard(false, state.turnIndex);
     state.runningCount += cFirst.count;
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
 
-    const cSecond = drawCard();
+    const cSecond = drawCard(false, state.turnIndex);
     state.runningCount += cSecond.count;
     updateStats();
     playSound('card');
@@ -873,7 +891,7 @@ function dealerTurn() {
 
     function loop() {
         if (score < 17) {
-            const c = drawCard();
+            const c = drawCard(true, null);
             state.runningCount += c.count;
             updateStats();
             playSound('card');
@@ -911,20 +929,32 @@ function resolveRound() {
             return;
         }
 
-        let hasAction = false;
-
-        p.hands.forEach(h => {
+        // Process hands one by one with delays to avoid overlapping sounds
+        let handIndex = 0;
+        
+        function processNextHand() {
+            if (handIndex >= p.hands.length) {
+                // All hands for this player processed, move to next player
+                renderSeat(pIndex - 1);
+                setTimeout(processNextPlayer, 1200); // Delay before moving to next player
+                return;
+            }
+            
+            const h = p.hands[handIndex];
+            handIndex++;
+            
             if (h.result !== null) {
                 if (h.status === 'blackjack') {
                     const profit = h.bet * 1.5;
                     p.chips += h.bet + profit;
                     showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
-                    hasAction = true;
                 } else if (h.status === 'bust') {
                     showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
                     //                              playSound('bust');
-                    hasAction = true;
                 }
+                
+                // Process next hand after delay
+                setTimeout(processNextHand, 1200);
                 return;
             }
 
@@ -936,28 +966,24 @@ function resolveRound() {
                 p.chips += h.bet * 2;
                 showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
                 playSound('win');
-                hasAction = true;
             } else if (pScore < dScore) {
                 h.status = 'lose';
                 h.result = 'lose';
                 showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
                 playSound('lose');
-                hasAction = true;
             } else {
                 h.status = 'push';
                 h.result = 'push';
                 p.chips += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
-                hasAction = true;
             }
-        });
-
-        renderSeat(pIndex - 1);
-        if (hasAction) {
-            setTimeout(processNextPlayer, 1200);
-        } else {
-            processNextPlayer();
+            
+            // Process next hand after delay
+            setTimeout(processNextHand, 1200);
         }
+        
+        // Start processing hands for this player
+        processNextHand();
     }
 
     processNextPlayer();
