@@ -211,7 +211,7 @@
             width: 320px;
             height: 80px;
             background: linear-gradient(to right, #2c2c2c, #1a1a1a);
-            border: 3px solid #444;
+            border: 3px solid #AAA;
             border-radius: 8px;
             box-shadow:
                 inset 0 0 10px rgba(0,0,0,0.8),
@@ -391,7 +391,7 @@
             position: absolute;
             width: 2px;
             height: 70px;
-            background-color: #888;
+            background-color: #b68181;
         }
 
         /* Card back styling for regular cards (when used elsewhere) */
@@ -425,7 +425,7 @@
         border: 2px solid #ffd700;
         }
 
-        /* Separator card - golden thick card to indicate cut card */
+        /* Separator card - thick card to indicate cut card */
         .card-back.separator {
             background: #ffcc00;
             background: linear-gradient(135deg, #FFD700 25%, #FFA500 25%, #FFA500 50%, #FFD700 50%, #FFD700 75%, #FFA500 75%);
@@ -1169,8 +1169,8 @@
                         // Check if this position corresponds to the separator card
                         if (Math.abs(realIndex - separatorIndex) < reductionFactor) {
                             // This visual card represents the separator card
-                            cardBackLine.style.width = '4px'; // Make separator card back line thicker
-                            cardBackLine.style.background = 'linear-gradient(0deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)';
+                            cardBackLine.style.width = '1px';
+                            cardBackLine.style.background = 'linear-gradient(0deg, #FFEED7 0%, #FFEEA5 50%, #FFEED7 100%)';
                             cardBackLine.style.zIndex = 100; // Ensure separator is visible
                         }
 
@@ -1187,16 +1187,16 @@
                 position: absolute;
                 width: 2px;
                 height: 70px;
-                background-color: #888;
+                background-color: pink;
                 left: ${edgePositionFromRight}px;
                 z-index: ${i * 2 + 1};
             `;
 
                         // Make separator card edge line more prominent
                         if (Math.abs(realIndex - separatorIndex) < reductionFactor) {
-                            cardEdgeLine.style.width = '4px'; // Much thicker for separator
-                            cardEdgeLine.style.backgroundColor = '#ff8c00';
-                            cardEdgeLine.style.zIndex = 101; // Ensure separator edge is very visible
+                            cardEdgeLine.style.width = '2px';
+                            cardEdgeLine.style.backgroundColor = '#FFF7A2';
+                            cardEdgeLine.style.zIndex = 99; // Ensure separator edge is very visible
                         }
 
                         cardStack.appendChild(cardEdgeLine);
@@ -1210,26 +1210,6 @@
                         // at the corresponding position from the LEFT side of the visual representation
                         const separatorVisualPos = Math.floor((separatorIndex / state.totalInitialCards) * cardsToShow);
                         const positionFromRight = totalWidth - (separatorVisualPos * 2);
-                        
-                        // Add an explicit separator card if it wasn't properly represented in the loop above
-                        // Only add if it's within our rendered range and not already properly shown
-                        if (separatorVisualPos < cardsToShow) {
-                            // Create an extra separator card element to ensure visibility
-                            const separatorCard = document.createElement('div');
-                            separatorCard.className = 'card-back-line';
-                            
-                            separatorCard.style.cssText = `
-                position: absolute;
-                width: 4px;
-                height: 75px;
-                background: linear-gradient(0deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
-                left: ${positionFromRight}px;
-                z-index: 200; // Very high z-index to ensure visibility
-                border: 1px solid #ff8c00;
-            `;
-                            
-                            cardStack.appendChild(separatorCard);
-                        }
                     }
                 });
             }
@@ -1259,11 +1239,11 @@
 
                 document.body.appendChild(flyingCard);
 
-                // Animate to dealer's hand area (center top of table)
+                // Animate  (NOTE: Only animates to dealer, should animate to player hands too)
                 setTimeout(() => {
                     const tableRect = document.getElementById('table').getBoundingClientRect();
-                    const centerX = tableRect.left + tableRect.width / 2;
-                    const centerY = tableRect.top + 80; // Upper center of table
+                    const centerX = tableRect.left + tableRect.width / 2 + 36;
+                    const centerY = tableRect.top + 60; // Upper center of table
 
                     flyingCard.style.left = `${centerX}px`;
                     flyingCard.style.top = `${centerY}px`;
