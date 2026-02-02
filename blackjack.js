@@ -36,6 +36,10 @@ const ui = {
     seatSelect: document.getElementById('seat-select'),
     strategyText: document.getElementById('strategy-text'),
     countHint: document.getElementById('count-hint'),
+    settingsArea: document.getElementById('settings-area'),
+    statsArea: document.getElementById('stats-area'),
+    toggleSettings: document.getElementById('toggle-settings'),
+    toggleStats: document.getElementById('toggle-stats'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -105,7 +109,27 @@ function init() {
         ui.deckStyleSelect.addEventListener('change', updateDeckStyle);
     }
 
+    // Initialize independent toggles
+    if (ui.toggleSettings) {
+        ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
+        ui.toggleSettings.classList.add('active'); // Default open
+    }
+    if (ui.toggleStats) {
+        ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
+        ui.toggleStats.classList.add('active'); // Default open
+    }
+
     setTimeout(updateShoeVisual, 100);
+}
+
+function toggleControlsArea(type) {
+    if (type === 'settings') {
+        const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
+        ui.toggleSettings.classList.toggle('active', !isCollapsed);
+    } else if (type === 'stats') {
+        const isCollapsed = ui.statsArea.classList.toggle('collapsed');
+        ui.toggleStats.classList.toggle('active', !isCollapsed);
+    }
 }
 
 function updateDeckStyle() {

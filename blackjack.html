@@ -12,45 +12,54 @@
 
     <header>
         <h1>Blackjack</h1>
+        <div class="header-toggles">
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
         <div class="game-controls">
-            <div class="stats">Seats:
-                <select id="seat-select">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5" selected>5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                </select>
-            </div>
-            <div class="stats">Decks:
-                <select id="deck-select">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6" selected>6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                </select>
-            </div>
-            <div class="stats">Deck Style:
-                <select id="deck-style-select">
-                    <option value="red" selected>Red Striped</option>
-                    <option value="blue">Blue Classic</option>
-                    <option value="green">Green Pattern</option>
-                    <option value="gold">Royal Gold</option>
-                    <option value="cyberpunk">Cyberpunk Grid</option>
-                </select>
+            <div class="controls-section" id="settings-area">
+                <div class="stats">Seats:
+                    <select id="seat-select">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5" selected>5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                    </select>
+                </div>
+                <div class="stats">Decks:
+                    <select id="deck-select">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6" selected>6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                    </select>
+                </div>
+                <div class="stats">Style:
+                    <select id="deck-style-select">
+                        <option value="red" selected>Red Striped</option>
+                        <option value="blue">Blue Classic</option>
+                        <option value="green">Green Pattern</option>
+                        <option value="gold">Royal Gold</option>
+                        <option value="cyberpunk">Cyberpunk Grid</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="stats">Cards: <span id="cards-left">0</span></div>
-            <div class="stats">Count: <span id="run-count">0</span></div>
-            <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
+            <div class="controls-section" id="stats-area">
+                <div class="stats">Cards: <span id="cards-left">0</span></div>
+                <div class="stats">Count: <span id="run-count">0</span></div>
+                <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
+            </div>
         </div>
     </header>
 
