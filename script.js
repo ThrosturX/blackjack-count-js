@@ -20,7 +20,8 @@ const state = {
     splitIndex: -1,
     timer: null,
     timerVal: 0,
-    isShuffling: false
+    isShuffling: false,
+    casinoProfit: 0
 };
 
 const ui = {
@@ -193,6 +194,20 @@ function finishShuffle() {
     ui.overlay.classList.remove('show');
     updateShoeVisual();
     updateGameFlow(); // Check for auto-bets immediately
+}
+
+function updateCasinoProfit() {
+    ui.casinoProfit.classList.remove('casino-profit-positive', 'casino-profit-negative', 'casino-profit-neutral');
+    if (state.casinoProfit > 0) {
+        ui.casinoProfit.textContent = `$${state.casinoProfit}`;
+        ui.casinoProfit.classList.add('casino-profit-positive');
+    } else if (state.casinoProfit < 0) {
+        ui.casinoProfit.textContent = `-$${Math.abs(state.casinoProfit)}`;
+        ui.casinoProfit.classList.add('casino-profit-negative');
+    } else {
+        ui.casinoProfit.textContent = `$${state.casinoProfit}`;
+        ui.casinoProfit.classList.add('casino-profit-neutral');
+    }
 }
 
 function updateStats() {
@@ -867,7 +882,7 @@ function playerSplit() {
     if (p.chips < h.bet) { playSound('error'); return; }
     const c1 = h.cards[0];
     const c2 = h.cards[1];
-    if (c1.val !== c2.val) { playSound('error'); return; }
+    if (c1.num !== c2.num) { playSound('error'); return; }
 
     playSound('chip');
     p.chips -= h.bet;
@@ -971,8 +986,10 @@ function resolveRound() {
                 if (h.status === 'blackjack') {
                     const profit = h.bet * 1.5;
                     p.chips += h.bet + profit;
+                    state.casinoProfit -= profit;
                     showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
                 } else if (h.status === 'bust') {
+                    state.casinoProfit += h.bet;
                     showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
                     next_timeout = 100
                 }
@@ -988,11 +1005,13 @@ function resolveRound() {
                 h.status = 'win';
                 h.result = 'win';
                 p.chips += h.bet * 2;
+                state.casinoProfit -= h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
                 if (!p.autoPlay) playSound('win');
             } else if (pScore < dScore) {
                 h.status = 'lose';
                 h.result = 'lose';
+                state.casinoProfit += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
                 if (!p.autoPlay) playSound('lose');
                 next_timeout = 400
@@ -1013,6 +1032,7 @@ function resolveRound() {
     }
 
     processNextPlayer();
+    updateCasinoProfit();
 }
 
 function finishRound() {
@@ -1091,10 +1111,10 @@ function getStrategyHint(dCard, pCards) {
     const pScore = calcScore(pCards);
     const soft = isSoftHand(pCards);
 
-    if (pCards.length === 2 && pCards[0].val === pCards[1].val) {
+    if (pCards.length === 2 && pCards[0].num === pCards[1].num) {
         const c = pCards[0].val;
         if (c === 'A' || c === '8') return "Split";
-        if (c === '10' || c === '5') return soft ? "Stand" : (pScore >= 12 ? "Stand" : "Hit");
+        if (c === '10') return soft ? "Stand" : (pScore >= 12 ? "Stand" : "Hit");
         if (c === '9') return (dVal !== 7 && dVal <= 9) ? "Split" : "Stand";
         if (c === '7') return (dVal <= 7) ? "Split" : "Hit";
         if (c === '6') return (dVal <= 6) ? "Split" : "Hit";
@@ -1106,8 +1126,8 @@ function getStrategyHint(dCard, pCards) {
         if (pScore >= 20) return "Stand";
         if (pScore === 19) return (dVal === 6) ? "Double" : "Stand";
         if (pScore === 18) return (dVal <= 6) ? "Double" : (dVal === 7 || dVal === 8 ? "Stand" : "Hit");
-        if (pScore === 17) return "Double";
-        if (pScore === 16 || pScore === 15) return (dVal <= 6) ? "Double" : "Hit";
+        if (pScore === 17) return (dVal >= 3 && dVal <= 6) ? "Double" : "Hit";
+        if (pScore === 16 || pScore === 15) return (dVal >= 4 && dVal <= 6) ? "Double" : "Hit";
         if (pScore === 14 || pScore === 13) return (dVal === 5 || dVal === 6) ? "Double" : "Hit";
     }
 
@@ -1303,14 +1323,14 @@ function getSeatHTML(idx) {
     else if (state.phase === 'PLAYING' && isMyTurn) {
         const h = p.hands[state.splitIndex];
         // Bot/Human double check
-        const canDouble = (h.cards.length === 2 && h.cards[0].val === h.cards[1].val && p.chips >= h.bet);
+        const canSplit = (h.cards.length === 2 && h.cards[0].num === h.cards[1].num && p.chips >= h.bet);
 
         controlsHTML = `
                     <div class="controls">
                         <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                         <button class="action-btn btn-stand" onclick="playerStand()">S</button>
                         <button class="action-btn btn-double" onclick="playerDouble()" ${p.chips < h.bet || h.cards.length !== 2 ? 'disabled' : ''}>D</button>
-                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canDouble ? 'disabled' : ''}>SP</button>
+                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
                     </div>
                 `;
     }

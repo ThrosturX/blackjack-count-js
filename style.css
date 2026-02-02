@@ -183,6 +183,18 @@
             color: var(--red);
         }
 
+        .casino-profit-positive {
+            color: var(--green);
+        }
+
+        .casino-profit-negative {
+            color: var(--red);
+        }
+
+        .casino-profit-neutral {
+            color: white;
+        }
+
         /* --- Visual Shoe (Positioned next to dealer) --- */
         .shoe-container {
             position: absolute;
