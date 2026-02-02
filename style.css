@@ -1460,3 +1460,312 @@ input:checked+.slider:before {
 .mini-hand .hand-result .res-profit {
     font-size: 0.6rem;
 }
+
+/* ========================================
+   SOLITAIRE-SPECIFIC STYLES
+   ======================================== */
+
+/* Solitaire Table Layout */
+#solitaire-table {
+    position: relative;
+    width: 95vw;
+    max-width: 1400px;
+    height: 80vh;
+    margin-top: 20px;
+    background: var(--table-bg);
+    border-radius: 40px;
+    border: 12px solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+/* Top row: Stock/Waste and Foundations */
+#top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+#stock-waste-area {
+    display: flex;
+    gap: 15px;
+}
+
+#foundation-area {
+    display: flex;
+    gap: 15px;
+}
+
+/* Pile base styles */
+.pile {
+    position: relative;
+    min-height: 110px;
+}
+
+.stock-pile,
+.waste-pile {
+    width: 80px;
+    height: 110px;
+    position: relative;
+}
+
+.foundation-pile {
+    width: 80px;
+    height: 110px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.foundation-pile:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Pile placeholders */
+.pile-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    user-select: none;
+}
+
+.pile-placeholder.recycle {
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.pile-placeholder.recycle:hover {
+    color: var(--gold);
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Tableau area */
+#tableau-area {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex: 1;
+    align-items: flex-start;
+}
+
+.tableau-column {
+    width: 80px;
+    min-height: 120px;
+    position: relative;
+    border: 2px dashed transparent;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.tableau-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tableau-column .card {
+    position: absolute;
+    left: 0;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tableau-column .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+/* Drag feedback */
+.card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.pile.drag-over-valid {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: var(--green);
+}
+
+.pile.drag-over-invalid {
+    background: rgba(235, 87, 87, 0.2);
+    border-color: var(--red);
+}
+
+/* Game controls bar */
+#game-controls-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px 25px;
+    border-radius: 30px;
+    border: 2px solid var(--gold);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.game-btn {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.game-btn:hover {
+    background: var(--gold);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(242, 201, 76, 0.4);
+}
+
+.game-btn:active {
+    transform: translateY(0);
+}
+
+/* Win overlay */
+#win-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 40px;
+    opacity: 1;
+    transition: opacity 0.5s;
+}
+
+#win-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.win-message {
+    text-align: center;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    padding: 50px;
+    border-radius: 20px;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 50px rgba(242, 201, 76, 0.5);
+    animation: popIn 0.5s ease-out;
+}
+
+.win-message h2 {
+    font-size: 3rem;
+    color: var(--gold);
+    margin: 0 0 20px 0;
+    text-shadow: 0 0 20px rgba(242, 201, 76, 0.5);
+    animation: pulse 2s infinite;
+}
+
+.win-message p {
+    font-size: 1.5rem;
+    margin: 10px 0;
+    color: white;
+}
+
+.win-message button {
+    margin-top: 30px;
+    font-size: 1.2rem;
+    padding: 15px 40px;
+}
+
+/* Win animation for cards */
+@keyframes card-cascade {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+.winning-card {
+    animation: card-cascade 2s ease-in forwards;
+}
+
+/* Responsive adjustments for Solitaire */
+@media (max-width: 1200px) {
+    #solitaire-table {
+        padding: 20px;
+    }
+
+    #tableau-area {
+        gap: 10px;
+    }
+
+    .tableau-column {
+        width: 70px;
+    }
+
+    .foundation-pile,
+    .stock-pile,
+    .waste-pile {
+        width: 70px;
+        height: 95px;
+    }
+}
+
+@media (max-width: 900px) {
+    #solitaire-table {
+        padding: 15px;
+    }
+
+    #tableau-area {
+        gap: 8px;
+    }
+
+    .tableau-column {
+        width: 60px;
+    }
+
+    .foundation-pile,
+    .stock-pile,
+    .waste-pile {
+        width: 60px;
+        height: 85px;
+    }
+
+    #game-controls-bar {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+
+    .game-btn {
+        padding: 8px 15px;
+        font-size: 0.8rem;
+    }
+}
