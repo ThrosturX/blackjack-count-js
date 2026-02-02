@@ -50,8 +50,8 @@ function preloadAudio() {
         'chip': ['chip.wav', 'chips.wav'],
         'win': ['win.wav', 'nice.wav', 'youwin.wav', 'winner.wav'],
         'lose': ['lose.wav', 'noluck.wav', 'itiswhatis.wav', 'nextluck.wav', 'lucknext.wav'],
-        'bust': ['bust.wav', 'lose.wav'],
-        'blackjack': ['blackjack.wav', 'nice.wav'],
+        'bust': ['bust.wav'],
+        'blackjack': ['blackjack.wav'],
         'error': ['error.wav']
     };
 
@@ -746,7 +746,6 @@ function runAutoPlay() {
     const action = getStrategyHint(d, h.cards);
 
     showOverlay(`Player ${p.id + 1}`, `Auto: ${action.toUpperCase()}`, "", "msg-auto");
-    playSound('card');
 
     setTimeout(() => {
         if (action === 'Hit') playerHit();
@@ -783,7 +782,7 @@ function playerHit() {
     if (calcScore(h.cards) > 21) {
         h.status = 'bust';
         h.result = 'lose';
-        playSound('bust');
+        if (!p.autoPlay) playSound('bust');
         ui.strategyText.textContent = "";
         setTimeout(nextTurn, 800);
     } else if (calcScore(h.cards) === 21) {
@@ -933,8 +932,9 @@ function dealerTurn() {
 function resolveRound() {
     const dScore = calcScore(state.dealer.hand);
 
-    if (dScore > 21 && false) {
+    if (dScore > 21) {
         showOverlay("Dealer Busts!", "All Active Hands Win", "", "msg-win");
+        playSound('bust')
     }
     ui.overlay.classList.remove('show');
     let pIndex = 0;
@@ -966,6 +966,7 @@ function resolveRound() {
             
             const h = p.hands[handIndex];
             handIndex++;
+            let next_timeout = 1200
             
             if (h.result !== null) {
                 if (h.status === 'blackjack') {
@@ -974,11 +975,11 @@ function resolveRound() {
                     showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
                 } else if (h.status === 'bust') {
                     showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
-                    //                              playSound('bust');
+                    next_timeout = 100
                 }
                 
                 // Process next hand after delay
-                setTimeout(processNextHand, 1200);
+                setTimeout(processNextHand, next_timeout);
                 return;
             }
 
@@ -989,21 +990,23 @@ function resolveRound() {
                 h.result = 'win';
                 p.chips += h.bet * 2;
                 showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
-                playSound('win');
+                if (!p.autoPlay) playSound('win');
             } else if (pScore < dScore) {
                 h.status = 'lose';
                 h.result = 'lose';
                 showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
-                playSound('lose');
+                if (!p.autoPlay) playSound('lose');
+                next_timeout = 400
             } else {
                 h.status = 'push';
                 h.result = 'push';
                 p.chips += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
+                next_timeout = 100
             }
             
             // Process next hand after delay
-            setTimeout(processNextHand, 1200);
+            setTimeout(processNextHand, next_timeout);
         }
         
         // Start processing hands for this player
