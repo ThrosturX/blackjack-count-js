@@ -1,11 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Redirecting...</title>
-    <meta http-equiv="refresh" content="0; url=blackjack.html">
-    <link rel="canonical" href="blackjack.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casino Suite</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .welcome-container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--gold);
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(242, 201, 76, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: var(--gold);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px rgba(242, 201, 76, 0.5);
+        }
+
+        .game-selection {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+        }
+
+        .game-card {
+            width: 250px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--gold);
+            background: rgba(242, 201, 76, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-card i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .game-card h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        .game-card p {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
+
 <body>
-    <p>If you are not redirected automatically, please follow this <a href="blackjack.html">link to the new page</a>.</p>
+    <div class="welcome-container">
+        <h1>Casino Suite</h1>
+        <div class="game-selection">
+            <a href="blackjack.html" class="game-card">
+                <div class="card-icon">♠️♥️</div>
+                <h2>Blackjack</h2>
+                <p>Classic 21. Count cards and beat the dealer!</p>
+            </a>
+            <a href="poker.html" class="game-card">
+                <div class="card-icon">🃏💰</div>
+                <h2>Texas Hold'em</h2>
+                <p>High stakes poker. Outsmart the table!</p>
+            </a>
+        </div>
+    </div>
 </body>
+
 </html>

@@ -4,14 +4,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Casino Blackjack</title>
+    <title>Casino Poker (Hold'em)</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Poker specific styles */
+        .community-cards {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            min-height: var(--card-h);
+        }
+
+        .pot-display {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border: 1px solid var(--gold);
+        }
+
+        .dealer-button {
+            width: 20px;
+            height: 20px;
+            background: white;
+            color: black;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: bold;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            border: 1px solid #333;
+        }
+
+        .seat.folded {
+            opacity: 0.5;
+        }
+
+        .seat.all-in {
+            border-color: var(--red);
+            box-shadow: 0 0 10px var(--red);
+        }
+    </style>
 </head>
 
 <body>
 
     <header>
-        <h1>Blackjack</h1>
+        <h1>Texas Hold'em Poker</h1>
         <div class="header-toggles">
             <button id="toggle-settings" class="btn-toggle">Settings</button>
             <button id="toggle-stats" class="btn-toggle">Stats</button>
@@ -21,27 +68,11 @@
             <div class="controls-section" id="settings-area">
                 <div class="stats">Seats:
                     <select id="seat-select">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
+                        <option value="2">2 (Heads up)</option>
                         <option value="3">3</option>
                         <option value="4">4</option>
                         <option value="5" selected>5</option>
                         <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                    </select>
-                </div>
-                <div class="stats">Decks:
-                    <select id="deck-select">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="6" selected>6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
                     </select>
                 </div>
                 <div class="stats">Style:
@@ -56,9 +87,8 @@
             </div>
 
             <div class="controls-section" id="stats-area">
-                <div class="stats">Cards: <span id="cards-left">0</span></div>
-                <div class="stats">Count: <span id="run-count">0</span></div>
-                <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
+                <div class="stats">Hand: <span id="game-phase-text">Wait</span></div>
+                <div class="stats">Pot: <span id="pot-total">$0</span></div>
             </div>
         </div>
     </header>
@@ -73,18 +103,18 @@
         <!-- Visual Shoe (Bottom Side) -->
         <div class="shoe-container">
             <div class="shoe-body">
-                <div class="card-stack" id="card-stack">
-                    <!-- Cards will be dynamically inserted here -->
-                </div>
+                <div class="card-stack" id="card-stack"></div>
                 <div class="shoe-lip"></div>
             </div>
             <div class="shoe-base"></div>
         </div>
 
-        <!-- Dealer Section -->
-        <div id="dealer-area">
-            <div class="score-pill" id="dealer-score">?</div>
-            <div class="cards" id="dealer-cards"></div>
+        <!-- Community Cards Section -->
+        <div id="dealer-area" style="top: 15%;">
+            <div class="pot-display" id="pot-display">Pot: $0</div>
+            <div class="community-cards" id="community-cards">
+                <!-- Flop, Turn, River Cards -->
+            </div>
         </div>
 
         <!-- Players Section -->
@@ -93,17 +123,10 @@
         </div>
     </main>
 
-    <!-- Strategy Hint Bar -->
-    <div id="strategy-bar">
-        <span class="hint-label">Basic Strategy Hint</span>
-        <span id="strategy-text" class="hint-text">Place bets to start</span>
-        <span id="count-hint" class="count-hint ch-neutral"></span>
-    </div>
-
     <script src="card.js"></script>
     <script src="common.js"></script>
-    <script src="blackjack-logic.js"></script>
-    <script src="blackjack.js"></script>
+    <script src="poker-logic.js"></script>
+    <script src="poker.js"></script>
 </body>
 
 </html>

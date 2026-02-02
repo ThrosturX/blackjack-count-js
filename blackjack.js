@@ -43,9 +43,6 @@ const ui = {
 };
 
 /* --- AUDIO HANDLING --- */
-// Preload audio assets
-const audioAssets = {};
-
 function preloadAudio() {
     const soundFiles = {
         'card': ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav', 'card5.wav'],
@@ -55,47 +52,18 @@ function preloadAudio() {
         'lose': ['lose.wav', 'noluck.wav', 'itiswhatis.wav', 'nextluck.wav', 'lucknext.wav'],
         'bust': ['bust.wav'],
         'blackjack': ['blackjack.wav'],
+        'dealer-bj': ['dealer-bj.wav', 'dealer-bj2.wav', 'dealer-bj3.wav'],
+        'dealer-bust': ['dealer-bust.wav', 'dealer-bust2.wav', 'dealer-bust3.wav'],
         'error': ['error.wav']
     };
-
-    for (const [type, filepaths] of Object.entries(soundFiles)) {
-        // audioAssets[type] will now hold an array of Audio objects
-        audioAssets[type] = filepaths.map(path => {
-            const audio = new Audio();
-            audio.preload = 'auto';
-            audio.src = 'audio/' + path;
-            audio.load();
-
-            audio.addEventListener('error', () => {
-                console.warn(`Could not load audio file: ${path}`);
-            });
-
-            return audio;
-        });
-    }
+    CommonUtils.preloadAudio(soundFiles);
 }
 
 // Initialize audio at startup
 preloadAudio();
 
 function playSound(type) {
-    if (audioAssets[type]) {
-        const sounds = audioAssets[type]
-
-        const audioChoice = sounds[Math.floor(Math.random() * sounds.length)];
-        // Create a new instance to allow overlapping sounds
-        const audio = new Audio(audioChoice.src);
-        audio.volume = 0.05; // Set volume low
-        if (type === 'card' || type === 'chip') {
-            audio.volume = 0.3; // Set volume to 30%
-        }
-        audio.play().catch(e => {
-            console.warn(`Could not play ${type} sound:`, e.message);
-        });
-    } else {
-        // For all other sound types, print warning without erroring
-        console.warn("Audio not implemented for: " + type);
-    }
+    CommonUtils.playSound(type);
 }
 
 /* --- INITIALIZATION --- */
@@ -159,19 +127,8 @@ function createShoe() {
     state.phase = 'SHUFFLING';
 
     // Create cards
-    for (let i = 0; i < state.deckCount; i++) {
-        for (let s of SUITS) {
-            for (let v of VALUES) {
-                state.shoe.push(new Card(s, v));
-                state.totalInitialCards++;
-            }
-        }
-    }
-    // Fisher-Yates Shuffle
-    for (let i = state.shoe.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [state.shoe[i], state.shoe[j]] = [state.shoe[j], state.shoe[i]];
-    }
+    state.shoe = CommonUtils.createShoe(state.deckCount, SUITS, VALUES);
+    state.totalInitialCards = state.shoe.length;
 
     // Determine Cut Card Position
     const cutIndex = Math.floor(state.totalInitialCards * (1 - PENETRATION));
@@ -244,220 +201,73 @@ function updateStats() {
 
 function updateShoeVisual() {
     const cardStack = document.getElementById('card-stack');
-    const shoeContainer = document.querySelector('.shoe-container');
-    if (!cardStack || !shoeContainer) return;
-
-    requestAnimationFrame(() => {
-        cardStack.innerHTML = '';
-
-        if (state.shoe.length === 0 || state.isShuffling) {
-            return;
-        }
-
-        const totalCards = state.shoe.length;
-
-        // Find separator position
-        const separatorIndex = state.shoe.findIndex(card => card.isSplitCard);
-
-        // Scale the number of rendered cards based on the number of decks
-        // To make 8 decks look like 4 decks currently does, we use a square root scale
-        // This creates a gradual compression as deck count increases
-        // Formula: renderedCards = baseCards * sqrt(deckCount)
-        // For 1 deck (52 cards): render 52 cards (~1:1 ratio)
-        // For 2 decks (104 cards): render ~73 cards (~1.4:1 ratio)
-        // For 4 decks (208 cards): render ~104 cards (~2:1 ratio)
-        // For 6 decks (312 cards): render ~127 cards (~2.5:1 ratio)
-        // For 8 decks (416 cards): render ~147 cards (~2.8:1 ratio) - closer to 4 decks appearance
-        const baseRenderedCards = 52; // Base number of rendered cards for 1 deck
-        const deckScalingFactor = Math.sqrt(state.deckCount); // Square root scaling
-        let maxRenderedCards = Math.floor(baseRenderedCards * deckScalingFactor);
-
-        // Also consider available width constraint (max 188 cards for 380px width)
-        const maxWidthCards = 188; // 380px / 2px per card
-        maxRenderedCards = Math.min(maxRenderedCards, maxWidthCards);
-
-        let cardsToShow, reductionFactor = 1;
-        if (totalCards > maxRenderedCards) {
-            reductionFactor = totalCards / maxRenderedCards;
-            cardsToShow = maxRenderedCards;
-        } else {
-            cardsToShow = totalCards;
-        }
-
-        // Flip the shoe horizontally: draw from right to left (dealer draws from right/end of shoe)
-        const totalWidth = cardsToShow * 2; // Each card takes 2px (back line + edge line)
-
-        // Create thin lines representing card backs and edges
-        for (let i = 0; i < cardsToShow; i++) {
-            // Calculate which card in the actual shoe this represents
-            // Since we're flipping horizontally, we want the top card (last drawn) to be on the right
-            const realIndex = Math.floor(i * reductionFactor); // Start from beginning of shoe (top cards)
-
-            // Card back line (representing the visible part of the card back)
-            const cardBackLine = document.createElement('div');
-            cardBackLine.className = 'card-back-line';
-
-            // Horizontal orientation - flip by calculating position from the right
-            const positionFromRight = totalWidth - (i * 2);
-
-            cardBackLine.style.cssText = `
-                position: absolute;
-                width: 2px;
-                height: 70px;
-                left: ${positionFromRight}px;
-                z-index: ${i * 2};
-            `;
-
-            // Check if this position corresponds to the separator card
-            if (Math.abs(realIndex - separatorIndex) < reductionFactor) {
-                // This visual card represents the separator card
-                cardBackLine.style.width = '1px';
-                cardBackLine.style.background = 'linear-gradient(0deg, #FFEED7 0%, #FFEEA5 50%, #FFEED7 100%)';
-                cardBackLine.style.zIndex = 100; // Ensure separator is visible
-            }
-
-            cardStack.appendChild(cardBackLine);
-
-            // Card edge line (representing the physical edge of the card)
-            const cardEdgeLine = document.createElement('div');
-            cardEdgeLine.className = 'card-edge-line';
-
-            // Horizontal orientation - flip by calculating position from the right
-            const edgePositionFromRight = totalWidth - (i * 2 + 1);
-
-            cardEdgeLine.style.cssText = `
-                position: absolute;
-                width: 2px;
-                height: 70px;
-                left: ${edgePositionFromRight}px;
-                z-index: ${i * 2 + 1};
-            `;
-
-            // Make separator card edge line more prominent
-            if (Math.abs(realIndex - separatorIndex) < reductionFactor) {
-                cardEdgeLine.style.width = '2px';
-                cardEdgeLine.style.backgroundColor = '#FFF7A2';
-                cardEdgeLine.style.zIndex = 99; // Ensure separator edge is very visible
-            }
-
-            cardStack.appendChild(cardEdgeLine);
-        }
-
-        // Ensure the separator card is always visible by adding it explicitly if needed
-        if (separatorIndex !== -1 && totalCards > 0) {
-            // Calculate where the separator should appear in the visual representation
-            // Since we're showing the shoe flipped horizontally (dealer draws from right), 
-            // the separator card (which is at 25% from start of full shoe) should appear 
-            // at the corresponding position from the LEFT side of the visual representation
-            const separatorVisualPos = Math.floor((separatorIndex / state.totalInitialCards) * cardsToShow);
-            const positionFromRight = totalWidth - (separatorVisualPos * 2);
-        }
-    });
+    CommonUtils.updateShoeVisual(cardStack, state.shoe, state.isShuffling, state.deckCount, state.totalInitialCards);
 }
 
 function animateCardDraw(toDealer = true, seatIndex = null) {
-    const cardStack = document.getElementById('card-stack');
-    if (!cardStack) return;
+    const shoeBody = document.querySelector('.shoe-body');
+    let destX, destY;
 
-    // Create flying card animation using the same style as the hole card
-    const flyingCard = document.createElement('div');
-    flyingCard.className = 'card hidden'; // Use the same styling as hidden cards
-    flyingCard.style.position = 'fixed';
-    flyingCard.style.width = '70px';
-    flyingCard.style.height = '95px';
-    flyingCard.style.zIndex = '1000';
-    flyingCard.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    flyingCard.style.pointerEvents = 'none';
-    flyingCard.style.opacity = '0.95';
-    flyingCard.style.borderRadius = '6px';
-    flyingCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
-    // Remove hardcoded border color, style will come from .card.hidden which now uses CSS variable
-
-    // Position at shoe
-    const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();
-    flyingCard.style.left = `${shoeRect.left + 5}px`;
-    flyingCard.style.top = `${shoeRect.top + 15}px`;
-
-    document.body.appendChild(flyingCard);
-
-    // Determine destination based on parameters
-    setTimeout(() => {
-        let destX, destY;
-
-        if (!toDealer && seatIndex !== null) {
-            // Animate to specific player seat
-            const seatElement = document.getElementById(`seat-${seatIndex}`);
-            if (seatElement) {
-                const seatRect = seatElement.getBoundingClientRect();
-                destX = seatRect.left + seatRect.width / 2;
-                destY = seatRect.top + seatRect.height / 2;
-            } else {
-                // Fallback to dealer if seat element not found
-                const tableRect = document.getElementById('table').getBoundingClientRect();
-                destX = tableRect.left + tableRect.width / 2 + 36;
-                destY = tableRect.top + 60;
-            }
+    if (!toDealer && seatIndex !== null) {
+        const seatElement = document.getElementById(`seat-${seatIndex}`);
+        if (seatElement) {
+            const seatRect = seatElement.getBoundingClientRect();
+            destX = seatRect.left + seatRect.width / 2;
+            destY = seatRect.top + seatRect.height / 2;
         } else {
-            // Animate to dealer
             const tableRect = document.getElementById('table').getBoundingClientRect();
             destX = tableRect.left + tableRect.width / 2 + 36;
             destY = tableRect.top + 60;
         }
+    } else {
+        const tableRect = document.getElementById('table').getBoundingClientRect();
+        destX = tableRect.left + tableRect.width / 2 + 36;
+        destY = tableRect.top + 60;
+    }
 
-        flyingCard.style.left = `${destX}px`;
-        flyingCard.style.top = `${destY}px`;
-        flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
-        flyingCard.style.opacity = '0.7';
-
-        setTimeout(() => {
-            if (flyingCard.parentNode) {
-                flyingCard.parentNode.removeChild(flyingCard);
-            }
-            updateShoeVisual();
-        }, 400);
-    }, 10);
+    CommonUtils.animateCardDraw(shoeBody, destX, destY, () => {
+        updateShoeVisual();
+    });
 }
 
 /* --- GAME FLOW CONTROL --- */
 
 function updateGameFlow() {
-    if (state.phase !== 'BETTING') return;
+    if (state.phase === 'BETTING') {
+        processAutoBets();
 
-    processAutoBets();
+        // --- NEW LOGIC: Check for immediate start condition ---
+        const seatedPlayers = state.players.filter(p => p); // Get all players who are seated (not null)
+        const allSeatedPlayersAreReady = seatedPlayers.length > 0 && seatedPlayers.every(p => p.isReady); // Check if there are seated players AND all of them are ready
+        const isThereAtLeastOneHuman = seatedPlayers.some(p => !p.autoPlay); // Check if at least one of the seated players is a human
 
-    // --- NEW LOGIC: Check for immediate start condition ---
-    const seatedPlayers = state.players.filter(p => p); // Get all players who are seated (not null)
-    const allSeatedPlayersAreReady = seatedPlayers.length > 0 && seatedPlayers.every(p => p.isReady); // Check if there are seated players AND all of them are ready
-    const isThereAtLeastOneHuman = seatedPlayers.some(p => !p.autoPlay); // Check if at least one of the seated players is a human
-
-    if (allSeatedPlayersAreReady && isThereAtLeastOneHuman) {
-        // All seated players have placed their bets and at least one is a human.
-        // Expire the timer immediately.
-        if (state.timer) {
-            clearInterval(state.timer);
-            state.timer = null;
+        if (allSeatedPlayersAreReady && isThereAtLeastOneHuman) {
+            // All seated players have placed their bets and at least one is a human.
+            // Expire the timer immediately.
+            if (state.timer) {
+                clearInterval(state.timer);
+                state.timer = null;
+            }
+            ui.overlay.classList.remove('show'); // Remove the timer display
+            dealHands(); // Start the round immediately
+            return; // Exit the function early since the round has started
         }
-        ui.overlay.classList.remove('show'); // Remove the timer display
-        dealHands(); // Start the round immediately
-        return; // Exit the function early since the round has started
-    }
-    // --- END OF NEW LOGIC ---
+        // --- END OF NEW LOGIC ---
 
-    // Original logic continues only if the immediate start condition wasn't met
-    const waitingPlayers = state.players.filter(p => p && p.isReady);
+        // Original logic continues only if the immediate start condition wasn't met
+        const waitingPlayers = state.players.filter(p => p && p.isReady);
 
-    if (waitingPlayers.length > 0) {
-        if (!state.timer) {
-            startTimer(); // Start the timer if it wasn't already running and bets have been placed
-        }
-        // If timer is already running, this function might update the UI or perform other tasks
-        // related to the ongoing betting phase, though in the original code it doesn't do much more here.
-    } else {
-        // No one has placed a bet yet
-        if (state.timer) {
-            clearInterval(state.timer);
-            state.timer = null;
-            ui.overlay.classList.remove('show');
+        if (waitingPlayers.length > 0) {
+            if (!state.timer) {
+                startTimer(); // Start the timer if it wasn't already running and bets have been placed
+            }
+        } else {
+            // No one has placed a bet yet
+            if (state.timer) {
+                clearInterval(state.timer);
+                state.timer = null;
+                ui.overlay.classList.remove('show');
+            }
         }
     }
 
@@ -527,7 +337,6 @@ function clearBet(idx) {
 }
 
 function toggleAuto(idx, type) {
-    if (state.phase !== 'BETTING') return;
     const p = state.players[idx];
     if (!p) return;
 
@@ -535,6 +344,9 @@ function toggleAuto(idx, type) {
         p.autoPlay = !p.autoPlay;
         if (!p.autoPlay) {
             p.autoBet = false;
+        } else if (state.phase === 'PLAYING' && state.turnIndex === idx) {
+            // If it's this player's turn and they just enabled auto-play, trigger it
+            runAutoPlay();
         }
     } else if (type === 'bet' && p.autoPlay) {
         p.autoBet = !p.autoBet;
@@ -546,6 +358,7 @@ function toggleAuto(idx, type) {
             }
         }
     }
+    renderSeat(idx);
     updateGameFlow();
 }
 
@@ -704,7 +517,8 @@ function dealHands() {
 
 function checkBlackjack() {
     const upCard = state.dealer.hand[0];
-    const dScore = (upCard.num === 10 || upCard.val === 'A')
+    const isTenVal = ['10', 'J', 'Q', 'K'].includes(upCard.val);
+    const dScore = (isTenVal || upCard.val === 'A')
         ? calcScore(state.dealer.hand, true) // Peek for BJ
         : calcScore(state.dealer.hand);     // Regular score
     let activePlayers = state.players.filter(p => p && p.hands.length);
@@ -729,7 +543,7 @@ function checkBlackjack() {
         state.runningCount += BlackjackLogic.getCardCount(state.dealer.hand[1]);
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
-        playSound('lose');
+        playSound('dealer-bj');
 
         // Determine outcomes: push for player blackjacks, lose for everyone else.
         activePlayers.forEach(p => {
@@ -845,7 +659,7 @@ function playerHit() {
     if (calcScore(h.cards) > 21) {
         h.status = 'bust';
         h.result = 'lose';
-        if (!p.autoPlay) playSound('bust');
+        if (!p.autoPlay) setTimeout(playSound, 200, 'bust');
         ui.strategyText.textContent = "";
         setTimeout(nextTurn, 800);
     } else if (calcScore(h.cards) === 21) {
@@ -905,7 +719,7 @@ function playerDouble() {
     h.bet *= 2;
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += c.count;
+    state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -996,98 +810,51 @@ function resolveRound() {
 
     if (dScore > 21) {
         showOverlay("Dealer Busts!", "All Active Hands Win", "", "msg-win");
-        playSound('bust')
+        playSound('dealer-bust')
     }
     ui.overlay.classList.remove('show');
-    let pIndex = 0;
 
-    function processNextPlayer() {
-        if (pIndex >= state.players.length) {
-            finishRound();
-            return;
-        }
+    // Resolve all hands simultaneously
+    state.players.forEach((p, pIndex) => {
+        if (!p || !p.hands.length) return;
 
-        const p = state.players[pIndex];
-        pIndex++;
-
-        if (!p || !p.hands.length) {
-            processNextPlayer();
-            return;
-        }
-
-        // Process hands one by one with delays to avoid overlapping sounds
-        let handIndex = 0;
-
-        function processNextHand() {
-            if (handIndex >= p.hands.length) {
-                // All hands for this player processed, move to next player
-                renderSeat(pIndex - 1);
-                setTimeout(processNextPlayer, 1200); // Delay before moving to next player
-                return;
-            }
-
-            const h = p.hands[handIndex];
-            handIndex++;
-            let next_timeout = 1200
-
-            // Ensure bust status is reflected as a loss
+        p.hands.forEach(h => {
+            // Determine result if not already determined (e.g. by blackjack or bust)
             if (h.status === 'bust') {
                 h.result = 'lose';
+            } else if (!h.result) {
+                const result = BlackjackLogic.determineResult(h.cards, state.dealer.hand);
+                h.result = (result === 'blackjack') ? 'win' : result;
             }
-
-            // First, handle hands with pre-determined results (from checkBlackjack or busts)
-            if (h.result !== null) {
-                if (h.result === 'win') { // Player blackjack wins 3:2
-                    const profit = h.bet * 1.5;
-                    p.chips += h.bet + profit;
-                    state.casinoProfit -= profit;
-                    showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
-                } else if (h.result === 'push') { // e.g., both player and dealer have blackjack
-                    p.chips += h.bet;
-                    showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
-                    next_timeout = 100;
-                } else if (h.result === 'lose') { // Player busted or lost to dealer's blackjack
-                    state.casinoProfit += h.bet;
-                    const reason = h.status === 'bust' ? "Bust" : "Lost";
-                    showOverlay(`Player ${p.id + 1}`, reason, `-$${h.bet}`, "msg-lose");
-                    if (h.status !== 'bust' && !p.autoPlay) playSound('lose');
-                    next_timeout = 400;
-                }
-
-                setTimeout(processNextHand, next_timeout);
-                return;
-            }
-
-            // If result is not pre-determined, resolve by comparing to dealer
-            const result = BlackjackLogic.determineResult(h.cards, state.dealer.hand);
-            h.result = (result === 'blackjack') ? 'win' : result;
             h.status = h.result;
 
+            // Calculate Payouts
+            h.profit = 0;
             if (h.result === 'win') {
-                p.chips += h.bet * 2;
-                state.casinoProfit -= h.bet;
-                showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
-                if (!p.autoPlay) playSound('win');
-            } else if (h.result === 'lose') {
-                state.casinoProfit += h.bet;
-                showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
-                if (!p.autoPlay) playSound('lose');
-                next_timeout = 400
-            } else {
+                if (BlackjackLogic.isBlackjack(h.cards)) {
+                    h.profit = h.bet * 1.5;
+                } else {
+                    h.profit = h.bet;
+                }
+                // Return original bet + profit
+                p.chips += h.bet + h.profit;
+                state.casinoProfit -= h.profit;
+            } else if (h.result === 'push') {
                 p.chips += h.bet;
-                showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
-                next_timeout = 100
+                // No profit change
+            } else {
+                // Loss
+                state.casinoProfit += h.bet;
+                h.profit = -h.bet;
             }
+        });
+    });
 
-            // Process next hand after delay
-            setTimeout(processNextHand, next_timeout);
-        }
+    // Update UI
+    render();
 
-        // Start processing hands for this player
-        processNextHand();
-    }
-
-    processNextPlayer();
+    // Move directly to finish (wait for user to see results)
+    setTimeout(finishRound, 4000);
 }
 
 function finishRound() {
@@ -1111,6 +878,14 @@ function finishRound() {
 }
 
 function endRound() {
+    // 1. Finalize any pending removals
+    state.players = state.players.map(p => (p && p.pendingStandUp) ? null : p);
+
+    // 2. Trim players array if seatCount was decreased during the round
+    if (state.players.length > state.seatCount) {
+        state.players = state.players.slice(0, state.seatCount);
+    }
+
     state.phase = 'BETTING';
     updateCountHint();
     updateGameFlow();
@@ -1124,11 +899,7 @@ function calcScore(cards, peek = false) {
 }
 
 function getScoreDisplay(cards) {
-    const score = calcScore(cards);
-    if (isSoftHand(cards) && score < 21) {
-        return `${score - 10} / ${score}`;
-    }
-    return score;
+    return CommonUtils.getScoreDisplay(calcScore(cards));
 }
 
 function isSoftHand(cards) {
@@ -1225,14 +996,7 @@ function showOverlay(main, sub, amount, colorClass) {
 
 /* --- RENDERING --- */
 function createCardEl(card) {
-    const div = document.createElement('div');
-    div.className = `card ${card.color} ${card.hidden ? 'hidden' : ''} ${card.isSplitCard ? 'split-card' : ''}`;
-    if (!card.hidden) {
-        div.innerHTML = `<div class="val-top">${card.val}<small>${card.suit}</small></div>`;
-        div.innerHTML += `<div class="suit-center">${card.suit}</div>`;
-        div.innerHTML += `<div class="val-bot">${card.val}<small>${card.suit}</small></div>`;
-    }
-    return div;
+    return CommonUtils.createCardEl(card);
 }
 
 function renderDealer() {
@@ -1248,6 +1012,8 @@ function renderDealer() {
 }
 
 function sit(idx) {
+    if (state.players[idx]) return;
+
     state.players[idx] = {
         id: idx,
         chips: 1000,
@@ -1256,14 +1022,40 @@ function sit(idx) {
         hands: [],
         isReady: false,
         autoPlay: false,
-        autoBet: false
+        autoBet: false,
+        pendingStandUp: false
     };
-    updateGameFlow();
+
+    if (state.phase === 'BETTING') {
+        updateGameFlow();
+    } else {
+        renderSeat(idx);
+    }
 }
 
 function standUp(idx) {
-    state.players[idx] = null;
-    updateGameFlow();
+    const p = state.players[idx];
+    if (!p) return;
+
+    if (state.phase !== 'BETTING' && p.hands.length > 0) {
+        // Round in progress and player has a hand, mark for removal
+        p.pendingStandUp = true;
+        p.autoPlay = true; // Bot takes over to finish the hand
+        renderSeat(idx);
+
+        // If it's their turn, the bot should start immediately
+        if (state.phase === 'PLAYING' && state.turnIndex === idx) {
+            runAutoPlay();
+        }
+    } else {
+        // Safe to remove immediately
+        state.players[idx] = null;
+        if (state.phase === 'BETTING') {
+            updateGameFlow();
+        } else {
+            renderSeats();
+        }
+    }
 }
 
 function renderSeat(idx) {
@@ -1293,7 +1085,7 @@ function getSeatHTML(idx) {
         return `
                     <div class="seat" id="seat-${idx}" style="justify-content: flex-end;">
                         <div style="color:#aaa; margin-bottom:auto;">Empty</div>
-                        <button class="btn-sit" onclick="sit(${idx})" ${isGameActive ? 'disabled' : ''}>Sit Down</button>
+                        <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
                     </div>
                 `;
     }
@@ -1302,12 +1094,14 @@ function getSeatHTML(idx) {
     if (p.autoPlay) classList += ` auto`;
 
     const isMyTurn = (state.turnIndex === idx && state.phase === 'PLAYING');
-    if (isGameActive && !isMyTurn) classList += ` disabled`;
 
     let statusClass = '';
     let statusText = '';
 
-    if (state.phase === 'BETTING' || state.phase === 'RESOLVING') {
+    if (p.pendingStandUp) {
+        statusClass = 'pending-standup';
+        statusText = 'STANDING UP...';
+    } else if (state.phase === 'BETTING' || state.phase === 'RESOLVING') {
         const wins = p.hands.filter(h => h.result === 'win').length;
         const loses = p.hands.filter(h => h.result === 'lose').length;
         const pushes = p.hands.filter(h => h.result === 'push').length;
@@ -1321,26 +1115,29 @@ function getSeatHTML(idx) {
 
     let controlsHTML = '';
 
+    // General Controls (Stand Up and Toggles) - Always available if seated
+    const togglesHTML = `
+                <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
+                <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
+                    <span class="toggle-label">Auto Play</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} disabled>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-container ${!p.autoPlay ? 'hidden-opacity' : ''}" onclick="toggleAuto(${idx}, 'bet')">
+                    <span class="toggle-label">Auto Bet</span>
+                    <label class="toggle-switch auto-bet">
+                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} disabled>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+    `;
+
     // Betting Phase Controls
     if (state.phase === 'BETTING') {
         controlsHTML = `
-                    <button class="btn-standup" onclick="standUp(${idx})">Stand Up</button>
-                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
-                        <span class="toggle-label">Auto Play</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" ${p.autoPlay ? 'checked' : ''} disabled>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    ${p.autoPlay ? `
-                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
-                        <span class="toggle-label">Auto Bet</span>
-                        <label class="toggle-switch auto-bet">
-                            <input type="checkbox" ${p.autoBet ? 'checked' : ''} disabled>
-                            <span class="slider"></span>
-                        </label>
-                    </div>` : ''}
-
+                    ${togglesHTML}
                     <div class="bet-controls">
                         <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || 10}" min="10" step="10">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
@@ -1349,48 +1146,25 @@ function getSeatHTML(idx) {
                 `;
     }
     // Playing Phase Controls
-    else if (state.phase === 'PLAYING' && isMyTurn) {
-        const h = p.hands[state.splitIndex];
-        // Bot/Human double check
-        const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
+    else if (state.phase === 'PLAYING') {
+        if (isMyTurn && !p.autoPlay) {
+            const h = p.hands[state.splitIndex];
+            const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
-        controlsHTML = `
-                    <div class="controls">
-                        <button class="action-btn btn-hit" onclick="playerHit()">H</button>
-                        <button class="action-btn btn-stand" onclick="playerStand()">S</button>
-                        <button class="action-btn btn-double" onclick="playerDouble()" ${p.chips < h.bet || h.cards.length !== 2 ? 'disabled' : ''}>D</button>
-                        <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
-                    </div>
-                `;
-    }
-
-    // Hand Rendering
-    let handsHTML = '';
-    if (p.hands.length > 0) {
-        if (p.hands.length > 1) {
-            // Split view
-            handsHTML = `<div class="split-container">`;
-            p.hands.forEach((h, hIdx) => {
-                const isActive = (state.splitIndex === hIdx) ? 'active-split' : '';
-                handsHTML += `
-                            <div class="mini-hand ${isActive}">
-                                <div class="score-pill" style="font-size:0.7rem; padding:2px 6px;">${getScoreDisplay(h.cards)}</div>
-                                <div class="cards">
-                                    ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
-                                </div>
-                            </div>
-                        `;
-            });
-            handsHTML += `</div>`;
-        } else {
-            // Single hand view
-            const h = p.hands[0];
-            handsHTML = `
-                        <div class="cards" style="transform: scale(0.8);">
-                            ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
+            controlsHTML = `
+                        ${togglesHTML}
+                        <div class="controls">
+                            <button class="action-btn btn-hit" onclick="playerHit()">H</button>
+                            <button class="action-btn btn-stand" onclick="playerStand()">S</button>
+                            <button class="action-btn btn-double" onclick="playerDouble()" ${p.chips < h.bet || h.cards.length !== 2 ? 'disabled' : ''}>D</button>
+                            <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
                         </div>
                     `;
+        } else {
+            controlsHTML = togglesHTML;
         }
+    } else {
+        controlsHTML = togglesHTML;
     }
 
     // Requirement: Persistent Bet Bubble
@@ -1406,7 +1180,7 @@ function getSeatHTML(idx) {
     return `
                 <div class="seat ${classList}" id="seat-${idx}">
                     <div class="seat-info">
-                        <span>Player ${idx + 1} ${p.autoPlay ? '(Bot)' : ''}</span>
+                        <span>Player ${idx + 1} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
                         <span class="chip-stack">$${p.chips}</span>
                     </div>
 
@@ -1415,9 +1189,84 @@ function getSeatHTML(idx) {
 
                         ${p.hands.length > 0 && state.phase !== 'BETTING'
             ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
-            : ''}
+            : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
+        }
 
-                        ${handsHTML}
+                        ${(() => {
+            // Hand rendering logic inline
+            if (!p.hands.length) return '';
+
+            let html = '';
+            if (p.hands.length > 1) {
+                html += `<div class="split-container">`;
+                p.hands.forEach((h, hIdx) => {
+                    const isActive = (state.splitIndex === hIdx) ? 'active-split' : '';
+
+                    // Result Overlay
+                    let resultHTML = '';
+                    if (state.phase === 'RESOLVING' && h.result) {
+                        let resClass = 'result-push';
+                        let contentHTML = '<span class="res-text">PUSH</span>';
+
+                        if (h.result === 'win') {
+                            resClass = 'result-win';
+                            contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
+                        } else if (h.result === 'lose') {
+                            resClass = 'result-lose';
+                            contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
+                        }
+
+                        resultHTML = `
+                                            <div class="hand-result ${resClass}">
+                                                ${contentHTML}
+                                            </div>
+                                        `;
+                    }
+
+                    html += `
+                                        <div class="mini-hand ${isActive}">
+                                            ${resultHTML}
+                                            <div class="score-pill" style="font-size:0.7rem; padding:2px 6px;">${getScoreDisplay(h.cards)}</div>
+                                            <div class="cards">
+                                                ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                });
+                html += `</div>`;
+            } else {
+                const h = p.hands[0];
+
+                // Result Overlay
+                let resultHTML = '';
+                if (state.phase === 'RESOLVING' && h.result) {
+                    let resClass = 'result-push';
+                    let contentHTML = '<span class="res-text">PUSH</span>';
+
+                    if (h.result === 'win') {
+                        resClass = 'result-win';
+                        contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
+                    } else if (h.result === 'lose') {
+                        resClass = 'result-lose';
+                        contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
+                    }
+
+                    resultHTML = `
+                                        <div class="hand-result ${resClass}">
+                                            ${contentHTML}
+                                        </div>
+                                    `;
+                }
+
+                html = `
+                                    <div class="cards" style="transform: scale(0.8); position: relative;">
+                                        ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
+                                        ${resultHTML}
+                                    </div>
+                                `;
+            }
+            return html;
+        })()}
 
                         ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
                     </div>
@@ -1429,8 +1278,21 @@ function getSeatHTML(idx) {
 
 // Event Listeners for Settings
 ui.seatSelect.addEventListener('change', (e) => {
-    state.seatCount = parseInt(e.target.value);
-    state.players = Array(state.seatCount).fill(null);
+    const newCount = parseInt(e.target.value);
+    const oldCount = state.seatCount;
+    state.seatCount = newCount;
+
+    if (newCount > oldCount) {
+        // Just expand the array
+        for (let i = oldCount; i < newCount; i++) {
+            state.players.push(null);
+        }
+    } else if (newCount < oldCount) {
+        // If some players are beyond the new count, they will be removed at the end of the round.
+        // For now, we just update the visual seat Count so renderSeats() only shows the new count.
+        // But we keep the players in state.players until endRound() trims it.
+    }
+
     renderSeats();
 });
 
