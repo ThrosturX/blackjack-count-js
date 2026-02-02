@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Casino Blackjack</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casino Blackjack</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-    <body>
+<body>
 
-        <header>
-            <h1>Blackjack</h1>
-            <div class="game-controls">
+    <header>
+        <h1>Blackjack</h1>
+        <div class="header-toggles">
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="settings-area">
                 <div class="stats">Seats:
                     <select id="seat-select">
                         <option value="1">1</option>
@@ -38,51 +44,65 @@
                         <option value="8">8</option>
                     </select>
                 </div>
+                <div class="stats">Style:
+                    <select id="deck-style-select">
+                        <option value="red" selected>Red Striped</option>
+                        <option value="blue">Blue Classic</option>
+                        <option value="green">Green Pattern</option>
+                        <option value="gold">Royal Gold</option>
+                        <option value="cyberpunk">Cyberpunk Grid</option>
+                    </select>
+                </div>
+            </div>
 
+            <div class="controls-section" id="stats-area">
                 <div class="stats">Cards: <span id="cards-left">0</span></div>
                 <div class="stats">Count: <span id="run-count">0</span></div>
                 <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <main id="table">
-            <!-- Center Overlay for Timer & Results -->
-            <div id="center-overlay">
-                <div id="overlay-main" class="overlay-text"></div>
-                <div id="overlay-sub" class="overlay-sub"></div>
-            </div>
-
-            <!-- Visual Shoe (Bottom Side) -->
-            <div class="shoe-container">
-                <div class="shoe-body">
-                    <div class="card-stack" id="card-stack">
-                        <!-- Cards will be dynamically inserted here -->
-                    </div>
-                    <div class="shoe-lip"></div>
-                </div>
-                <div class="shoe-base"></div>
-            </div>
-
-            <!-- Dealer Section -->
-            <div id="dealer-area">
-                <div class="score-pill" id="dealer-score">?</div>
-                <div class="cards" id="dealer-cards"></div>
-            </div>
-
-            <!-- Players Section -->
-            <div id="seats">
-                <!-- Seats injected by JS -->
-            </div>
-        </main>
-
-        <!-- Strategy Hint Bar -->
-        <div id="strategy-bar">
-            <span class="hint-label">Basic Strategy Hint</span>
-            <span id="strategy-text" class="hint-text">Place bets to start</span>
-            <span id="count-hint" class="count-hint ch-neutral"></span>
+    <main id="table">
+        <!-- Center Overlay for Timer & Results -->
+        <div id="center-overlay">
+            <div id="overlay-main" class="overlay-text"></div>
+            <div id="overlay-sub" class="overlay-sub"></div>
         </div>
 
-        <script src="script.js"></script>
-    </body>
+        <!-- Visual Shoe (Bottom Side) -->
+        <div class="shoe-container">
+            <div class="shoe-body">
+                <div class="card-stack" id="card-stack">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+                <div class="shoe-lip"></div>
+            </div>
+            <div class="shoe-base"></div>
+        </div>
+
+        <!-- Dealer Section -->
+        <div id="dealer-area">
+            <div class="score-pill" id="dealer-score">?</div>
+            <div class="cards" id="dealer-cards"></div>
+        </div>
+
+        <!-- Players Section -->
+        <div id="seats">
+            <!-- Seats injected by JS -->
+        </div>
+    </main>
+
+    <!-- Strategy Hint Bar -->
+    <div id="strategy-bar">
+        <span class="hint-label">Basic Strategy Hint</span>
+        <span id="strategy-text" class="hint-text">Place bets to start</span>
+        <span id="count-hint" class="count-hint ch-neutral"></span>
+    </div>
+
+    <script src="card.js"></script>
+    <script src="blackjack-logic.js"></script>
+    <script src="blackjack.js"></script>
+</body>
 
 </html>

@@ -1,6 +1,3 @@
-/* --- CONSTANTS --- */
-const SUITS = ['♥', '♦', '♣', '♠'];
-const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
@@ -35,9 +32,14 @@ const ui = {
     runCount: document.getElementById('run-count'),
     casinoProfit: document.getElementById('casino-profit'),
     deckSelect: document.getElementById('deck-select'),
+    deckStyleSelect: document.getElementById('deck-style-select'),
     seatSelect: document.getElementById('seat-select'),
     strategyText: document.getElementById('strategy-text'),
     countHint: document.getElementById('count-hint'),
+    settingsArea: document.getElementById('settings-area'),
+    statsArea: document.getElementById('stats-area'),
+    toggleSettings: document.getElementById('toggle-settings'),
+    toggleStats: document.getElementById('toggle-stats'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -96,32 +98,52 @@ function playSound(type) {
     }
 }
 
-/* --- CARD CLASS --- */
-class Card {
-    constructor(suit, val) {
-        this.suit = suit;
-        this.val = val;
-        this.hidden = false;
-        this.isSplitCard = false;
-    }
-    get num() {
-        if (['J', 'Q', 'K'].includes(this.val)) return 10;
-        if (this.val === 'A') return 11;
-        return parseInt(this.val);
-    }
-    get count() {
-        if (['10', 'J', 'Q', 'K', 'A'].includes(this.val)) return -1;
-        if (['2', '3', '4', '5', '6'].includes(this.val)) return 1;
-        return 0;
-    }
-    get color() { return (this.suit === '♥' || this.suit === '♦') ? 'red' : 'black'; }
-}
-
 /* --- INITIALIZATION --- */
 function init() {
     state.players = Array(state.seatCount).fill(null);
     createShoe();
+
+    // Initialize deck style
+    if (ui.deckStyleSelect) {
+        updateDeckStyle();
+        ui.deckStyleSelect.addEventListener('change', updateDeckStyle);
+    }
+
+    // Initialize independent toggles
+    if (ui.toggleSettings) {
+        ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
+        ui.toggleSettings.classList.add('active'); // Default open
+    }
+    if (ui.toggleStats) {
+        ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
+        ui.toggleStats.classList.add('active'); // Default open
+    }
+
     setTimeout(updateShoeVisual, 100);
+}
+
+function toggleControlsArea(type) {
+    if (type === 'settings') {
+        const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
+        ui.toggleSettings.classList.toggle('active', !isCollapsed);
+    } else if (type === 'stats') {
+        const isCollapsed = ui.statsArea.classList.toggle('collapsed');
+        ui.toggleStats.classList.toggle('active', !isCollapsed);
+    }
+}
+
+function updateDeckStyle() {
+    const style = ui.deckStyleSelect.value;
+    // Remove any existing deck classes
+    Array.from(document.body.classList).forEach(cls => {
+        if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+    });
+    // Add selected deck class
+    document.body.classList.add(`deck-${style}`);
+
+    // Refresh visuals that might need it
+    updateShoeVisual();
+    render();
 }
 
 function createShoe() {
@@ -282,7 +304,6 @@ function updateShoeVisual() {
                 position: absolute;
                 width: 2px;
                 height: 70px;
-                background: linear-gradient(0deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
                 left: ${positionFromRight}px;
                 z-index: ${i * 2};
             `;
@@ -308,7 +329,6 @@ function updateShoeVisual() {
                 position: absolute;
                 width: 2px;
                 height: 70px;
-                background-color: pink;
                 left: ${edgePositionFromRight}px;
                 z-index: ${i * 2 + 1};
             `;
@@ -351,7 +371,7 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     flyingCard.style.opacity = '0.95';
     flyingCard.style.borderRadius = '6px';
     flyingCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
-    flyingCard.style.border = '2px solid #ffd700';
+    // Remove hardcoded border color, style will come from .card.hidden which now uses CSS variable
 
     // Position at shoe
     const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();
@@ -363,7 +383,7 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     // Determine destination based on parameters
     setTimeout(() => {
         let destX, destY;
-        
+
         if (!toDealer && seatIndex !== null) {
             // Animate to specific player seat
             const seatElement = document.getElementById(`seat-${seatIndex}`);
@@ -660,7 +680,7 @@ function dealHands() {
             if (c.isSplitCard) state.cutCardReached = true;
 
             if (!c.hidden) {
-                state.runningCount += c.count;
+                state.runningCount += BlackjackLogic.getCardCount(c);
                 updateStats();
                 playSound('card');
             }
@@ -670,7 +690,7 @@ function dealHands() {
             const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
-            state.runningCount += c.count;
+            state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
             p.hands[0].cards.push(c);
@@ -693,7 +713,7 @@ function checkBlackjack() {
     // Set blackjack status for any player who has 21
     activePlayers.forEach(p => {
         p.hands.forEach(h => {
-            if (calcScore(h.cards) === 21) {
+            if (BlackjackLogic.isBlackjack(h.cards)) {
                 h.status = 'blackjack';
                 playSound('blackjack');
             }
@@ -706,7 +726,7 @@ function checkBlackjack() {
         // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
-        state.runningCount += state.dealer.hand[1].count;
+        state.runningCount += BlackjackLogic.getCardCount(state.dealer.hand[1]);
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('lose');
@@ -805,7 +825,7 @@ function runAutoPlay() {
 function playerHit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent hitting if hand is not in playing status (already busted, stood, etc.)
     if (h.status !== 'playing') {
         playSound('error');
@@ -813,7 +833,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += c.count;
+    state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -844,7 +864,7 @@ function playerStand() {
     ui.strategyText.textContent = "";
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent standing if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -869,7 +889,7 @@ function playerStand() {
 function playerDouble() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent doubling if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -900,7 +920,7 @@ function playerDouble() {
 function playerSplit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent splitting if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -926,13 +946,13 @@ function playerSplit() {
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
     const cFirst = drawCard(false, state.turnIndex);
-    state.runningCount += cFirst.count;
+    state.runningCount += BlackjackLogic.getCardCount(cFirst);
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
 
     const cSecond = drawCard(false, state.turnIndex);
-    state.runningCount += cSecond.count;
+    state.runningCount += BlackjackLogic.getCardCount(cSecond);
     updateStats();
     playSound('card');
     newHand.cards.push(cSecond);
@@ -948,7 +968,7 @@ function dealerTurn() {
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
-    state.runningCount += hole.count;
+    state.runningCount += BlackjackLogic.getCardCount(hole);
     render();
     playSound('card');
 
@@ -957,7 +977,7 @@ function dealerTurn() {
     function loop() {
         if (score < 17) {
             const c = drawCard(true, null);
-            state.runningCount += c.count;
+            state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
             state.dealer.hand.push(c);
@@ -997,7 +1017,7 @@ function resolveRound() {
 
         // Process hands one by one with delays to avoid overlapping sounds
         let handIndex = 0;
-        
+
         function processNextHand() {
             if (handIndex >= p.hands.length) {
                 // All hands for this player processed, move to next player
@@ -1005,11 +1025,11 @@ function resolveRound() {
                 setTimeout(processNextPlayer, 1200); // Delay before moving to next player
                 return;
             }
-            
+
             const h = p.hands[handIndex];
             handIndex++;
             let next_timeout = 1200
-            
+
             // Ensure bust status is reflected as a loss
             if (h.status === 'bust') {
                 h.result = 'lose';
@@ -1033,40 +1053,36 @@ function resolveRound() {
                     if (h.status !== 'bust' && !p.autoPlay) playSound('lose');
                     next_timeout = 400;
                 }
-                
+
                 setTimeout(processNextHand, next_timeout);
                 return;
             }
 
             // If result is not pre-determined, resolve by comparing to dealer
-            const pScore = calcScore(h.cards);
+            const result = BlackjackLogic.determineResult(h.cards, state.dealer.hand);
+            h.result = (result === 'blackjack') ? 'win' : result;
+            h.status = h.result;
 
-            if (pScore > dScore || dScore > 21) {
-                h.status = 'win';
-                h.result = 'win';
+            if (h.result === 'win') {
                 p.chips += h.bet * 2;
                 state.casinoProfit -= h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
                 if (!p.autoPlay) playSound('win');
-            } else if (pScore < dScore) {
-                h.status = 'lose';
-                h.result = 'lose';
+            } else if (h.result === 'lose') {
                 state.casinoProfit += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
                 if (!p.autoPlay) playSound('lose');
                 next_timeout = 400
             } else {
-                h.status = 'push';
-                h.result = 'push';
                 p.chips += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
                 next_timeout = 100
             }
-            
+
             // Process next hand after delay
             setTimeout(processNextHand, next_timeout);
         }
-        
+
         // Start processing hands for this player
         processNextHand();
     }
@@ -1104,15 +1120,7 @@ function endRound() {
 /* --- HELPERS --- */
 
 function calcScore(cards, peek = false) {
-    let s = 0;
-    let a = 0;
-    cards.forEach(c => {
-        if (c.hidden && !peek) return;
-        s += c.num;
-        if (c.val === 'A') a++;
-    });
-    while (s > 21 && a > 0) { s -= 10; a--; }
-    return s;
+    return BlackjackLogic.calcScore(cards, peek);
 }
 
 function getScoreDisplay(cards) {
@@ -1124,34 +1132,15 @@ function getScoreDisplay(cards) {
 }
 
 function isSoftHand(cards) {
-    let minScore = 0;
-    let hasAce = false;
-
-    for (let c of cards) {
-        if (c.hidden) continue;
-
-        // Calculate the absolute minimum value (Aces = 1)
-        if (c.val === 'A') {
-            minScore += 1;
-            hasAce = true;
-        } else {
-            // Ensure we use the card's blackjack value (10 for J, Q, K)
-            minScore += Math.min(10, c.num); 
-        }
-    }
-
-    // A hand is "Soft" ONLY if:
-    // 1. It has at least one Ace
-    // 2. Changing ONE Ace from 1 to 11 (adding 10) stays at or under 21
-    return hasAce && (minScore + 10 <= 21);
+    return BlackjackLogic.isSoftHand(cards);
 }
 
 function getStrategyHint(dCard, pCards) {
-    const dVal = dCard.num;
+    const dVal = BlackjackLogic.getCardValue(dCard);
     const pScore = calcScore(pCards);
     const soft = isSoftHand(pCards);
 
-    if (pCards.length === 2 && pCards[0].num === pCards[1].num) {
+    if (pCards.length === 2 && BlackjackLogic.getCardValue(pCards[0]) === BlackjackLogic.getCardValue(pCards[1])) {
         const c = pCards[0].val;
         if (c === 'A' || c === '8') return "Split";
         if (c === '10') return soft ? "Stand" : (pScore >= 12 ? "Stand" : "Hit");
@@ -1252,7 +1241,7 @@ function renderDealer() {
 
     const hasHidden = state.dealer.hand.some(c => c.hidden);
     if (hasHidden && state.phase !== 'RESOLVING') {
-        ui.dealerScore.textContent = state.dealer.hand[0].num;
+        ui.dealerScore.textContent = BlackjackLogic.getCardValue(state.dealer.hand[0]);
     } else {
         ui.dealerScore.textContent = calcScore(state.dealer.hand);
     }
@@ -1363,7 +1352,7 @@ function getSeatHTML(idx) {
     else if (state.phase === 'PLAYING' && isMyTurn) {
         const h = p.hands[state.splitIndex];
         // Bot/Human double check
-        const canSplit = (h.cards.length === 2 && h.cards[0].num === h.cards[1].num && p.chips >= h.bet);
+        const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
         controlsHTML = `
                     <div class="controls">
@@ -1425,8 +1414,8 @@ function getSeatHTML(idx) {
                         ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10;">${statusText}</div>` : ''}
 
                         ${p.hands.length > 0 && state.phase !== 'BETTING'
-                                ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
-                                : ''}
+            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+            : ''}
 
                         ${handsHTML}
 
