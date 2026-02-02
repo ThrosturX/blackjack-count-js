@@ -778,23 +778,22 @@ function playerHit() {
     ui.overlay.classList.remove('show');
     renderSeat(state.turnIndex);
 
-    setTimeout(() => {
-        if (calcScore(h.cards) > 21) {
-            h.status = 'bust';
-            h.result = 'lose';
-            playSound('bust');
-            ui.strategyText.textContent = "";
-            setTimeout(nextTurn, 800);
-        } else if (calcScore(h.cards) === 21) {
-            ui.strategyText.textContent = "";
-            setTimeout(playerStand, 500);
-        } else {
-            updateStrategyHint();
-            if (state.players[state.turnIndex].autoPlay) {
-                setTimeout(runAutoPlay, 500);
-            }
+    // Immediately check for bust and update status to prevent multiple hits after bust
+    if (calcScore(h.cards) > 21) {
+        h.status = 'bust';
+        h.result = 'lose';
+        playSound('bust');
+        ui.strategyText.textContent = "";
+        setTimeout(nextTurn, 800);
+    } else if (calcScore(h.cards) === 21) {
+        ui.strategyText.textContent = "";
+        setTimeout(playerStand, 500);
+    } else {
+        updateStrategyHint();
+        if (state.players[state.turnIndex].autoPlay) {
+            setTimeout(runAutoPlay, 500);
         }
-    }, 500);
+    }
 }
 
 function playerStand() {
