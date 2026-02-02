@@ -363,7 +363,7 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     // Determine destination based on parameters
     setTimeout(() => {
         let destX, destY;
-        
+
         if (!toDealer && seatIndex !== null) {
             // Animate to specific player seat
             const seatElement = document.getElementById(`seat-${seatIndex}`);
@@ -693,7 +693,7 @@ function checkBlackjack() {
     // Set blackjack status for any player who has 21
     activePlayers.forEach(p => {
         p.hands.forEach(h => {
-            if (calcScore(h.cards) === 21) {
+            if (BlackjackLogic.isBlackjack(h.cards)) {
                 h.status = 'blackjack';
                 playSound('blackjack');
             }
@@ -805,7 +805,7 @@ function runAutoPlay() {
 function playerHit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent hitting if hand is not in playing status (already busted, stood, etc.)
     if (h.status !== 'playing') {
         playSound('error');
@@ -844,7 +844,7 @@ function playerStand() {
     ui.strategyText.textContent = "";
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent standing if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -869,7 +869,7 @@ function playerStand() {
 function playerDouble() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent doubling if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -900,7 +900,7 @@ function playerDouble() {
 function playerSplit() {
     const p = state.players[state.turnIndex];
     const h = p.hands[state.splitIndex];
-    
+
     // Prevent splitting if hand is not in playing status
     if (h.status !== 'playing') {
         playSound('error');
@@ -997,7 +997,7 @@ function resolveRound() {
 
         // Process hands one by one with delays to avoid overlapping sounds
         let handIndex = 0;
-        
+
         function processNextHand() {
             if (handIndex >= p.hands.length) {
                 // All hands for this player processed, move to next player
@@ -1005,11 +1005,11 @@ function resolveRound() {
                 setTimeout(processNextPlayer, 1200); // Delay before moving to next player
                 return;
             }
-            
+
             const h = p.hands[handIndex];
             handIndex++;
             let next_timeout = 1200
-            
+
             // Ensure bust status is reflected as a loss
             if (h.status === 'bust') {
                 h.result = 'lose';
@@ -1033,40 +1033,36 @@ function resolveRound() {
                     if (h.status !== 'bust' && !p.autoPlay) playSound('lose');
                     next_timeout = 400;
                 }
-                
+
                 setTimeout(processNextHand, next_timeout);
                 return;
             }
 
             // If result is not pre-determined, resolve by comparing to dealer
-            const pScore = calcScore(h.cards);
+            const result = BlackjackLogic.determineResult(h.cards, state.dealer.hand);
+            h.result = (result === 'blackjack') ? 'win' : result;
+            h.status = h.result;
 
-            if (pScore > dScore || dScore > 21) {
-                h.status = 'win';
-                h.result = 'win';
+            if (h.result === 'win') {
                 p.chips += h.bet * 2;
                 state.casinoProfit -= h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Won`, `+$${h.bet}`, "msg-win");
                 if (!p.autoPlay) playSound('win');
-            } else if (pScore < dScore) {
-                h.status = 'lose';
-                h.result = 'lose';
+            } else if (h.result === 'lose') {
                 state.casinoProfit += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Lost`, `-$${h.bet}`, "msg-lose");
                 if (!p.autoPlay) playSound('lose');
                 next_timeout = 400
             } else {
-                h.status = 'push';
-                h.result = 'push';
                 p.chips += h.bet;
                 showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
                 next_timeout = 100
             }
-            
+
             // Process next hand after delay
             setTimeout(processNextHand, next_timeout);
         }
-        
+
         // Start processing hands for this player
         processNextHand();
     }
@@ -1104,15 +1100,7 @@ function endRound() {
 /* --- HELPERS --- */
 
 function calcScore(cards, peek = false) {
-    let s = 0;
-    let a = 0;
-    cards.forEach(c => {
-        if (c.hidden && !peek) return;
-        s += c.num;
-        if (c.val === 'A') a++;
-    });
-    while (s > 21 && a > 0) { s -= 10; a--; }
-    return s;
+    return BlackjackLogic.calcScore(cards, peek);
 }
 
 function getScoreDisplay(cards) {
@@ -1124,26 +1112,7 @@ function getScoreDisplay(cards) {
 }
 
 function isSoftHand(cards) {
-    let minScore = 0;
-    let hasAce = false;
-
-    for (let c of cards) {
-        if (c.hidden) continue;
-
-        // Calculate the absolute minimum value (Aces = 1)
-        if (c.val === 'A') {
-            minScore += 1;
-            hasAce = true;
-        } else {
-            // Ensure we use the card's blackjack value (10 for J, Q, K)
-            minScore += Math.min(10, c.num); 
-        }
-    }
-
-    // A hand is "Soft" ONLY if:
-    // 1. It has at least one Ace
-    // 2. Changing ONE Ace from 1 to 11 (adding 10) stays at or under 21
-    return hasAce && (minScore + 10 <= 21);
+    return BlackjackLogic.isSoftHand(cards);
 }
 
 function getStrategyHint(dCard, pCards) {
@@ -1425,8 +1394,8 @@ function getSeatHTML(idx) {
                         ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10;">${statusText}</div>` : ''}
 
                         ${p.hands.length > 0 && state.phase !== 'BETTING'
-                                ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
-                                : ''}
+            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+            : ''}
 
                         ${handsHTML}
 
