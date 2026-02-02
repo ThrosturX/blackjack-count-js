@@ -32,6 +32,7 @@ const ui = {
     runCount: document.getElementById('run-count'),
     casinoProfit: document.getElementById('casino-profit'),
     deckSelect: document.getElementById('deck-select'),
+    deckStyleSelect: document.getElementById('deck-style-select'),
     seatSelect: document.getElementById('seat-select'),
     strategyText: document.getElementById('strategy-text'),
     countHint: document.getElementById('count-hint'),
@@ -97,7 +98,28 @@ function playSound(type) {
 function init() {
     state.players = Array(state.seatCount).fill(null);
     createShoe();
+
+    // Initialize deck style
+    if (ui.deckStyleSelect) {
+        updateDeckStyle();
+        ui.deckStyleSelect.addEventListener('change', updateDeckStyle);
+    }
+
     setTimeout(updateShoeVisual, 100);
+}
+
+function updateDeckStyle() {
+    const style = ui.deckStyleSelect.value;
+    // Remove any existing deck classes
+    Array.from(document.body.classList).forEach(cls => {
+        if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+    });
+    // Add selected deck class
+    document.body.classList.add(`deck-${style}`);
+
+    // Refresh visuals that might need it
+    updateShoeVisual();
+    render();
 }
 
 function createShoe() {
@@ -258,7 +280,6 @@ function updateShoeVisual() {
                 position: absolute;
                 width: 2px;
                 height: 70px;
-                background: linear-gradient(0deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
                 left: ${positionFromRight}px;
                 z-index: ${i * 2};
             `;
@@ -284,7 +305,6 @@ function updateShoeVisual() {
                 position: absolute;
                 width: 2px;
                 height: 70px;
-                background-color: pink;
                 left: ${edgePositionFromRight}px;
                 z-index: ${i * 2 + 1};
             `;
@@ -327,7 +347,7 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     flyingCard.style.opacity = '0.95';
     flyingCard.style.borderRadius = '6px';
     flyingCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.1)';
-    flyingCard.style.border = '2px solid #ffd700';
+    // Remove hardcoded border color, style will come from .card.hidden which now uses CSS variable
 
     // Position at shoe
     const shoeRect = document.querySelector('.shoe-body').getBoundingClientRect();

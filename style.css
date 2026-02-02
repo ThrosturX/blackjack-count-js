@@ -10,7 +10,62 @@
     --card-w: 70px;
     --card-h: 100px;
     --card-back-color: #b71c1c;
+    --card-back-pattern-color: #c62828;
     --card-border-color: #555;
+    --card-back-accent: #ffd700;
+    --card-edge-color: #b68181;
+    --card-back-bg: repeating-linear-gradient(45deg, var(--card-back-color), var(--card-back-color) 10px, var(--card-back-pattern-color) 10px, var(--card-back-pattern-color) 20px);
+}
+
+body.deck-red {
+    --card-back-color: #b71c1c;
+    --card-back-pattern-color: #c62828;
+    --card-back-accent: #ffd700;
+    --card-edge-color: #b68181;
+    --card-back-bg: repeating-linear-gradient(45deg, var(--card-back-color), var(--card-back-color) 10px, var(--card-back-pattern-color) 10px, var(--card-back-pattern-color) 20px);
+}
+
+body.deck-blue {
+    --card-back-color: #0d47a1;
+    --card-back-pattern-color: #1565c0;
+    --card-back-accent: #90caf9;
+    --card-edge-color: #82b1ff;
+    --card-back-bg: repeating-linear-gradient(45deg, var(--card-back-color), var(--card-back-color) 10px, var(--card-back-pattern-color) 10px, var(--card-back-pattern-color) 20px);
+}
+
+body.deck-green {
+    --card-back-color: #1b5e20;
+    --card-back-pattern-color: #2e7d32;
+    --card-back-accent: #a5d6a7;
+    --card-edge-color: #b9f6ca;
+    --card-back-bg: repeating-linear-gradient(45deg, var(--card-back-color), var(--card-back-color) 10px, var(--card-back-pattern-color) 10px, var(--card-back-pattern-color) 20px);
+}
+
+body.deck-gold {
+    --card-back-color: #d4af37;
+    --card-back-pattern-color: #f1c40f;
+    --card-back-accent: #fff;
+    --card-edge-color: #ffd700;
+    --card-back-bg:
+        radial-gradient(circle at 50% 50%, var(--card-back-pattern-color) 15%, transparent 16%),
+        radial-gradient(circle at 0% 0%, var(--card-back-pattern-color) 15%, transparent 16%),
+        radial-gradient(circle at 100% 0%, var(--card-back-pattern-color) 15%, transparent 16%),
+        radial-gradient(circle at 0% 100%, var(--card-back-pattern-color) 15%, transparent 16%),
+        radial-gradient(circle at 100% 100%, var(--card-back-pattern-color) 15%, transparent 16%),
+        var(--card-back-color);
+    --card-back-bg-size: 20px 20px;
+}
+
+body.deck-cyberpunk {
+    --card-back-color: #000;
+    --card-back-pattern-color: #0ff;
+    --card-back-accent: #f0f;
+    --card-edge-color: #0ff;
+    --card-back-bg:
+        linear-gradient(transparent 95%, var(--card-back-accent) 95%),
+        linear-gradient(90deg, transparent 95%, var(--card-back-pattern-color) 95%),
+        var(--card-back-color);
+    --card-back-bg-size: 15px 15px;
 }
 
 body {
@@ -375,11 +430,8 @@ select {
 }
 
 .card.hidden {
-    background: repeating-linear-gradient(45deg,
-            #b71c1c,
-            #b71c1c 10px,
-            #c62828 10px,
-            #c62828 20px);
+    background: var(--card-back-bg);
+    background-size: var(--card-back-bg-size, auto);
     border: 2px solid white;
 }
 
@@ -388,25 +440,22 @@ select {
     position: absolute;
     width: 2px;
     height: 70px;
-    background: linear-gradient(0deg, #b71c1c 0%, #c62828 50%, #b71c1c 100%);
+    background: linear-gradient(0deg, var(--card-back-color) 0%, var(--card-back-pattern-color) 50%, var(--card-back-color) 100%);
 }
 
 .card-edge-line {
     position: absolute;
     width: 2px;
     height: 70px;
-    background-color: #b68181;
+    background-color: var(--card-edge-color);
 }
 
 /* Card back styling for regular cards (when used elsewhere) */
 .card-back {
     width: 70px;
     height: 95px;
-    background: repeating-linear-gradient(45deg,
-            #b71c1c,
-            #b71c1c 10px,
-            #c62828 10px,
-            #c62828 20px);
+    background: var(--card-back-bg);
+    background-size: var(--card-back-bg-size, auto);
     border: 2px solid white;
     border-radius: 6px;
     box-shadow:
@@ -427,7 +476,7 @@ select {
     box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.4),
         inset 0 0 10px rgba(255, 255, 255, 0.1);
-    border: 2px solid #ffd700;
+    border: 2px solid var(--card-back-accent);
 }
 
 /* Separator card - thick card to indicate cut card */
