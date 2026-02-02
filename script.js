@@ -32,6 +32,7 @@ const ui = {
     overlaySub: document.getElementById('overlay-sub'),
     cardsLeft: document.getElementById('cards-left'),
     runCount: document.getElementById('run-count'),
+    casinoProfit: document.getElementById('casino-profit'),
     deckSelect: document.getElementById('deck-select'),
     seatSelect: document.getElementById('seat-select'),
     strategyText: document.getElementById('strategy-text'),
