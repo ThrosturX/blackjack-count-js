@@ -906,9 +906,8 @@ function dealerTurn() {
     const hole = state.dealer.hand[1];
     hole.hidden = false;
     state.runningCount += hole.count;
-    updateStats();
+    render();
     playSound('card');
-    renderDealer();
 
     let score = calcScore(state.dealer.hand);
 
