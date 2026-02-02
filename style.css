@@ -626,19 +626,20 @@ select {
     font-weight: bold;
 }
 
+
 .player-hand-area {
     flex-grow: 1;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 30px;
     position: relative;
 }
 
 .bet-bubble {
-    position: absolute;
-    top: 0px;
+    /* Positioned in flow at bottom of hand area */
     background: var(--gold);
     color: #000;
     padding: 2px 8px;
@@ -647,6 +648,7 @@ select {
     font-size: 0.75rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     z-index: 5;
+    margin-top: 5px;
 }
 
 /* --- Controls --- */
@@ -993,23 +995,28 @@ input:checked+.slider:before {
 }
 
 /* Hand Result Overlay */
-/* Hand Result Overlay */
 .hand-result {
     position: absolute;
-    top: 50%;
+    top: -35px;
+    /* Move above the cards */
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
+    /* Center horizontally */
     z-index: 20;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     background: rgba(0, 0, 0, 0.95);
     padding: 6px 12px;
     border-radius: 8px;
     border: 2px solid;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
     pointer-events: none;
-    /* Let clicks pass through if needed */
     white-space: nowrap;
     width: max-content;
+    min-width: 60px;
+    min-height: 24px;
     box-sizing: border-box;
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -1023,8 +1030,9 @@ input:checked+.slider:before {
 }
 
 .hand-result .res-profit {
-    font-size: 0.8rem;
+    font-size: 1rem;
     font-weight: bold;
+    line-height: 1;
 }
 
 /* Result Colors */
@@ -1045,12 +1053,12 @@ input:checked+.slider:before {
 
 @keyframes popIn {
     0% {
-        transform: translate(-50%, -50%) scale(0.5);
+        transform: translateX(-50%) scale(0.5);
         opacity: 0;
     }
 
     100% {
-        transform: translate(-50%, -50%) scale(1);
+        transform: translateX(-50%) scale(1);
         opacity: 1;
     }
 }

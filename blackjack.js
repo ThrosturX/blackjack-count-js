@@ -52,6 +52,8 @@ function preloadAudio() {
         'lose': ['lose.wav', 'noluck.wav', 'itiswhatis.wav', 'nextluck.wav', 'lucknext.wav'],
         'bust': ['bust.wav'],
         'blackjack': ['blackjack.wav'],
+        'dealer-bj': ['dealer-bj.wav', 'dealer-bj2.wav', 'dealer-bj3.wav'],
+        'dealer-bust': ['dealer-bust.wav', 'dealer-bust2.wav', 'dealer-bust3.wav'],
         'error': ['error.wav']
     };
     CommonUtils.preloadAudio(soundFiles);
@@ -1187,7 +1189,8 @@ function getSeatHTML(idx) {
 
                         ${p.hands.length > 0 && state.phase !== 'BETTING'
             ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
-            : ''}
+            : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
+        }
 
                         ${(() => {
             // Hand rendering logic inline
@@ -1203,23 +1206,19 @@ function getSeatHTML(idx) {
                     let resultHTML = '';
                     if (state.phase === 'RESOLVING' && h.result) {
                         let resClass = 'result-push';
-                        let resText = 'PUSH';
-                        let profitText = '';
+                        let contentHTML = '<span class="res-text">PUSH</span>';
 
                         if (h.result === 'win') {
                             resClass = 'result-win';
-                            resText = 'WIN';
-                            profitText = `+$${h.profit}`;
+                            contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
                         } else if (h.result === 'lose') {
                             resClass = 'result-lose';
-                            resText = 'LOSE';
-                            profitText = `-$${h.bet}`;
+                            contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
                         }
 
                         resultHTML = `
                                             <div class="hand-result ${resClass}">
-                                                <div class="res-text">${resText}</div>
-                                                <div class="res-profit">${profitText}</div>
+                                                ${contentHTML}
                                             </div>
                                         `;
                     }
@@ -1242,23 +1241,19 @@ function getSeatHTML(idx) {
                 let resultHTML = '';
                 if (state.phase === 'RESOLVING' && h.result) {
                     let resClass = 'result-push';
-                    let resText = 'PUSH';
-                    let profitText = '';
+                    let contentHTML = '<span class="res-text">PUSH</span>';
 
                     if (h.result === 'win') {
                         resClass = 'result-win';
-                        resText = 'WIN';
-                        profitText = `+$${h.profit}`;
+                        contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
                     } else if (h.result === 'lose') {
                         resClass = 'result-lose';
-                        resText = 'LOSE';
-                        profitText = `-$${h.bet}`;
+                        contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
                     }
 
                     resultHTML = `
-                                        <div class="hand-result ${resClass}" style="bottom: 40px; font-size: 1.2rem;">
-                                            <div class="res-text">${resText}</div>
-                                            <div class="res-profit">${profitText}</div>
+                                        <div class="hand-result ${resClass}">
+                                            ${contentHTML}
                                         </div>
                                     `;
                 }
