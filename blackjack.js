@@ -1,6 +1,3 @@
-/* --- CONSTANTS --- */
-const SUITS = ['♥', '♦', '♣', '♠'];
-const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
@@ -94,27 +91,6 @@ function playSound(type) {
         // For all other sound types, print warning without erroring
         console.warn("Audio not implemented for: " + type);
     }
-}
-
-/* --- CARD CLASS --- */
-class Card {
-    constructor(suit, val) {
-        this.suit = suit;
-        this.val = val;
-        this.hidden = false;
-        this.isSplitCard = false;
-    }
-    get num() {
-        if (['J', 'Q', 'K'].includes(this.val)) return 10;
-        if (this.val === 'A') return 11;
-        return parseInt(this.val);
-    }
-    get count() {
-        if (['10', 'J', 'Q', 'K', 'A'].includes(this.val)) return -1;
-        if (['2', '3', '4', '5', '6'].includes(this.val)) return 1;
-        return 0;
-    }
-    get color() { return (this.suit === '♥' || this.suit === '♦') ? 'red' : 'black'; }
 }
 
 /* --- INITIALIZATION --- */
@@ -660,7 +636,7 @@ function dealHands() {
             if (c.isSplitCard) state.cutCardReached = true;
 
             if (!c.hidden) {
-                state.runningCount += c.count;
+                state.runningCount += BlackjackLogic.getCardCount(c);
                 updateStats();
                 playSound('card');
             }
@@ -670,7 +646,7 @@ function dealHands() {
             const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
-            state.runningCount += c.count;
+            state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
             p.hands[0].cards.push(c);
@@ -706,7 +682,7 @@ function checkBlackjack() {
         // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
-        state.runningCount += state.dealer.hand[1].count;
+        state.runningCount += BlackjackLogic.getCardCount(state.dealer.hand[1]);
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('lose');
@@ -813,7 +789,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += c.count;
+    state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -926,13 +902,13 @@ function playerSplit() {
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
     const cFirst = drawCard(false, state.turnIndex);
-    state.runningCount += cFirst.count;
+    state.runningCount += BlackjackLogic.getCardCount(cFirst);
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
 
     const cSecond = drawCard(false, state.turnIndex);
-    state.runningCount += cSecond.count;
+    state.runningCount += BlackjackLogic.getCardCount(cSecond);
     updateStats();
     playSound('card');
     newHand.cards.push(cSecond);
@@ -948,7 +924,7 @@ function dealerTurn() {
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
-    state.runningCount += hole.count;
+    state.runningCount += BlackjackLogic.getCardCount(hole);
     render();
     playSound('card');
 
@@ -957,7 +933,7 @@ function dealerTurn() {
     function loop() {
         if (score < 17) {
             const c = drawCard(true, null);
-            state.runningCount += c.count;
+            state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
             state.dealer.hand.push(c);

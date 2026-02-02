@@ -1,4 +1,4 @@
-const logic = require('./logic');
+const logic = require('./blackjack-logic');
 
 function assert(condition, message) {
     if (!condition) {
@@ -62,5 +62,13 @@ assert(logic.determineResult([T, N8], [T, N9]) === 'lose', '18 vs 19 is Lose');
 assert(logic.determineResult([T, N8], [T, N8]) === 'push', '18 vs 18 is Push');
 assert(logic.determineResult([T, T, N2], [T, T]) === 'lose', 'Player Bust is Lose');
 assert(logic.determineResult([T, N7], [T, T, N5]) === 'win', 'Dealer Bust is Win');
+
+// 6. Card Counting Tests
+assert(logic.getCardCount(A) === -1, 'Ace count is -1');
+assert(logic.getCardCount(K) === -1, 'King count is -1');
+assert(logic.getCardCount(N9) === 0, '9 count is 0');
+assert(logic.getCardCount(N7) === 0, '7 count is 0');
+assert(logic.getCardCount(N6) === 1, '6 count is 1');
+assert(logic.getCardCount(N2) === 1, '2 count is 1');
 
 console.log('\nAll tests passed successfully! 🚀');

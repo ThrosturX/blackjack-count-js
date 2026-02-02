@@ -85,6 +85,17 @@ const BlackjackLogic = {
         if (pScore > dScore) return 'win';
         if (pScore < dScore) return 'lose';
         return 'push';
+    },
+
+    /**
+     * Gets the count value of a card for card counting (Hi-Lo system).
+     * @param {Object} card - Card object
+     * @returns {number} -1, 0, or 1
+     */
+    getCardCount: function (card) {
+        if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+        if (['2', '3', '4', '5', '6'].includes(card.val)) return 1;
+        return 0;
     }
 };
 
