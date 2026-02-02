@@ -33,6 +33,7 @@ const ui = {
     casinoProfit: document.getElementById('casino-profit'),
     deckSelect: document.getElementById('deck-select'),
     deckStyleSelect: document.getElementById('deck-style-select'),
+    tableStyleSelect: document.getElementById('table-style-select'),
     seatSelect: document.getElementById('seat-select'),
     strategyText: document.getElementById('strategy-text'),
     countHint: document.getElementById('count-hint'),
@@ -77,6 +78,12 @@ function init() {
         ui.deckStyleSelect.addEventListener('change', updateDeckStyle);
     }
 
+    // Initialize table style
+    if (ui.tableStyleSelect) {
+        updateTableStyle();
+        ui.tableStyleSelect.addEventListener('change', updateTableStyle);
+    }
+
     // Initialize independent toggles
     if (ui.toggleSettings) {
         ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
@@ -112,6 +119,16 @@ function updateDeckStyle() {
     // Refresh visuals that might need it
     updateShoeVisual();
     render();
+}
+
+function updateTableStyle() {
+    const style = ui.tableStyleSelect.value;
+    // Remove any existing table classes
+    Array.from(document.body.classList).forEach(cls => {
+        if (cls.startsWith('table-')) document.body.classList.remove(cls);
+    });
+    // Add selected table class
+    document.body.classList.add(`table-${style}`);
 }
 
 function createShoe() {

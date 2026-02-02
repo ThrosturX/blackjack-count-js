@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klondike Solitaire</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Klondike Solitaire</h1>
+        <div class="header-toggles">
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="settings-area">
+                <div class="stats">Table:
+                    <select id="table-style-select">
+                        <option value="felt" selected>Green Felt</option>
+                        <option value="crimson">Crimson Velvet</option>
+                        <option value="lavender">Lavender Dusk</option>
+                        <option value="neon">Neon Nights</option>
+                        <option value="depths">Ocean Depths</option>
+                        <option value="waves">Rolling Waves</option>
+                        <option value="stone">Dark Stone</option>
+                    </select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select">
+                        <option value="red" selected>Red Striped</option>
+                        <option value="blue">Blue Classic</option>
+                        <option value="green">Green Pattern</option>
+                        <option value="gold">Royal Gold</option>
+                        <option value="velvet">Regal Velvet</option>
+                        <option value="oceanic">Oceanic</option>
+                        <option value="dark">Midnight Luxe</option>
+                        <option value="cherry">Cherry Blossom</option>
+                        <option value="emerald">Emerald Luxe</option>
+                        <option value="ruby">Ruby Luxe</option>
+                        <option value="starlight">Starlight</option>
+                    </select>
+                </div>
+                <div class="stats">Draw:
+                    <select id="draw-count-select">
+                        <option value="1">Draw 1</option>
+                        <option value="3" selected>Draw 3</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls-section" id="stats-area">
+                <div class="stats">Score: <span id="score-display">0</span></div>
+                <div class="stats">Moves: <span id="moves-display">0</span></div>
+                <div class="stats">Time: <span id="time-display">0:00</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main id="solitaire-table">
+        <!-- Top row: Stock/Waste and Foundations -->
+        <div id="top-row">
+            <div id="stock-waste-area">
+                <div class="stock-pile pile" id="stock-pile">
+                    <div class="pile-placeholder">Stock</div>
+                </div>
+                <div class="waste-pile pile" id="waste-pile">
+                    <div class="pile-placeholder">Waste</div>
+                </div>
+            </div>
+
+            <div id="foundation-area">
+                <div class="foundation-pile pile" id="foundation-0" data-suit="♥">
+                    <div class="pile-placeholder">♥</div>
+                </div>
+                <div class="foundation-pile pile" id="foundation-1" data-suit="♦">
+                    <div class="pile-placeholder">♦</div>
+                </div>
+                <div class="foundation-pile pile" id="foundation-2" data-suit="♣">
+                    <div class="pile-placeholder">♣</div>
+                </div>
+                <div class="foundation-pile pile" id="foundation-3" data-suit="♠">
+                    <div class="pile-placeholder">♠</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau (7 columns) -->
+        <div id="tableau-area">
+            <div class="tableau-column pile" id="tableau-0"></div>
+            <div class="tableau-column pile" id="tableau-1"></div>
+            <div class="tableau-column pile" id="tableau-2"></div>
+            <div class="tableau-column pile" id="tableau-3"></div>
+            <div class="tableau-column pile" id="tableau-4"></div>
+            <div class="tableau-column pile" id="tableau-5"></div>
+            <div class="tableau-column pile" id="tableau-6"></div>
+        </div>
+
+        <!-- Win overlay -->
+        <div id="win-overlay" class="hidden">
+            <div class="win-message">
+                <h2>🎉 You Win! 🎉</h2>
+                <p>Score: <span id="final-score">0</span></p>
+                <p>Time: <span id="final-time">0:00</span></p>
+                <button id="new-game-from-win" class="game-btn">New Game</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Control bar -->
+    <div id="game-controls-bar">
+        <button id="new-game-btn" class="game-btn">New Game</button>
+        <button id="undo-btn" class="game-btn">Undo</button>
+        <button id="hint-btn" class="game-btn">Hint</button>
+        <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
+    </div>
+
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="solitaire-logic.js"></script>
+    <script src="solitaire.js"></script>
+</body>
+
+</html>

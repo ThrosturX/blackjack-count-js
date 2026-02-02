@@ -28,6 +28,7 @@ const ui = {
     overlaySub: document.getElementById('overlay-sub'),
     gamePhaseText: document.getElementById('game-phase-text'),
     deckStyleSelect: document.getElementById('deck-style-select'),
+    tableStyleSelect: document.getElementById('table-style-select'),
     seatSelect: document.getElementById('seat-select'),
     toggleSettings: document.getElementById('toggle-settings'),
     toggleStats: document.getElementById('toggle-stats'),
@@ -49,6 +50,11 @@ function init() {
     if (ui.deckStyleSelect) {
         updateDeckStyle();
         ui.deckStyleSelect.addEventListener('change', updateDeckStyle);
+    }
+
+    if (ui.tableStyleSelect) {
+        updateTableStyle();
+        ui.tableStyleSelect.addEventListener('change', updateTableStyle);
     }
 
     if (ui.seatSelect) {
@@ -89,6 +95,14 @@ function updateDeckStyle() {
     document.body.classList.add(`deck-${style}`);
     updateShoeVisual();
     render();
+}
+
+function updateTableStyle() {
+    const style = ui.tableStyleSelect.value;
+    Array.from(document.body.classList).forEach(cls => {
+        if (cls.startsWith('table-')) document.body.classList.remove(cls);
+    });
+    document.body.classList.add(`table-${style}`);
 }
 
 function updateShoeVisual() {
