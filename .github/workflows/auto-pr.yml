@@ -1,0 +1,23 @@
+name: Auto Pull Request
+on:
+  push:
+    branches:
+      - gemini # Trigger whenever the 'gemini' branch is updated
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gemini
+          base: main
+          title: "Auto-PR: Merge gemini into main"
+          body: "This PR was automatically generated because the `gemini` branch was updated."
+          labels: |
+            automated-pr
