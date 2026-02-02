@@ -598,6 +598,11 @@ select {
     border-color: var(--blue);
 }
 
+.seat.pending-standup {
+    border-color: var(--orange);
+    opacity: 0.8;
+}
+
 .seat.auto {
     border-color: var(--blue);
 }
@@ -710,6 +715,12 @@ button:disabled {
     width: 100%;
     margin-bottom: 4px;
     cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.hidden-opacity {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .toggle-label {
@@ -979,4 +990,87 @@ input:checked+.slider:before {
     background: rgba(255, 255, 255, 0.1);
     color: #aaa;
     border: 1px solid #888;
+}
+
+/* Hand Result Overlay */
+/* Hand Result Overlay */
+.hand-result {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.95);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 2px solid;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    /* Let clicks pass through if needed */
+    white-space: nowrap;
+    width: max-content;
+    box-sizing: border-box;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hand-result .res-text {
+    font-size: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.hand-result .res-profit {
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Result Colors */
+.hand-result.result-win {
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.hand-result.result-lose {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.hand-result.result-push {
+    border-color: var(--blue);
+    color: var(--blue);
+}
+
+@keyframes popIn {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Adjustments for Split Hands */
+.mini-hand {
+    position: relative;
+    /* Ensure absolute children are relative to this */
+}
+
+/* Ensure mini-hand result is smaller or well positioned */
+.mini-hand .hand-result {
+    padding: 2px 4px;
+    border-width: 1px;
+}
+
+.mini-hand .hand-result .res-text {
+    font-size: 0.7rem;
+}
+
+.mini-hand .hand-result .res-profit {
+    font-size: 0.6rem;
 }
