@@ -1260,8 +1260,8 @@ function getSeatHTML(idx) {
 
                 html = `
                                     <div class="cards" style="transform: scale(0.8); position: relative;">
-                                        ${resultHTML}
                                         ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
+                                        ${resultHTML}
                                     </div>
                                 `;
             }
