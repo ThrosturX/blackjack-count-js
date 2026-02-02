@@ -687,35 +687,60 @@ function checkBlackjack() {
     let activePlayers = state.players.filter(p => p && p.hands.length);
     let playing = false;
 
+    // Set blackjack status for any player who has 21
     activePlayers.forEach(p => {
         p.hands.forEach(h => {
-            const s = calcScore(h.cards);
-            if (s === 21) {
+            if (calcScore(h.cards) === 21) {
                 h.status = 'blackjack';
-                h.result = 'win';
-                playSound('blackjack')
-                if (dScore === 21) h.result = 'push';
-            } else {
-                playing = true;
+                playSound('blackjack');
             }
         });
     });
 
-    render();
+    render(); // Update UI to show player blackjacks
 
     if (dScore === 21) {
+        // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
         state.runningCount += state.dealer.hand[1].count;
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('lose');
-        setTimeout(endRound, 2000);
-    } else if (!playing) {
-        setTimeout(endRound, 1500);
+
+        // Determine outcomes: push for player blackjacks, lose for everyone else.
+        activePlayers.forEach(p => {
+            p.hands.forEach(h => {
+                if (h.status === 'blackjack') {
+                    h.result = 'push';
+                } else {
+                    h.result = 'lose';
+                }
+            });
+        });
+
+        // Move to the resolution phase to settle bets.
+        state.phase = 'RESOLVING';
+        setTimeout(resolveRound, 2000);
+
     } else {
-        state.phase = 'PLAYING';
-        nextTurn();
+        // Dealer does not have blackjack. Check if any players are still in the game.
+        playing = activePlayers.some(p => p.hands.some(h => h.status !== 'blackjack'));
+
+        if (playing) {
+            // At least one player needs to act, so proceed to their turn.
+            state.phase = 'PLAYING';
+            nextTurn();
+        } else {
+            // All active players had blackjack, so they all win. The round is over.
+            activePlayers.forEach(p => p.hands.forEach(h => {
+                if (h.status === 'blackjack') {
+                    h.result = 'win';
+                }
+            }));
+            state.phase = 'RESOLVING';
+            setTimeout(resolveRound, 1500);
+        }
     }
 }
 
@@ -982,23 +1007,35 @@ function resolveRound() {
             handIndex++;
             let next_timeout = 1200
             
+            // Ensure bust status is reflected as a loss
+            if (h.status === 'bust') {
+                h.result = 'lose';
+            }
+
+            // First, handle hands with pre-determined results (from checkBlackjack or busts)
             if (h.result !== null) {
-                if (h.status === 'blackjack') {
+                if (h.result === 'win') { // Player blackjack wins 3:2
                     const profit = h.bet * 1.5;
                     p.chips += h.bet + profit;
                     state.casinoProfit -= profit;
                     showOverlay(`Player ${p.id + 1}`, "Blackjack", `+$${Math.floor(profit)}`, "msg-bj");
-                } else if (h.status === 'bust') {
+                } else if (h.result === 'push') { // e.g., both player and dealer have blackjack
+                    p.chips += h.bet;
+                    showOverlay(`Player ${p.id + 1}`, `Push`, "", "msg-push");
+                    next_timeout = 100;
+                } else if (h.result === 'lose') { // Player busted or lost to dealer's blackjack
                     state.casinoProfit += h.bet;
-                    showOverlay(`Player ${p.id + 1}`, "Bust", `-$${h.bet}`, "msg-lose");
-                    next_timeout = 100
+                    const reason = h.status === 'bust' ? "Bust" : "Lost";
+                    showOverlay(`Player ${p.id + 1}`, reason, `-$${h.bet}`, "msg-lose");
+                    if (h.status !== 'bust' && !p.autoPlay) playSound('lose');
+                    next_timeout = 400;
                 }
                 
-                // Process next hand after delay
                 setTimeout(processNextHand, next_timeout);
                 return;
             }
 
+            // If result is not pre-determined, resolve by comparing to dealer
             const pScore = calcScore(h.cards);
 
             if (pScore > dScore || dScore > 21) {
@@ -1032,7 +1069,6 @@ function resolveRound() {
     }
 
     processNextPlayer();
-    updateCasinoProfit();
 }
 
 function finishRound() {
@@ -1052,6 +1088,7 @@ function finishRound() {
     } else {
         endRound();
     }
+    updateCasinoProfit();
 }
 
 function endRound() {
