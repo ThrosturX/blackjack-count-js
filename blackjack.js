@@ -813,9 +813,6 @@ function resolveRound() {
     ui.overlay.classList.remove('show');
 
     // Resolve all hands simultaneously
-    let anyWin = false;
-    let anyLose = false;
-
     state.players.forEach((p, pIndex) => {
         if (!p || !p.hands.length) return;
 
@@ -840,7 +837,6 @@ function resolveRound() {
                 // Return original bet + profit
                 p.chips += h.bet + h.profit;
                 state.casinoProfit -= h.profit;
-                anyWin = true;
             } else if (h.result === 'push') {
                 p.chips += h.bet;
                 // No profit change
@@ -848,14 +844,9 @@ function resolveRound() {
                 // Loss
                 state.casinoProfit += h.bet;
                 h.profit = -h.bet;
-                anyLose = true;
             }
         });
     });
-
-    // Play appropriate sound // TODO REVISE THIS!
-    if (anyWin) playSound('win');
-    else if (anyLose) playSound('lose');
 
     // Update UI
     render();
