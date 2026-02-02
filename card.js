@@ -10,9 +10,11 @@ class Card {
         this.hidden = false;
         this.isSplitCard = false;
     }
-    get num() {
-        if (['J', 'Q', 'K'].includes(this.val)) return 10;
-        if (this.val === 'A') return 11;
+    get rank() {
+        if (this.val === 'A') return 1;
+        if (this.val === 'J') return 11;
+        if (this.val === 'Q') return 12;
+        if (this.val === 'K') return 13;
         return parseInt(this.val);
     }
     // removed count getter as it is game specific

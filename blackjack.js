@@ -1092,11 +1092,11 @@ function isSoftHand(cards) {
 }
 
 function getStrategyHint(dCard, pCards) {
-    const dVal = dCard.num;
+    const dVal = BlackjackLogic.getCardValue(dCard);
     const pScore = calcScore(pCards);
     const soft = isSoftHand(pCards);
 
-    if (pCards.length === 2 && pCards[0].num === pCards[1].num) {
+    if (pCards.length === 2 && BlackjackLogic.getCardValue(pCards[0]) === BlackjackLogic.getCardValue(pCards[1])) {
         const c = pCards[0].val;
         if (c === 'A' || c === '8') return "Split";
         if (c === '10') return soft ? "Stand" : (pScore >= 12 ? "Stand" : "Hit");
@@ -1197,7 +1197,7 @@ function renderDealer() {
 
     const hasHidden = state.dealer.hand.some(c => c.hidden);
     if (hasHidden && state.phase !== 'RESOLVING') {
-        ui.dealerScore.textContent = state.dealer.hand[0].num;
+        ui.dealerScore.textContent = BlackjackLogic.getCardValue(state.dealer.hand[0]);
     } else {
         ui.dealerScore.textContent = calcScore(state.dealer.hand);
     }
@@ -1308,7 +1308,7 @@ function getSeatHTML(idx) {
     else if (state.phase === 'PLAYING' && isMyTurn) {
         const h = p.hands[state.splitIndex];
         // Bot/Human double check
-        const canSplit = (h.cards.length === 2 && h.cards[0].num === h.cards[1].num && p.chips >= h.bet);
+        const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
         controlsHTML = `
                     <div class="controls">
