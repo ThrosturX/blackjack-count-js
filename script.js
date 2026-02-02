@@ -683,7 +683,10 @@ function dealHands() {
 }
 
 function checkBlackjack() {
-    const dScore = calcScore(state.dealer.hand);
+    const upCard = state.dealer.hand[0];
+    const dScore = (upCard.num === 10 || upCard.val === 'A')
+        ? calcScore(state.dealer.hand, true) // Peek for BJ
+        : calcScore(state.dealer.hand);     // Regular score
     let activePlayers = state.players.filter(p => p && p.hands.length);
     let playing = false;
 
@@ -1100,11 +1103,11 @@ function endRound() {
 
 /* --- HELPERS --- */
 
-function calcScore(cards) {
+function calcScore(cards, peek = false) {
     let s = 0;
     let a = 0;
     cards.forEach(c => {
-        if (c.hidden) return;
+        if (c.hidden && !peek) return;
         s += c.num;
         if (c.val === 'A') a++;
     });
