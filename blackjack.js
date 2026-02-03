@@ -916,7 +916,11 @@ function calcScore(cards, peek = false) {
 }
 
 function getScoreDisplay(cards) {
-    return CommonUtils.getScoreDisplay(calcScore(cards));
+    const score = calcScore(cards);
+    if (isSoftHand(cards) && score < 21) {
+        return `${score - 10} / ${score}`;
+    }
+    return CommonUtils.getScoreDisplay(score);
 }
 
 function isSoftHand(cards) {
