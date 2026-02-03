@@ -222,7 +222,7 @@ const CommonUtils = {
      * @returns {string}
      */
     getScoreDisplay: function (score) {
-        if (score > 21) return 'BUST';
+        if (score > 21) return 'BUST (' + score + ')';
         return score.toString();
     }
 };
