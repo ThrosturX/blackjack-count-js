@@ -233,17 +233,17 @@ body.deck-emerald .card.black::before {
 
 /* --- Mammoth Style --- */
 body.deck-mammoth .card {
-    background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 50%, #b2ebf2 100%);
-    border: 1px solid #4dd0e1;
-    box-shadow: inset 0 0 10px rgba(0, 172, 193, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #fae7e0 0%, #ffffff 50%, #f2d4b2 100%);
+    border: 1px solid #614623;
+    box-shadow: inset 0 0 10px rgba(0, 61, 193, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 body.deck-mammoth .card.red {
-    color: #ff7043;
+    color: #632f0c;
 }
 
 body.deck-mammoth .card.black {
-    color: #006064;
+    color: #414546;
 }
 
 body.deck-mammoth .card.red::before {
@@ -253,7 +253,7 @@ body.deck-mammoth .card.red::before {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 3em;
-    opacity: 0.2;
+    opacity: 0.6;
     pointer-events: none;
 }
 
@@ -264,24 +264,88 @@ body.deck-mammoth .card.black::before {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 3em;
-    opacity: 0.2;
+    opacity: 0.8;
     pointer-events: none;
 }
 
 body.deck-mammoth .card.hidden {
+    /*
+    background: linear-gradient(135deg, #a39d9d 0%, #515c3b 100%) !important;
+    border: 2px solid var(--card-back-accent) !important;
+    */
+    position: relative;
+
+    background: linear-gradient(135deg, #fae7e0 0%, #fffdf5f6 50%, #f2d4b2 100%);
+    background-size: var(--card-back-bg-size);
+    border: 1px 1px rgba(56, 30, 5, 0.432);
+    box-shadow: inset 0 0 15px rgba(176, 190, 197, 0.1), 2px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+body.deck-mammoth .card.hidden::before {
+    content: "🪾" !important;
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    font-size: 4em;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+/* whale style */
+body.deck-whale {
+    --card-back-color: #006064;
+    --card-back-pattern-color: #00838f;
+    --card-back-accent: #84ffff;
+    --card-edge-color: #00acc1;
+    --card-back-bg:
+        radial-gradient(circle at 100% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        radial-gradient(circle at 0% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        linear-gradient(60deg, var(--card-back-color) 25%, var(--card-back-pattern-color) 25%, var(--card-back-pattern-color) 50%, var(--card-back-color) 50%, var(--card-back-color) 75%, var(--card-back-pattern-color) 75%, var(--card-back-pattern-color) 100%);
+    --card-back-bg-size: 20px 35px;
+}
+
+body.deck-whale .card.red::before {
+    content: "🐬";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+body.deck-whale .card.red:not(.hidden)::before {
+    filter: hue-rotate(120deg) brightness(1.2);
+}
+
+body.deck-whale .card.black::before {
+    content: "🫍";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* whale uses unique whale design for hidden cards to prevent color leaking */
+body.deck-whale .card.hidden {
     background: linear-gradient(135deg, #004d5a 0%, #003840 100%) !important;
     border: 2px solid var(--card-back-accent) !important;
     position: relative;
 }
 
-body.deck-mammoth .card.hidden::before {
-    content: "🐾" !important;
+body.deck-whale .card.hidden::before {
+    content: "🐳" !important;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) !important;
     font-size: 3em;
-    opacity: 0.2;
+    opacity: 0.3;
     pointer-events: none;
 }
 
@@ -1833,28 +1897,33 @@ input:checked+.slider:before {
 
     /* 1. Resize the Cards globally */
     :root {
-        --card-w: 45px;  /* Smaller cards */
+        --card-w: 45px;
+        /* Smaller cards */
         --card-h: 65px;
     }
 
     /* 2. Fix the Table Container */
     #table {
         width: 100vw;
-        height: 100vh;        /* Use full screen height */
+        height: 100vh;
+        /* Use full screen height */
         max-width: 100%;
-        border-width: 0;      /* Remove thick borders to save space */
+        border-width: 0;
+        /* Remove thick borders to save space */
         border-radius: 0;
         margin-top: 0;
         box-shadow: none;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start; /* Stack dealer at top */
+        justify-content: flex-start;
+        /* Stack dealer at top */
         padding-top: 10px;
     }
 
     /* 3. Hide the 3D Shoe & Header Toggles to save space */
     .shoe-container {
-        display: none; /* It takes up too much room on mobile */
+        display: none;
+        /* It takes up too much room on mobile */
     }
 
     /* Simplify the header */
@@ -1871,29 +1940,35 @@ input:checked+.slider:before {
     #dealer-area {
         margin-top: 10px;
         margin-bottom: 10px;
-        transform: scale(0.9); /* Slightly shrink dealer area */
+        transform: scale(0.9);
+        /* Slightly shrink dealer area */
     }
 
     /* 5. Make Seats Scrollable Horizontal */
     /* Instead of squishing 5 seats, we let the user swipe side-to-side */
     #seats {
         width: 100%;
-        overflow-x: auto; /* Enables horizontal scrolling */
-        justify-content: flex-start; /* Aligns seats to start so scrolling works */
+        overflow-x: auto;
+        /* Enables horizontal scrolling */
+        justify-content: flex-start;
+        /* Aligns seats to start so scrolling works */
         padding-left: 10px;
         padding-right: 10px;
-        padding-bottom: 140px; /* Extra padding at bottom for sticky controls */
+        padding-bottom: 140px;
+        /* Extra padding at bottom for sticky controls */
         gap: 10px;
         /* Smooth scrolling for iOS */
         -webkit-overflow-scrolling: touch;
     }
 
     .seat {
-        min-width: 110px; /* Force minimum width so seat isn't tiny */
+        min-width: 110px;
+        /* Force minimum width so seat isn't tiny */
         width: 110px;
         height: auto;
         min-height: 180px;
-        flex-shrink: 0; /* Prevent seat from shrinking */
+        flex-shrink: 0;
+        /* Prevent seat from shrinking */
     }
 
     /* 6. Sticky Action Controls */
@@ -1915,11 +1990,13 @@ input:checked+.slider:before {
     button {
         padding: 12px 15px;
         font-size: 0.9rem;
-        flex: 1; /* Buttons stretch to fill width */
+        flex: 1;
+        /* Buttons stretch to fill width */
     }
 
     /* Smaller auxiliary buttons */
-    .btn-clear, .btn-bet {
+    .btn-clear,
+    .btn-bet {
         padding: 8px;
         font-size: 0.8rem;
     }
@@ -1929,7 +2006,7 @@ input:checked+.slider:before {
     #strategy-bar {
         bottom: 80px;
         padding: 5px;
-        background: rgba(0,0,0,0.8);
+        background: rgba(0, 0, 0, 0.8);
         border: none;
     }
 
@@ -1947,8 +2024,10 @@ input:checked+.slider:before {
     }
 
     #tableau-area {
-        flex-wrap: wrap; /* Allow columns to wrap if needed, or scale */
-        transform: scale(0.85); /* Shrink slightly to fit width */
+        flex-wrap: wrap;
+        /* Allow columns to wrap if needed, or scale */
+        transform: scale(0.85);
+        /* Shrink slightly to fit width */
         transform-origin: top center;
     }
 }
