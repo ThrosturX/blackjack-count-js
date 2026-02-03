@@ -1769,3 +1769,132 @@ input:checked+.slider:before {
         font-size: 0.8rem;
     }
 }
+
+/* ========================================
+   MOBILE RESPONSIVE OVERRIDES
+   Paste this at the very bottom of style.css
+   ======================================== */
+
+@media screen and (max-width: 900px) {
+
+    /* 1. Resize the Cards globally */
+    :root {
+        --card-w: 45px;  /* Smaller cards */
+        --card-h: 65px;
+    }
+
+    /* 2. Fix the Table Container */
+    #table {
+        width: 100vw;
+        height: 100vh;        /* Use full screen height */
+        max-width: 100%;
+        border-width: 0;      /* Remove thick borders to save space */
+        border-radius: 0;
+        margin-top: 0;
+        box-shadow: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* Stack dealer at top */
+        padding-top: 10px;
+    }
+
+    /* 3. Hide the 3D Shoe & Header Toggles to save space */
+    .shoe-container {
+        display: none; /* It takes up too much room on mobile */
+    }
+
+    /* Simplify the header */
+    header {
+        padding: 5px;
+        justify-content: center;
+    }
+
+    h1 {
+        font-size: 1rem;
+    }
+
+    /* 4. Fix the Dealer Area */
+    #dealer-area {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        transform: scale(0.9); /* Slightly shrink dealer area */
+    }
+
+    /* 5. Make Seats Scrollable Horizontal */
+    /* Instead of squishing 5 seats, we let the user swipe side-to-side */
+    #seats {
+        width: 100%;
+        overflow-x: auto; /* Enables horizontal scrolling */
+        justify-content: flex-start; /* Aligns seats to start so scrolling works */
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 140px; /* Extra padding at bottom for sticky controls */
+        gap: 10px;
+        /* Smooth scrolling for iOS */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .seat {
+        min-width: 110px; /* Force minimum width so seat isn't tiny */
+        width: 110px;
+        height: auto;
+        min-height: 180px;
+        flex-shrink: 0; /* Prevent seat from shrinking */
+    }
+
+    /* 6. Sticky Action Controls */
+    /* Move buttons to the bottom of the screen so they are easy to tap with thumbs */
+    .controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 15px 10px;
+        z-index: 1000;
+        border-top: 2px solid var(--gold);
+        justify-content: space-around;
+        gap: 10px;
+    }
+
+    /* Make buttons bigger for touch */
+    button {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        flex: 1; /* Buttons stretch to fill width */
+    }
+
+    /* Smaller auxiliary buttons */
+    .btn-clear, .btn-bet {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    /* 7. Adjust Strategy Bar */
+    /* Move it up so it doesn't get covered by the sticky controls */
+    #strategy-bar {
+        bottom: 80px;
+        padding: 5px;
+        background: rgba(0,0,0,0.8);
+        border: none;
+    }
+
+    .hint-text {
+        font-size: 1rem;
+    }
+
+    /* 8. Fix Solitaire Layout if used */
+    #solitaire-table {
+        height: auto;
+        min-height: 100vh;
+        border-width: 0;
+        padding: 10px;
+        overflow-x: hidden;
+    }
+
+    #tableau-area {
+        flex-wrap: wrap; /* Allow columns to wrap if needed, or scale */
+        transform: scale(0.85); /* Shrink slightly to fit width */
+        transform-origin: top center;
+    }
+}
