@@ -268,6 +268,9 @@ function updateGameFlow() {
             ui.overlay.classList.remove('show'); // Remove the timer display
             dealHands(); // Start the round immediately
             return; // Exit the function early since the round has started
+        } else if (seatedPlayers.length > 0 && seatedPlayers.every(p => (!p.isReady) && p.autoBet)) {
+            // nobody is playing and nobody wants to bet, so encourage the bots to try again
+            dealHands();
         }
         // --- END OF NEW LOGIC ---
 
@@ -306,9 +309,16 @@ function processAutoBets() {
             else betAmt = 20;
             if (betAmt > p.chips) betAmt = p.chips;
 
+            // check if this AI player feels poor
+            if (p.chips < 888 * Math.random()) {
+                if (tc < Math.random()) betAmt = 0
+                else betAmt = Math.floor(Math.max(10, betAmt / 2))
+            }
 
-            placeBetInternal(idx, betAmt);
-            madeChanges = true;
+            if (betAmt > 0 ) {
+                placeBetInternal(idx, betAmt);
+                madeChanges = true;
+            }
         }
     });
 }
