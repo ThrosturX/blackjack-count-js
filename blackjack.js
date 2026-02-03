@@ -796,6 +796,7 @@ function playerSplit() {
 function dealerTurn() {
     state.phase = 'RESOLVING';
     state.turnIndex = -1;
+    state.splitIndex = -1;
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
@@ -1208,8 +1209,8 @@ function getSeatHTML(idx) {
                     <div class="player-hand-area">
                         ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
 
-                        ${p.hands.length > 0 && state.phase !== 'BETTING'
-            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+                        ${p.hands.length === 1 && state.phase !== 'BETTING'
+            ? `<div class="score-pill" style="margin-bottom:5px;">${getScoreDisplay(p.hands[0].cards)}</div>`
             : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
         }
 
@@ -1221,7 +1222,7 @@ function getSeatHTML(idx) {
             if (p.hands.length > 1) {
                 html += `<div class="split-container">`;
                 p.hands.forEach((h, hIdx) => {
-                    const isActive = (state.splitIndex === hIdx) ? 'active-split' : '';
+                    const isActive = (isMyTurn && state.splitIndex === hIdx) ? 'active-split' : '';
 
                     // Result Overlay
                     let resultHTML = '';
