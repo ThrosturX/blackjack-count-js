@@ -232,6 +232,13 @@ body.deck-emerald .card.black::before {
 }
 
 /* --- Mammoth Style --- */
+body.deck-mammoth {
+    --card-back-color: #ccb49e;
+    --card-back-pattern-color: #a09f88;
+    --card-back-accent: #8a7663;
+    --card-edge-color: #91857d;
+}
+
 body.deck-mammoth .card {
     background: linear-gradient(135deg, #fae7e0 0%, #ffffff 50%, #f2d4b2 100%);
     border: 1px solid #614623;
@@ -269,12 +276,7 @@ body.deck-mammoth .card.black::before {
 }
 
 body.deck-mammoth .card.hidden {
-    /*
-    background: linear-gradient(135deg, #a39d9d 0%, #515c3b 100%) !important;
-    border: 2px solid var(--card-back-accent) !important;
-    */
     position: relative;
-
     background: linear-gradient(135deg, #fae7e0 0%, #fffdf5f6 50%, #f2d4b2 100%);
     background-size: var(--card-back-bg-size);
     border: 1px 1px rgba(56, 30, 5, 0.432);
@@ -295,9 +297,9 @@ body.deck-mammoth .card.hidden::before {
 /* whale style */
 body.deck-whale {
     --card-back-color: #006064;
-    --card-back-pattern-color: #00838f;
-    --card-back-accent: #84ffff;
-    --card-edge-color: #00acc1;
+    --card-back-pattern-color: #1194a0;
+    --card-back-accent: #b5fdfd;
+    --card-edge-color: #11afc4;
     --card-back-bg:
         radial-gradient(circle at 100% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
         radial-gradient(circle at 0% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
