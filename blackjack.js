@@ -761,7 +761,7 @@ function playerSplit() {
     if (p.chips < h.bet) { playSound('error'); return; }
     const c1 = h.cards[0];
     const c2 = h.cards[1];
-    if (c1.num !== c2.num) { playSound('error'); return; }
+    if (BlackjackLogic.getCardValue(c1) !== BlackjackLogic.getCardValue(c2)) { playSound('error'); return; }
 
     playSound('chip');
     p.chips -= h.bet;
