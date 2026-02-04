@@ -143,7 +143,7 @@ ui.fastModeCheckbox.addEventListener('change', (event) => {
     state.fastMode = event.target.checked;
 });
 
-function createShoe() {
+function createShoe(msg) {
     // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
     if (state.isShuffling) return;
     playSound('shuffle');
@@ -166,7 +166,7 @@ function createShoe() {
     // UI Updates
     ui.overlayMain.className = 'overlay-text msg-shuffle';
     ui.overlayMain.textContent = "Shuffling";
-    ui.overlaySub.textContent = "Preparing Shoe...";
+    ui.overlaySub.textContent = msg ? msg :"Preparing Shoe...";
     ui.overlay.classList.add('show');
 
     // Clear seats visually if not already done (usually cleared before calling this)
@@ -360,7 +360,10 @@ function placeBet(idx, amt) {
     const p = state.players[idx];
     if (!p) return;
 
-    if (isNaN(amt) || amt < state.minBet || amt > p.chips) { playSound('error'); return; }
+    if (isNaN(amt) || amt < state.minBet || amt > p.chips) {
+        showOverlay("Invalid bet", 'Check the minimum and maximum bet amounts.', 0, "msg-lose");
+        playSound('error'); return;
+    }
     amt = Math.floor(amt);
     if (amt === 0) { return; }
     if (amt > state.maxBet) { amt = state.maxBet; }
@@ -936,6 +939,11 @@ function finishRound() {
             if (dc !== undefined) {
                 state.deckCount = parseInt(dc);
             }
+            let min = state.tableSettingsChanged['minBet']
+            if (min !== undefined) {
+                state.minBet = parseInt(min);
+                state.maxBet = calcMaxBet(state.minBet)
+            }
             state.tableSettingsChanged = false;
         }
 
@@ -1113,7 +1121,7 @@ function sit(idx) {
         id: idx,
         chips: 1000,
         currentBet: 0,
-        lastBet: 10,
+        lastBet: state.minBet,
         hands: [],
         isReady: false,
         autoPlay: false,
@@ -1234,7 +1242,7 @@ function getSeatHTML(idx) {
         controlsHTML = `
                     ${togglesHTML}
                     <div class="bet-controls">
-                        <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || 10}" min="10" step="10">
+                        <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || state.minBet}" min="${state.minBet}" step="5">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
                         <button class="btn-clear" onclick="clearBet(${idx})">Clear</button>
                     </div>
@@ -1402,9 +1410,13 @@ ui.deckSelect.addEventListener('change', (e) => {
 })
 
 ui.minBet.addEventListener('change', (e) => {
-    state.minBet = parseInt(e.target.value);
-    state.maxBet = calcMaxBet(state.minBet)
-    state.tableSettingsChanged = {}; // forces a re-shuffle due to having "changed tables"
+    if (state.phase === 'BETTING') {
+        state.minBet = parseInt(e.target.value);
+        state.maxBet = calcMaxBet(state.minBet);
+        createShoe("Changing table...");
+    } else {
+        state.tableSettingsChanged = {"minBet": parseInt(e.target.value)}; // forces a re-shuffle due to having "changed tables"
+    }
 });
 
 
