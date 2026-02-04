@@ -286,8 +286,9 @@ function updateGameFlow() {
             dealHands(); // Start the round immediately
             return; // Exit the function early since the round has started
         } else if (seatedPlayers.length > 0 && seatedPlayers.every(p => (!p.isReady) && p.autoBet)) {
-            // nobody is playing and nobody wants to bet, so encourage the bots to try again
-            dealHands();
+            // nobody is playing and nobody wants to bet, so shuffle the deck to attract customers
+            createShoe();
+            return;
         }
         // --- END OF NEW LOGIC ---
 
