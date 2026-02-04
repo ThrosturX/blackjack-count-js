@@ -823,6 +823,7 @@ body.deck-oceanic .card.black::before {
     position: absolute;
     top: 20px;
     margin-bottom: auto;
+    margin-right: 30px;
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -836,7 +837,7 @@ body.deck-oceanic .card.black::before {
 /* --- Realistic Deck Shoe (Horizontal) --- */
 .shoe-body {
     position: relative;
-    width: 320px;
+    width: 268px;
     height: 80px;
     background: linear-gradient(to right, #2c2c2c, #1a1a1a);
     border: 3px solid #AAA;
@@ -886,7 +887,7 @@ body.deck-oceanic .card.black::before {
 .shoe-base {
     position: absolute;
     right: -8px;
-    width: 10px;
+    width: 280px;
     height: 90px;
     background: linear-gradient(to right, #333, #222);
     border: 2px solid #555;
