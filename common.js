@@ -77,6 +77,10 @@ const CommonUtils = {
     createCardEl: function (card) {
         const div = document.createElement('div');
         div.className = `card ${card.color}${card.hidden ? ' hidden' : ''}${card.isSplitCard ? ' split-card' : ''}`;
+        // if we can give it a random rotation, let's do that
+        if (card.rotation !== undefined) {
+            div.style.transform = `rotate(${card.rotation}deg)`;
+        }
 
         const valTop = document.createElement('div');
         valTop.className = 'val-top';

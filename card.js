@@ -2,6 +2,12 @@
 const SUITS = ['♥', '♦', '♣', '♠'];
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
+function getRandomRotation() {
+    let max = 3;
+    let min = -2;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 /* --- CARD CLASS --- */
 class Card {
     constructor(suit, val) {
@@ -9,6 +15,7 @@ class Card {
         this.val = val;
         this.hidden = false;
         this.isSplitCard = false;
+        this.rotation = getRandomRotation();
     }
     get rank() {
         if (this.val === 'A') return 1;
