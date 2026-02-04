@@ -9,6 +9,7 @@ const state = {
     shoe: [],
     totalInitialCards: 0,
     cutCardReached: false,
+    tableSettingsChanged: false,
     runningCount: 0,
     dealer: { hand: [] },
     players: [],
@@ -18,7 +19,11 @@ const state = {
     timer: null,
     timerVal: 0,
     isShuffling: false,
-    casinoProfit: 0
+    minBet: 10,
+    maxBet: 1000,
+    casinoProfit: 0,
+    playedRounds: 0,
+    fastMode: false
 };
 
 const ui = {
@@ -31,6 +36,7 @@ const ui = {
     cardsLeft: document.getElementById('cards-left'),
     runCount: document.getElementById('run-count'),
     casinoProfit: document.getElementById('casino-profit'),
+    playedRounds: document.getElementById('played-rounds'),
     deckSelect: document.getElementById('deck-select'),
     deckStyleSelect: document.getElementById('deck-style-select'),
     tableStyleSelect: document.getElementById('table-style-select'),
@@ -41,6 +47,8 @@ const ui = {
     statsArea: document.getElementById('stats-area'),
     toggleSettings: document.getElementById('toggle-settings'),
     toggleStats: document.getElementById('toggle-stats'),
+    fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
+    minBet: document.getElementById('table-minimum-bet'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -131,7 +139,11 @@ function updateTableStyle() {
     document.body.classList.add(`table-${style}`);
 }
 
-function createShoe() {
+ui.fastModeCheckbox.addEventListener('change', (event) => {
+    state.fastMode = event.target.checked;
+});
+
+function createShoe(msg) {
     // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
     if (state.isShuffling) return;
     playSound('shuffle');
@@ -154,7 +166,7 @@ function createShoe() {
     // UI Updates
     ui.overlayMain.className = 'overlay-text msg-shuffle';
     ui.overlayMain.textContent = "Shuffling";
-    ui.overlaySub.textContent = "Preparing Shoe...";
+    ui.overlaySub.textContent = msg ? msg :"Preparing Shoe...";
     ui.overlay.classList.add('show');
 
     // Clear seats visually if not already done (usually cleared before calling this)
@@ -172,7 +184,7 @@ function createShoe() {
         state.phase = 'BETTING';
         ui.overlay.classList.remove('show');
         updateGameFlow();
-    }, 800);
+    }, getDelay(800));
 
     // Update shoe visual after shuffle
     setTimeout(() => {
@@ -181,7 +193,7 @@ function createShoe() {
         ui.overlay.classList.remove('show');
         updateShoeVisual(); // Show full stack
         updateGameFlow();
-    }, 800);
+    }, getDelay(800));
 }
 
 function finishShuffle() {
@@ -204,6 +216,11 @@ function updateCasinoProfit() {
         ui.casinoProfit.textContent = `$${state.casinoProfit}`;
         ui.casinoProfit.classList.add('casino-profit-neutral');
     }
+}
+
+function updatePlayedRounds() {
+    state.playedRounds += 1;
+    ui.playedRounds.textContent = `${state.playedRounds}`;
 }
 
 function updateStats() {
@@ -268,6 +285,10 @@ function updateGameFlow() {
             ui.overlay.classList.remove('show'); // Remove the timer display
             dealHands(); // Start the round immediately
             return; // Exit the function early since the round has started
+        } else if (seatedPlayers.length > 0 && seatedPlayers.every(p => (!p.isReady) && p.autoBet)) {
+            // nobody is playing and nobody wants to bet, so shuffle the deck to attract customers
+            createShoe();
+            return;
         }
         // --- END OF NEW LOGIC ---
 
@@ -299,16 +320,35 @@ function processAutoBets() {
         if (p && p.autoPlay && p.autoBet && !p.isReady) {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
-            let betAmt = p.lastBet || 10;
-            if (tc >= 3) betAmt = 100;
-            else if (tc >= 2) betAmt = 50;
-            else if (tc <= -2) betAmt = 10;
-            else betAmt = 20;
+            let betAmt = p.lastBet || state.minBet;
+            if (tc >= 8) betAmt = state.maxBet;
+            else if (tc >= 6) betAmt = state.maxBet * 0.50;
+            else if (tc >= 4) betAmt = state.maxBet * 0.25;
+            else if (tc >= 3) betAmt = state.maxBet * 0.10;
+            else if (tc >= 2) betAmt = state.maxBet * 0.05;
+            else if (tc <= -2) betAmt = state.minBet;
+            else betAmt = 2 * state.minBet;
             if (betAmt > p.chips) betAmt = p.chips;
 
+            // check if we are using too much of our bankroll
+            if (betAmt > p.chips * 0.06 && p.chips > state.minBet * 20) {
+                // only bet if the count is positive
+                if (tc > 0) betAmt = Math.floor(p.chips * 0.021 * tc);
+                // otherwise sit out most of the time
+                else if (Math.random() > 0.33) betAmt = 0;
+                else betAmt = state.minBet; // if won't sit out, bet the minimum
+            } else if (3 * p.chips < state.maxBet * Math.random() - state.minBet * 2) {
+                // check if this AI player "feels" poor
+                // sit out if this AI might believe the deck is cold
+                if (tc < Math.random()) betAmt = 0
+                // place a smaller bet
+                else betAmt = Math.floor(Math.max(state.minBet, Math.floor(betAmt / 2)))
+            }
 
-            placeBetInternal(idx, betAmt);
-            madeChanges = true;
+            if (betAmt >= state.minBet && betAmt <= p.chips) {
+                placeBetInternal(idx, betAmt);
+                madeChanges = true;
+            }
         }
     });
 }
@@ -320,9 +360,14 @@ function placeBet(idx, amt) {
     const p = state.players[idx];
     if (!p) return;
 
-    if (isNaN(amt) || amt < 1) { playSound('error'); return; }
-    if (amt > p.chips) { amt = p.chips; }
+    if (isNaN(amt) || amt < state.minBet || amt > p.chips) {
+        showOverlay("Invalid bet", 'Check the minimum and maximum bet amounts.', 0, "msg-lose");
+        playSound('error'); return;
+    }
+    amt = Math.floor(amt);
     if (amt === 0) { return; }
+    if (amt > state.maxBet) { amt = state.maxBet; }
+
 
     placeBetInternal(idx, amt);
     updateGameFlow();
@@ -397,7 +442,7 @@ function startTimer() {
             ui.overlay.classList.remove('show');
             dealHands();
         }
-    }, 1000);
+    }, state.fastMode ? 300 : 1000);
 }
 
 /* --- GAME LOGIC --- */
@@ -527,7 +572,7 @@ function dealHands() {
             renderSeat(action.idx);
         }
         i++;
-        setTimeout(nextDeal, 200);
+        setTimeout(nextDeal, getDelay(200));
     }
     nextDeal();
 }
@@ -575,7 +620,7 @@ function checkBlackjack() {
 
         // Move to the resolution phase to settle bets.
         state.phase = 'RESOLVING';
-        setTimeout(resolveRound, 2000);
+        setTimeout(resolveRound, getDelay(2000));
 
     } else {
         // Dealer does not have blackjack. Check if any players are still in the game.
@@ -593,7 +638,7 @@ function checkBlackjack() {
                 }
             }));
             state.phase = 'RESOLVING';
-            setTimeout(resolveRound, 1500);
+            setTimeout(resolveRound, getDelay(1500));
         }
     }
 }
@@ -611,13 +656,13 @@ function nextTurn() {
 
                 const score = calcScore(p.hands[hIdx].cards);
                 if (score === 21) {
-                    setTimeout(playerStand, 500);
+                    setTimeout(playerStand, getDelay(500));
                 } else {
                     render();
                     updateStrategyHint();
 
                     if (p.autoPlay) {
-                        setTimeout(runAutoPlay, 800);
+                        setTimeout(runAutoPlay, getDelay(800));
                     }
                 }
                 return;
@@ -650,7 +695,7 @@ function runAutoPlay() {
             else playerHit();
         }
         else if (action === 'Split') playerSplit();
-    }, 1000);
+    }, getDelay(1000));
 }
 
 function playerHit() {
@@ -676,16 +721,16 @@ function playerHit() {
     if (calcScore(h.cards) > 21) {
         h.status = 'bust';
         h.result = 'lose';
-        if (!p.autoPlay) setTimeout(playSound, 200, 'bust');
+        if (!p.autoPlay) setTimeout(playSound, getDelay(200), 'bust');
         ui.strategyText.textContent = "";
-        setTimeout(nextTurn, 800);
+        setTimeout(nextTurn, getDelay(800));
     } else if (calcScore(h.cards) === 21) {
         ui.strategyText.textContent = "";
-        setTimeout(playerStand, 500);
+        setTimeout(playerStand, getDelay(500));
     } else {
         updateStrategyHint();
         if (state.players[state.turnIndex].autoPlay) {
-            setTimeout(runAutoPlay, 500);
+            setTimeout(runAutoPlay, getDelay(500));
         }
     }
 }
@@ -710,8 +755,8 @@ function playerStand() {
         updateStrategyHint();
         setTimeout(() => {
             if (calcScore(p.hands[nextSplit].cards) === 21) playerStand();
-            else if (p.autoPlay) setTimeout(runAutoPlay, 500);
-        }, 500);
+            else if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
+        }, getDelay(500));
     } else {
         nextTurn();
     }
@@ -745,7 +790,7 @@ function playerDouble() {
     ui.overlay.classList.remove('show');
     ui.strategyText.textContent = "";
     renderSeat(state.turnIndex);
-    setTimeout(nextTurn, 800);
+    setTimeout(nextTurn, getDelay(800));
 }
 
 function playerSplit() {
@@ -761,7 +806,7 @@ function playerSplit() {
     if (p.chips < h.bet) { playSound('error'); return; }
     const c1 = h.cards[0];
     const c2 = h.cards[1];
-    if (c1.num !== c2.num) { playSound('error'); return; }
+    if (BlackjackLogic.getCardValue(c1) !== BlackjackLogic.getCardValue(c2)) { playSound('error'); return; }
 
     playSound('chip');
     p.chips -= h.bet;
@@ -790,12 +835,13 @@ function playerSplit() {
 
     renderSeat(state.turnIndex);
     updateStrategyHint();
-    if (p.autoPlay) setTimeout(runAutoPlay, 500);
+    if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
 }
 
 function dealerTurn() {
     state.phase = 'RESOLVING';
     state.turnIndex = -1;
+    state.splitIndex = -1;
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
@@ -875,7 +921,7 @@ function resolveRound() {
 }
 
 function finishRound() {
-    if (state.cutCardReached) {
+    if (state.cutCardReached || state.tableSettingsChanged) {
         // Requirement 4: Clear table immediately when shuffling starts
         state.phase = 'SHUFFLING';
 
@@ -886,12 +932,28 @@ function finishRound() {
         // Force a render to show the empty table immediately
         render();
 
-        showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
+        let msg = "Cut Card Reached";
+        if (state.tableSettingsChanged) {
+            msg = "Changing table";
+            let dc = state.tableSettingsChanged['deckCount']
+            if (dc !== undefined) {
+                state.deckCount = parseInt(dc);
+            }
+            let min = state.tableSettingsChanged['minBet']
+            if (min !== undefined) {
+                state.minBet = parseInt(min);
+                state.maxBet = calcMaxBet(state.minBet)
+            }
+            state.tableSettingsChanged = false;
+        }
+
+        showOverlay(msg, "Shuffling...", "", "msg-shuffle");
         setTimeout(createShoe, 1500);
     } else {
         endRound();
     }
     updateCasinoProfit();
+    updatePlayedRounds();
 }
 
 function endRound() {
@@ -910,6 +972,10 @@ function endRound() {
 }
 
 /* --- HELPERS --- */
+
+function getDelay(base) {
+    return state.fastMode ? 250 : base;
+}
 
 function calcScore(cards, peek = false) {
     return BlackjackLogic.calcScore(cards, peek);
@@ -1015,6 +1081,22 @@ function showOverlay(main, sub, amount, colorClass) {
     }
 }
 
+function calcMaxBet(minBet) {
+    const raw = minBet * (minBet >= 25 ? 200 : 100);
+
+    let div;
+    if (raw <= 1000) {
+        div = 100;
+    } else if (raw <= 5000) {
+        div = 500;
+    } else {
+        div = 1000;
+    }
+
+    return Math.round(raw / div) * div;
+}
+
+
 /* --- RENDERING --- */
 function createCardEl(card) {
     return CommonUtils.createCardEl(card);
@@ -1039,7 +1121,7 @@ function sit(idx) {
         id: idx,
         chips: 1000,
         currentBet: 0,
-        lastBet: 10,
+        lastBet: state.minBet,
         hands: [],
         isReady: false,
         autoPlay: false,
@@ -1142,14 +1224,14 @@ function getSeatHTML(idx) {
                 <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
                     <span class="toggle-label">Auto Play</span>
                     <label class="toggle-switch">
-                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} disabled>
+                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autobet-${idx}" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="toggle-container ${!p.autoPlay ? 'hidden-opacity' : ''}" onclick="toggleAuto(${idx}, 'bet')">
                     <span class="toggle-label">Auto Bet</span>
                     <label class="toggle-switch auto-bet">
-                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} disabled>
+                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -1160,7 +1242,7 @@ function getSeatHTML(idx) {
         controlsHTML = `
                     ${togglesHTML}
                     <div class="bet-controls">
-                        <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || 10}" min="10" step="10">
+                        <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || state.minBet}" min="${state.minBet}" step="5">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
                         <button class="btn-clear" onclick="clearBet(${idx})">Clear</button>
                     </div>
@@ -1208,8 +1290,8 @@ function getSeatHTML(idx) {
                     <div class="player-hand-area">
                         ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
 
-                        ${p.hands.length > 0 && state.phase !== 'BETTING'
-            ? `<div class="score-pill" style="margin-bottom:5px;">${p.hands.length > 1 ? '' : getScoreDisplay(p.hands[0].cards)}</div>`
+                        ${p.hands.length === 1 && state.phase !== 'BETTING'
+            ? `<div class="score-pill" style="margin-bottom:5px;">${getScoreDisplay(p.hands[0].cards)}</div>`
             : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
         }
 
@@ -1221,7 +1303,7 @@ function getSeatHTML(idx) {
             if (p.hands.length > 1) {
                 html += `<div class="split-container">`;
                 p.hands.forEach((h, hIdx) => {
-                    const isActive = (state.splitIndex === hIdx) ? 'active-split' : '';
+                    const isActive = (isMyTurn && state.splitIndex === hIdx) ? 'active-split' : '';
 
                     // Result Overlay
                     let resultHTML = '';
@@ -1318,9 +1400,37 @@ ui.seatSelect.addEventListener('change', (e) => {
 });
 
 ui.deckSelect.addEventListener('change', (e) => {
-    state.deckCount = parseInt(e.target.value);
-    createShoe();
+    if (state.phase === 'BETTING') {
+        state.deckCount = parseInt(e.target.value);
+        createShoe();
+    } else {
+        // wait until the round is finished before "changing tables"
+        state.tableSettingsChanged = state.tableSettingsChanged || {};
+        state.tableSettingsChanged["deckCount"] = parseInt(e.target.value);
+    }
+})
+
+ui.minBet.addEventListener('change', (e) => {
+    if (state.phase === 'BETTING') {
+        state.minBet = parseInt(e.target.value);
+        state.maxBet = calcMaxBet(state.minBet);
+        createShoe("Changing table...");
+    } else {
+        state.tableSettingsChanged = state.tableSettingsChanged || {};
+        state.tableSettingsChanged["minBet"] =  parseInt(e.target.value); // forces a re-shuffle due to having "changed tables"
+    }
 });
 
+
 // Start
-init();
+const handleFirstInteraction = () => {
+    init();
+    // Clean up all listeners so it doesn't fire again
+    window.removeEventListener('click', handleFirstInteraction);
+    window.removeEventListener('keydown', handleFirstInteraction);
+    window.removeEventListener('touchstart', handleFirstInteraction);
+};
+
+window.addEventListener('click', handleFirstInteraction);
+window.addEventListener('keydown', handleFirstInteraction);
+window.addEventListener('touchstart', handleFirstInteraction);

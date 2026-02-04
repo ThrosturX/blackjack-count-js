@@ -1,3 +1,4 @@
+
 :root {
     --felt-color: #2d5e38;
     --felt-border: #4a3b2a;
@@ -1997,7 +1998,6 @@ input:checked+.slider:before {
         justify-content: space-around;
         gap: 10px;
     }
-
     /* Make buttons bigger for touch */
     button {
         padding: 12px 15px;
@@ -2042,4 +2042,14 @@ input:checked+.slider:before {
         /* Shrink slightly to fit width */
         transform-origin: top center;
     }
+}
+.inline-label {
+    display: inline-block;
+    margin-right: 8px;
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+#fast-mode-checkbox {
+    vertical-align: middle;
 }
