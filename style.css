@@ -659,13 +659,14 @@ body.table-stone {
 /* --- Table Area --- */
 #table {
     position: relative;
+    --table-radius: 100px;
     width: 95vw;
     max-width: 1400px;
     height: clamp(360px, 70vh, 70vh);
     min-height: 360px;
     margin-top: 20px;
     background: var(--table-bg);
-    border-radius: 100px;
+    border-radius: var(--table-radius);
     border: 12px solid var(--table-border);
     box-shadow: var(--table-shadow);
     display: flex;
@@ -704,7 +705,7 @@ body.table-stone {
 #table-scroll::-webkit-scrollbar-track {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
     border-radius: 999px;
-    margin: 40px 6px;
+    margin: calc(var(--table-radius) + 76px) 6px;
 }
 
 #table-scroll::-webkit-scrollbar-thumb {
