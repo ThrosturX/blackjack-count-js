@@ -661,7 +661,7 @@ body.table-stone {
     position: relative;
     width: 95vw;
     max-width: 1400px;
-    height: 75vh;
+    min-height: 60vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 100px;
@@ -669,7 +669,8 @@ body.table-stone {
     box-shadow: var(--table-shadow);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    align-items: center;
     overflow: hidden;
     transition: background 0.5s, border-color 0.5s;
 }
@@ -819,6 +820,7 @@ body.deck-oceanic .card.black::before {
 .shoe-container {
     position: absolute;
     top: 20px;
+    margin-bottom: auto;
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -1073,6 +1075,7 @@ body.deck-oceanic .card.black::before {
     width: 100%;
     z-index: 5;
     padding-right: 80px;
+    margin-top: auto;
 }
 
 .seat {
