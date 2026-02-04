@@ -1224,14 +1224,14 @@ function getSeatHTML(idx) {
                 <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
                     <span class="toggle-label">Auto Play</span>
                     <label class="toggle-switch">
-                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} disabled>
+                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autobet-${idx}" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="toggle-container ${!p.autoPlay ? 'hidden-opacity' : ''}" onclick="toggleAuto(${idx}, 'bet')">
                     <span class="toggle-label">Auto Bet</span>
                     <label class="toggle-switch auto-bet">
-                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} disabled>
+                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
