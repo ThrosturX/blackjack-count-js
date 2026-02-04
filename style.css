@@ -458,7 +458,6 @@ body {
     align-items: center;
     min-height: 100vh;
     user-select: none;
-    padding-bottom: 90px;
     overflow: hidden;
 }
 
@@ -675,6 +674,31 @@ body.table-stone {
     overflow-y: auto;
     overflow-x: hidden;
     transition: background 0.5s, border-color 0.5s;
+    flex: 1 1 auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(242, 201, 76, 0.45) rgba(0, 0, 0, 0.25);
+    scrollbar-gutter: stable;
+}
+
+#table::-webkit-scrollbar {
+    width: 10px;
+}
+
+#table::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
+    border-radius: 999px;
+    margin: 14px 0;
+}
+
+#table::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(242, 201, 76, 0.65), rgba(242, 201, 76, 0.35));
+    border-radius: 999px;
+    border: 2px solid rgba(0, 0, 0, 0.35);
+}
+
+#table::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(242, 201, 76, 0.9), rgba(242, 201, 76, 0.55));
 }
 
 /* --- Oceanic Card Front Overrides --- */
@@ -1453,9 +1477,7 @@ input:checked+.slider:before {
 
 /* --- Strategy Hint --- */
 #strategy-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+    position: relative;
     width: 100%;
     background: #222;
     border-top: 2px solid #444;
@@ -1467,7 +1489,7 @@ input:checked+.slider:before {
     justify-content: center;
     align-items: center;
     gap: 4px;
-    margin-top: 40px; /* Added to create space from table */
+    margin-top: auto;
 }
 
 .hint-label {
