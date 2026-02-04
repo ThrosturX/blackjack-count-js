@@ -18,7 +18,8 @@ const state = {
     timer: null,
     timerVal: 0,
     isShuffling: false,
-    casinoProfit: 0
+    casinoProfit: 0,
+    fastMode: false
 };
 
 const ui = {
@@ -41,6 +42,7 @@ const ui = {
     statsArea: document.getElementById('stats-area'),
     toggleSettings: document.getElementById('toggle-settings'),
     toggleStats: document.getElementById('toggle-stats'),
+    fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -131,6 +133,10 @@ function updateTableStyle() {
     document.body.classList.add(`table-${style}`);
 }
 
+ui.fastModeCheckbox.addEventListener('change', (event) => {
+  state.fastMode = event.target.checked;
+});
+
 function createShoe() {
     // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
     if (state.isShuffling) return;
@@ -172,7 +178,7 @@ function createShoe() {
         state.phase = 'BETTING';
         ui.overlay.classList.remove('show');
         updateGameFlow();
-    }, 800);
+    }, getDelay(800));
 
     // Update shoe visual after shuffle
     setTimeout(() => {
@@ -181,7 +187,7 @@ function createShoe() {
         ui.overlay.classList.remove('show');
         updateShoeVisual(); // Show full stack
         updateGameFlow();
-    }, 800);
+    }, getDelay(800));
 }
 
 function finishShuffle() {
@@ -397,7 +403,7 @@ function startTimer() {
             ui.overlay.classList.remove('show');
             dealHands();
         }
-    }, 1000);
+    }, state.fastMode ? 300 : 1000);
 }
 
 /* --- GAME LOGIC --- */
@@ -527,7 +533,7 @@ function dealHands() {
             renderSeat(action.idx);
         }
         i++;
-        setTimeout(nextDeal, 200);
+        setTimeout(nextDeal, getDelay(200));
     }
     nextDeal();
 }
@@ -575,7 +581,7 @@ function checkBlackjack() {
 
         // Move to the resolution phase to settle bets.
         state.phase = 'RESOLVING';
-        setTimeout(resolveRound, 2000);
+        setTimeout(resolveRound, getDelay(2000));
 
     } else {
         // Dealer does not have blackjack. Check if any players are still in the game.
@@ -593,7 +599,7 @@ function checkBlackjack() {
                 }
             }));
             state.phase = 'RESOLVING';
-            setTimeout(resolveRound, 1500);
+            setTimeout(resolveRound, getDelay(1500));
         }
     }
 }
@@ -611,13 +617,13 @@ function nextTurn() {
 
                 const score = calcScore(p.hands[hIdx].cards);
                 if (score === 21) {
-                    setTimeout(playerStand, 500);
+                    setTimeout(playerStand, getDelay(500));
                 } else {
                     render();
                     updateStrategyHint();
 
                     if (p.autoPlay) {
-                        setTimeout(runAutoPlay, 800);
+                        setTimeout(runAutoPlay, getDelay(800));
                     }
                 }
                 return;
@@ -650,7 +656,7 @@ function runAutoPlay() {
             else playerHit();
         }
         else if (action === 'Split') playerSplit();
-    }, 1000);
+    }, getDelay(1000));
 }
 
 function playerHit() {
@@ -676,16 +682,16 @@ function playerHit() {
     if (calcScore(h.cards) > 21) {
         h.status = 'bust';
         h.result = 'lose';
-        if (!p.autoPlay) setTimeout(playSound, 200, 'bust');
+        if (!p.autoPlay) setTimeout(playSound, getDelay(200), 'bust');
         ui.strategyText.textContent = "";
-        setTimeout(nextTurn, 800);
+        setTimeout(nextTurn, getDelay(800));
     } else if (calcScore(h.cards) === 21) {
         ui.strategyText.textContent = "";
-        setTimeout(playerStand, 500);
+        setTimeout(playerStand, getDelay(500));
     } else {
         updateStrategyHint();
         if (state.players[state.turnIndex].autoPlay) {
-            setTimeout(runAutoPlay, 500);
+            setTimeout(runAutoPlay, getDelay(500));
         }
     }
 }
@@ -710,8 +716,8 @@ function playerStand() {
         updateStrategyHint();
         setTimeout(() => {
             if (calcScore(p.hands[nextSplit].cards) === 21) playerStand();
-            else if (p.autoPlay) setTimeout(runAutoPlay, 500);
-        }, 500);
+            else if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
+        }, getDelay(500));
     } else {
         nextTurn();
     }
@@ -745,7 +751,7 @@ function playerDouble() {
     ui.overlay.classList.remove('show');
     ui.strategyText.textContent = "";
     renderSeat(state.turnIndex);
-    setTimeout(nextTurn, 800);
+    setTimeout(nextTurn, getDelay(800));
 }
 
 function playerSplit() {
@@ -790,7 +796,7 @@ function playerSplit() {
 
     renderSeat(state.turnIndex);
     updateStrategyHint();
-    if (p.autoPlay) setTimeout(runAutoPlay, 500);
+    if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
 }
 
 function dealerTurn() {
@@ -911,6 +917,10 @@ function endRound() {
 }
 
 /* --- HELPERS --- */
+
+function getDelay(base) {
+    return state.fastMode ? 250 : base;
+}
 
 function calcScore(cards, peek = false) {
     return BlackjackLogic.calcScore(cards, peek);
