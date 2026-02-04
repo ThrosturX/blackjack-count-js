@@ -333,18 +333,16 @@ function processAutoBets() {
             // check if we are using too much of our bankroll
             if (betAmt > p.chips * 0.06 && p.chips > state.minBet * 20) {
                 // only bet if the count is positive
-                if (tc > 0) betAmt = p.chips * 0.021 * tc;
+                if (tc > 0) betAmt = Math.floor(p.chips * 0.021 * tc);
                 // otherwise sit out most of the time
                 else if (Math.random() > 0.33) betAmt = 0;
                 else betAmt = state.minBet; // if won't sit out, bet the minimum
-                console.log(`Player ${idx + 1} using too much bankroll!`)
             } else if (3 * p.chips < state.maxBet * Math.random() - state.minBet * 2) {
                 // check if this AI player "feels" poor
                 // sit out if this AI might believe the deck is cold
                 if (tc < Math.random()) betAmt = 0
                 // place a smaller bet
-                else betAmt = Math.floor(Math.max(state.minBet, betAmt / 2))
-                console.log(`Player ${idx + 1} feels poor!`)
+                else betAmt = Math.floor(Math.max(state.minBet, Math.floor(betAmt / 2)))
             }
 
             if (betAmt >= state.minBet && betAmt <= p.chips) {
