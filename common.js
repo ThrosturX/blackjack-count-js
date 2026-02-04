@@ -166,6 +166,29 @@ const CommonUtils = {
 
                 cardStack.appendChild(line);
             }
+            // finally, place the top card so it comes out of the lip
+            const previewEl = document.getElementById('top-card-preview');
+            if (!previewEl || shoe.length === 0) {
+                // no card to draw
+                previewEl.style.opacity = 0;
+                return;
+            }
+            previewEl.innerHTML = '';
+            previewEl.style.opacity = 0.92;
+            let topCard = this.createCardEl(shoe[0]);
+            topCard.className += ' hidden';
+            topCard.style.cssText = `
+                position: absolute;
+                width: 50px;
+                height: 70px;
+                left: -10px;
+                z-index: ${visualLines + 1}
+            `
+            let max = 2
+            let min = -3
+            let rot = Math.floor(Math.random() * (max - min + 1)) + min;
+            topCard.style.transform = `rotate(${rot}deg)`;
+            previewEl.appendChild(topCard);
         });
     },
 
@@ -196,11 +219,12 @@ const CommonUtils = {
         flyingCard.style.top = `${shoeRect.top + 15}px`;
 
         document.body.appendChild(flyingCard);
+        let rot = Math.floor(Math.random() * (11)) - 5;
 
         setTimeout(() => {
             flyingCard.style.left = `${destX}px`;
             flyingCard.style.top = `${destY}px`;
-            flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
+            flyingCard.style.transform = `scale(0.8) rotate(${rot}deg)`;
             flyingCard.style.opacity = '0.7';
 
             setTimeout(() => {

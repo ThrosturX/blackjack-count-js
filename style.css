@@ -2063,3 +2063,29 @@ input:checked+.slider:before {
 #fast-mode-checkbox {
     vertical-align: middle;
 }
+
+.top-card-preview {
+    position: absolute;
+    /* Position relative to .shoe-body — adjust these values based on your current shoe design */
+    left: -18px;               /* Negative value = sticks out to the right (toward dealer/lip side) */
+    top: 50%;
+    transform: translateY(-50%) rotate(1deg);  /* slight tilt for realism */
+    width: var(--card-w);       /* 70px or whatever your --card-w is */
+    height: 70px;
+    pointer-events: none;       /* don't block clicks on table */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5),
+                inset 0 0 8px rgba(255,255,255,0.15);
+    border-radius: 6px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+/* If you want it to look like it's coming from under the lip, you can clip or use pseudo-element shadow */
+.top-card-preview::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    border-radius: 6px;
+    pointer-events: none;
+}
