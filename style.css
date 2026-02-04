@@ -848,7 +848,7 @@ body.deck-oceanic .card.black::before {
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    overflow: visible;
+    overflow: hidden;
     padding: 0;
 }
 
