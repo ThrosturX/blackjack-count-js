@@ -1405,7 +1405,8 @@ ui.deckSelect.addEventListener('change', (e) => {
         createShoe();
     } else {
         // wait until the round is finished before "changing tables"
-        state.tableSettingsChanged = {"deckCount": parseInt(e.target.value)};
+        state.tableSettingsChanged = state.tableSettingsChanged || {};
+        state.tableSettingsChanged["deckCount"] = parseInt(e.target.value);
     }
 })
 
@@ -1415,7 +1416,8 @@ ui.minBet.addEventListener('change', (e) => {
         state.maxBet = calcMaxBet(state.minBet);
         createShoe("Changing table...");
     } else {
-        state.tableSettingsChanged = {"minBet": parseInt(e.target.value)}; // forces a re-shuffle due to having "changed tables"
+        state.tableSettingsChanged = state.tableSettingsChanged || {};
+        state.tableSettingsChanged["minBet"] =  parseInt(e.target.value); // forces a re-shuffle due to having "changed tables"
     }
 });
 
