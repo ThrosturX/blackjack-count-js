@@ -705,7 +705,7 @@ body.table-stone {
 #table-scroll::-webkit-scrollbar-track {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
     border-radius: 999px;
-    margin: calc(var(--table-radius) + 76px) 6px;
+    margin: 20px 6px;
 }
 
 #table-scroll::-webkit-scrollbar-thumb {
@@ -1936,4 +1936,6 @@ input:checked+.slider:before {
     .stock-pile,
     .waste-pile {
         width: 60px;
-        height:
+        height: 8px;
+    }
+}
