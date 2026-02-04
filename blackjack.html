@@ -19,6 +19,22 @@
 
         <div class="game-controls">
             <div class="controls-section" id="settings-area">
+                <div class="stats">
+                    <label for="fast-mode-checkbox" class="inline-label">Fast Mode:</label>
+                    <input type="checkbox" id="fast-mode-checkbox">
+                </div>
+                <div class="stats">Minimum bet:
+                    <select id="table-minimum-bet">
+                        <option value="5">$5</option>
+                        <option value="10" selected>$10</option>
+                        <option value="15">$15</option>
+                        <option value="20">$20</option>
+                        <option value="25">$25</option>
+                        <option value="30">$30</option>
+                        <option value="50">$50</option>
+                        <option value="100">$100</option>
+                    </select>
+                </div>
                 <div class="stats">Table:
                     <select id="table-style-select">
                         <option value="felt" selected>Green Felt</option>
@@ -72,16 +88,13 @@
                         <option value="starlight">Starlight</option>
                     </select>
                 </div>
-                <div class="stats">
-                    <label for="fast-mode-checkbox" class="inline-label">Fast Mode:</label>
-                    <input type="checkbox" id="fast-mode-checkbox">
-                </div>
             </div>
 
             <div class="controls-section" id="stats-area">
                 <div class="stats">Cards: <span id="cards-left">0</span></div>
                 <div class="stats">Count: <span id="run-count">0</span></div>
                 <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
+                <div class="stats">Played rounds: <span id="played-rounds">0</span></div>
             </div>
         </div>
     </header>
@@ -106,8 +119,12 @@
 
         <!-- Dealer Section -->
         <div id="dealer-area">
-            <div class="score-pill" id="dealer-score">?</div>
-            <div class="cards" id="dealer-cards"></div>
+            <div class="score-pill" id="dealer-score">Click anywhere to start</div>
+            <div class="cards" id="dealer-cards">
+                <div class="card red" style="transform: rotate(-10deg);"><div class="val-top">A<br><small>♦</small></div><div class="suit-center">♥</div><div class="val-bot">A<br><small>♥</small></div></div>
+                <div class="card hidden" style="opacity: 0;"></div>
+                <div class="card black" style="transform: rotate(12deg);"><div class="val-top">K<br><small>♠</small></div><div class="suit-center">♠</div><div class="val-bot">K<br><small>♠</small></div></div>
+            </div>
         </div>
 
         <!-- Players Section -->

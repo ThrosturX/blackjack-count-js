@@ -9,6 +9,7 @@ const state = {
     shoe: [],
     totalInitialCards: 0,
     cutCardReached: false,
+    tableSettingsChanged: false,
     runningCount: 0,
     dealer: { hand: [] },
     players: [],
@@ -18,7 +19,10 @@ const state = {
     timer: null,
     timerVal: 0,
     isShuffling: false,
+    minBet: 10,
+    maxBet: 1000,
     casinoProfit: 0,
+    playedRounds: 0,
     fastMode: false
 };
 
@@ -32,6 +36,7 @@ const ui = {
     cardsLeft: document.getElementById('cards-left'),
     runCount: document.getElementById('run-count'),
     casinoProfit: document.getElementById('casino-profit'),
+    playedRounds: document.getElementById('played-rounds'),
     deckSelect: document.getElementById('deck-select'),
     deckStyleSelect: document.getElementById('deck-style-select'),
     tableStyleSelect: document.getElementById('table-style-select'),
@@ -43,6 +48,7 @@ const ui = {
     toggleSettings: document.getElementById('toggle-settings'),
     toggleStats: document.getElementById('toggle-stats'),
     fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
+    minBet: document.getElementById('table-minimum-bet'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -134,7 +140,7 @@ function updateTableStyle() {
 }
 
 ui.fastModeCheckbox.addEventListener('change', (event) => {
-  state.fastMode = event.target.checked;
+    state.fastMode = event.target.checked;
 });
 
 function createShoe() {
@@ -210,6 +216,11 @@ function updateCasinoProfit() {
         ui.casinoProfit.textContent = `$${state.casinoProfit}`;
         ui.casinoProfit.classList.add('casino-profit-neutral');
     }
+}
+
+function updatePlayedRounds() {
+    state.playedRounds += 1;
+    ui.playedRounds.textContent = `${state.playedRounds}`;
 }
 
 function updateStats() {
@@ -308,20 +319,34 @@ function processAutoBets() {
         if (p && p.autoPlay && p.autoBet && !p.isReady) {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
-            let betAmt = p.lastBet || 10;
-            if (tc >= 3) betAmt = 100;
-            else if (tc >= 2) betAmt = 50;
-            else if (tc <= -2) betAmt = 10;
-            else betAmt = 20;
+            let betAmt = p.lastBet || state.minBet;
+            if (tc >= 8) betAmt = state.maxBet;
+            else if (tc >= 6) betAmt = state.maxBet * 0.50;
+            else if (tc >= 4) betAmt = state.maxBet * 0.25;
+            else if (tc >= 3) betAmt = state.maxBet * 0.10;
+            else if (tc >= 2) betAmt = state.maxBet * 0.05;
+            else if (tc <= -2) betAmt = state.minBet;
+            else betAmt = 2 * state.minBet;
             if (betAmt > p.chips) betAmt = p.chips;
 
-            // check if this AI player feels poor
-            if (p.chips < 888 * Math.random()) {
+            // check if we are using too much of our bankroll
+            if (betAmt > p.chips * 0.06 && p.chips > state.minBet * 20) {
+                // only bet if the count is positive
+                if (tc > 0) betAmt = p.chips * 0.021 * tc;
+                // otherwise sit out most of the time
+                else if (Math.random() > 0.33) betAmt = 0;
+                else betAmt = state.minBet; // if won't sit out, bet the minimum
+                console.log(`Player ${idx + 1} using too much bankroll!`)
+            } else if (3 * p.chips < state.maxBet * Math.random() - state.minBet * 2) {
+                // check if this AI player "feels" poor
+                // sit out if this AI might believe the deck is cold
                 if (tc < Math.random()) betAmt = 0
-                else betAmt = Math.floor(Math.max(10, betAmt / 2))
+                // place a smaller bet
+                else betAmt = Math.floor(Math.max(state.minBet, betAmt / 2))
+                console.log(`Player ${idx + 1} feels poor!`)
             }
 
-            if (betAmt > 0 ) {
+            if (betAmt >= state.minBet && betAmt <= p.chips) {
                 placeBetInternal(idx, betAmt);
                 madeChanges = true;
             }
@@ -336,9 +361,13 @@ function placeBet(idx, amt) {
     const p = state.players[idx];
     if (!p) return;
 
-    if (isNaN(amt) || amt < 1) { playSound('error'); return; }
+    if (isNaN(amt) || amt < state.minBet || amt > p.chips) { playSound('error'); return; }
+    amt = Math.floor(amt);
+    if (amt < state.minBet) { amt = state.minBet}
     if (amt > p.chips) { amt = p.chips; }
     if (amt === 0) { return; }
+    if (amt > state.maxBet) { amt = state.maxBet}
+
 
     placeBetInternal(idx, amt);
     updateGameFlow();
@@ -892,7 +921,7 @@ function resolveRound() {
 }
 
 function finishRound() {
-    if (state.cutCardReached) {
+    if (state.cutCardReached || state.tableSettingsChanged) {
         // Requirement 4: Clear table immediately when shuffling starts
         state.phase = 'SHUFFLING';
 
@@ -903,12 +932,23 @@ function finishRound() {
         // Force a render to show the empty table immediately
         render();
 
-        showOverlay("Cut Card Reached", "Shuffling...", "", "msg-shuffle");
+        let msg = "Cut Card Reached";
+        if (state.tableSettingsChanged) {
+            msg = "Changing table";
+            let dc = state.tableSettingsChanged['deckCount']
+            if (dc !== undefined) {
+                state.deckCount = parseInt(dc);
+            }
+            state.tableSettingsChanged = false;
+        }
+
+        showOverlay(msg, "Shuffling...", "", "msg-shuffle");
         setTimeout(createShoe, 1500);
     } else {
         endRound();
     }
     updateCasinoProfit();
+    updatePlayedRounds();
 }
 
 function endRound() {
@@ -1035,6 +1075,22 @@ function showOverlay(main, sub, amount, colorClass) {
         setTimeout(() => { ui.overlay.classList.remove('show'); }, 1200);
     }
 }
+
+function calcMaxBet(minBet) {
+    const raw = minBet * (minBet >= 25 ? 200 : 100);
+
+    let div;
+    if (raw <= 1000) {
+        div = 100;
+    } else if (raw <= 5000) {
+        div = 500;
+    } else {
+        div = 1000;
+    }
+
+    return Math.round(raw / div) * div;
+}
+
 
 /* --- RENDERING --- */
 function createCardEl(card) {
@@ -1339,9 +1395,31 @@ ui.seatSelect.addEventListener('change', (e) => {
 });
 
 ui.deckSelect.addEventListener('change', (e) => {
-    state.deckCount = parseInt(e.target.value);
-    createShoe();
+    if (state.phase === 'BETTING') {
+        state.deckCount = parseInt(e.target.value);
+        createShoe();
+    } else {
+        // wait until the round is finished before "changing tables"
+        state.tableSettingsChanged = {"deckCount": parseInt(e.target.value)};
+    }
+})
+
+ui.minBet.addEventListener('change', (e) => {
+    state.minBet = parseInt(e.target.value);
+    state.maxBet = calcMaxBet(state.minBet)
+    state.tableSettingsChanged = true // forces a re-shuffle due to having "changed tables"
 });
 
+
 // Start
-init();
+const handleFirstInteraction = () => {
+    init();
+    // Clean up all listeners so it doesn't fire again
+    window.removeEventListener('click', handleFirstInteraction);
+    window.removeEventListener('keydown', handleFirstInteraction);
+    window.removeEventListener('touchstart', handleFirstInteraction);
+};
+
+window.addEventListener('click', handleFirstInteraction);
+window.addEventListener('keydown', handleFirstInteraction);
+window.addEventListener('touchstart', handleFirstInteraction);
