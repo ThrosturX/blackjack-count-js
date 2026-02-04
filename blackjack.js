@@ -1407,7 +1407,7 @@ ui.deckSelect.addEventListener('change', (e) => {
 ui.minBet.addEventListener('change', (e) => {
     state.minBet = parseInt(e.target.value);
     state.maxBet = calcMaxBet(state.minBet)
-    state.tableSettingsChanged = true // forces a re-shuffle due to having "changed tables"
+    state.tableSettingsChanged = {}; // forces a re-shuffle due to having "changed tables"
 });
 
 
