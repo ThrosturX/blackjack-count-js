@@ -904,7 +904,8 @@ body.deck-oceanic .card.black::before {
     flex-direction: column;
     align-items: center;
     z-index: 5;
-    flex: 0 0 auto; /* Added to keep fixed height */
+    flex: 0 0 auto;
+    margin-bottom: 40px;
 }
 
 .score-pill {
@@ -1078,7 +1079,8 @@ body.deck-oceanic .card.black::before {
     width: 100%;
     z-index: 5;
     padding-right: 80px;
-    flex: 0 0 auto; /* Added to keep fixed height */
+    flex: 0 0 auto;
+    margin-top: 40px;
 }
 
 .seat {
