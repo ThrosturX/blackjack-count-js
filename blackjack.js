@@ -172,6 +172,12 @@ function createShoe(msg) {
     // Clear seats visually if not already done (usually cleared before calling this)
     if (ui.seats.innerHTML === '') renderSeats();
 
+    // hide the top card from the shoe if it was visible
+    const topCard = document.getElementById('top-card-preview')
+    if (topCard) {
+        topCard.style.opacity = 0;
+    }
+
     // reset the count hint since we just shuffled
     updateCountHint();
 
@@ -262,6 +268,14 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     CommonUtils.animateCardDraw(shoeBody, destX, destY, () => {
         updateShoeVisual();
     });
+
+    // if we took the last card, hide it
+    if (state.shoe.length === 0) {
+        const topCard = document.getElementById('top-card-preview')
+        if (topCard) {
+            topCard.style.opacity = 0;
+        }
+    }
 }
 
 /* --- GAME FLOW CONTROL --- */
@@ -707,6 +721,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
+    animateCardDraw(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
     playSound('card');
@@ -778,6 +793,7 @@ function playerDouble() {
     p.chips -= h.bet;
     h.bet *= 2;
 
+    animateCardDraw(false, state.turnIndex);
     const c = drawCard(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
@@ -805,6 +821,11 @@ function playerSplit() {
     const c1 = h.cards[0];
     const c2 = h.cards[1];
     if (BlackjackLogic.getCardValue(c1) !== BlackjackLogic.getCardValue(c2)) { playSound('error'); return; }
+
+    animateCardDraw(false, state.turnIndex);
+    setTimeout( function() {
+        animateCardDraw(false, state.turnIndex);
+    }, 100);
 
     playSound('chip');
     p.chips -= h.bet;
@@ -855,6 +876,7 @@ function dealerTurn() {
             state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
+            animateCardDraw(true);
             state.dealer.hand.push(c);
             score = calcScore(state.dealer.hand);
             renderDealer();
