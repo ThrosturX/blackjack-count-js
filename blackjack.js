@@ -363,10 +363,8 @@ function placeBet(idx, amt) {
 
     if (isNaN(amt) || amt < state.minBet || amt > p.chips) { playSound('error'); return; }
     amt = Math.floor(amt);
-    if (amt < state.minBet) { amt = state.minBet}
-    if (amt > p.chips) { amt = p.chips; }
     if (amt === 0) { return; }
-    if (amt > state.maxBet) { amt = state.maxBet}
+    if (amt > state.maxBet) { amt = state.maxBet; }
 
 
     placeBetInternal(idx, amt);
