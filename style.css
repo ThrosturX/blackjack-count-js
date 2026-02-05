@@ -555,7 +555,7 @@ body.deck-ghost .card.hidden {
 }
 
 body.deck-ghost .card.hidden::before {
-    content: "💀" !important;
+    content: "☠️" !important;
     position: absolute;
     top: 50%;
     left: 50%;
