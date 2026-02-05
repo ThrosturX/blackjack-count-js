@@ -118,62 +118,64 @@ const CommonUtils = {
             const totalCards = shoe.length;
             const separatorIndex = shoe.findIndex(card => card.isSplitCard);
 
-            const baseRenderedCards = 52;
-            const deckScalingFactor = Math.sqrt(deckCount);
-            let maxRenderedCards = Math.floor(baseRenderedCards * deckScalingFactor);
-            const maxWidthCards = 188;
-            maxRenderedCards = Math.min(maxRenderedCards, maxWidthCards);
+            // 1. SET REALISTIC BOUNDS
+            // A real 8-deck stack is ~12.5cm. 260px is a realistic "UI size" for this.
+            // If you want it "Life-Size" (1px = 1 card), change this to 416.
+            const MAX_PHYSICAL_WIDTH = 260;
 
-            let cardsToShow, reductionFactor = 1;
-            if (totalCards > maxRenderedCards) {
-                reductionFactor = totalCards / maxRenderedCards;
-                cardsToShow = maxRenderedCards;
-            } else {
-                cardsToShow = totalCards;
-            }
+            // 2. UNPACKING & SAMPLING LOGIC
+            // The shoe fills up to 260px. If > 260 cards, we compress (decimate).
+            // If < 260 cards, we use 1px per card (the "unpacking" effect).
+            const visualLines = Math.min(totalCards, MAX_PHYSICAL_WIDTH);
+            const reductionFactor = totalCards / visualLines;
 
-            const totalWidth = cardsToShow * 2;
-
-            for (let i = 0; i < cardsToShow; i++) {
+            for (let i = 0; i < visualLines; i++) {
+                // Mapping: i=0 is the bottom (right), i=max is the top/mouth (left).
                 const realIndex = Math.floor(i * reductionFactor);
-                const cardBackLine = document.createElement('div');
-                cardBackLine.className = 'card-back-line';
-                const positionFromRight = totalWidth - (i * 2);
 
-                cardBackLine.style.cssText = `
+                // Position 0 is the mouth. Higher values are deeper in the shoe.
+                const leftPos = visualLines - i;
+
+                const line = document.createElement('div');
+                // Alternate classes to preserve the "paper edge" texture from the intern's CSS
+                line.className = (i % 2 === 0) ? 'card-back-line' : 'card-edge-line';
+
+                line.style.cssText = `
                     position: absolute;
-                    width: 2px;
+                    width: 1px;
                     height: 70px;
-                    left: ${positionFromRight}px;
-                    z-index: ${i * 2};
+                    left: ${leftPos}px;
+                    z-index: ${i};
                 `;
 
+                // 3. CORRECT CUT CARD POSITION
+                // We highlight the line if the separator falls within this sampled slice.
                 if (separatorIndex !== -1 && Math.abs(realIndex - separatorIndex) < reductionFactor) {
-                    cardBackLine.style.width = '1px';
-                    cardBackLine.style.background = 'linear-gradient(0deg, #FFEED7 0%, #FFEEA5 50%, #FFEED7 100%)';
-                    cardBackLine.style.zIndex = 100;
+                    line.style.width = '2px'; // Make the plastic slightly visible
+                    line.style.background = 'linear-gradient(0deg, #FFEED7 0%, #FFEEA5 50%, #FFEED7 100%)';
+                    line.style.zIndex = 1000;
                 }
-                cardStack.appendChild(cardBackLine);
 
-                const cardEdgeLine = document.createElement('div');
-                cardEdgeLine.className = 'card-edge-line';
-                const edgePositionFromRight = totalWidth - (i * 2 + 1);
-
-                cardEdgeLine.style.cssText = `
-                    position: absolute;
-                    width: 2px;
-                    height: 70px;
-                    left: ${edgePositionFromRight}px;
-                    z-index: ${i * 2 + 1};
-                `;
-
-                if (separatorIndex !== -1 && Math.abs(realIndex - separatorIndex) < reductionFactor) {
-                    cardEdgeLine.style.width = '2px';
-                    cardEdgeLine.style.backgroundColor = '#FFF7A2';
-                    cardEdgeLine.style.zIndex = 99;
-                }
-                cardStack.appendChild(cardEdgeLine);
+                cardStack.appendChild(line);
             }
+            // finally, place the top card so it comes out of the lip
+            const previewEl = document.getElementById('top-card-preview');
+            if (!previewEl || shoe.length === 0) {
+                // no card to draw
+                previewEl.style.opacity = 0;
+                return;
+            }
+            previewEl.innerHTML = '';
+            previewEl.style.opacity = 0.92;
+            let topCard = this.createCardEl(shoe[shoe.length - 1]);
+            topCard.classList.add('hidden');
+            topCard.classList.add('top-card-preview-card');
+            topCard.style.zIndex = visualLines + 1;
+            const TOP_CARD_ROTATION_MAX = 2;
+            const TOP_CARD_ROTATION_MIN = -3;
+            let rot = Math.floor(Math.random() * (TOP_CARD_ROTATION_MAX - TOP_CARD_ROTATION_MIN + 1)) + TOP_CARD_ROTATION_MIN;
+            topCard.style.transform = `rotate(${rot}deg)`;
+            previewEl.appendChild(topCard);
         });
     },
 
@@ -204,11 +206,12 @@ const CommonUtils = {
         flyingCard.style.top = `${shoeRect.top + 15}px`;
 
         document.body.appendChild(flyingCard);
+        let rot = Math.floor(Math.random() * (11)) - 5;
 
         setTimeout(() => {
             flyingCard.style.left = `${destX}px`;
             flyingCard.style.top = `${destY}px`;
-            flyingCard.style.transform = 'scale(0.8) rotate(5deg)';
+            flyingCard.style.transform = `scale(0.8) rotate(${rot}deg)`;
             flyingCard.style.opacity = '0.7';
 
             setTimeout(() => {

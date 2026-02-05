@@ -49,6 +49,7 @@ const ui = {
     toggleStats: document.getElementById('toggle-stats'),
     fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
     minBet: document.getElementById('table-minimum-bet'),
+    topCardPreview: document.getElementById('top-card-preview'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -100,6 +101,17 @@ function init() {
     if (ui.toggleStats) {
         ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
         ui.toggleStats.classList.add('active'); // Default open
+    }
+
+    if (ui.topCardPreview) {
+        ui.topCardPreview.onmouseup = () => {
+            const peekCard = ui.topCardPreview.children[0];
+            if (peekCard) peekCard.classList.add('hidden');
+        }
+        ui.topCardPreview.onmousedown = () => {
+            const peekCard = ui.topCardPreview.children[0];
+            if (peekCard) peekCard.classList.remove('hidden');
+        }
     }
 
     setTimeout(updateShoeVisual, 100);
@@ -171,6 +183,11 @@ function createShoe(msg) {
 
     // Clear seats visually if not already done (usually cleared before calling this)
     if (ui.seats.innerHTML === '') renderSeats();
+
+    // hide the top card from the shoe if it was visible
+    if (ui.topCardPreview) {
+        ui.topCardPreview.style.opacity = 0;
+    }
 
     // reset the count hint since we just shuffled
     updateCountHint();
@@ -262,6 +279,13 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
     CommonUtils.animateCardDraw(shoeBody, destX, destY, () => {
         updateShoeVisual();
     });
+
+    // if we took the last card, hide it
+    if (state.shoe.length === 0) {
+        if (ui.topCardPreview ) {
+            ui.topCardPreview.style.opacity = 0;
+        }
+    }
 }
 
 /* --- GAME FLOW CONTROL --- */
@@ -825,6 +849,14 @@ function playerSplit() {
     playSound('card');
     h.cards.push(cFirst);
 
+    // The two `drawCard` animations for the split hand often merge visually.
+    // This explicit `animateCardDraw` with a timeout creates a distinct
+    // second animation, simulating two separate card throws.
+    setTimeout( function() {
+        animateCardDraw(false, state.turnIndex);
+    }, 100);
+
+
     const cSecond = drawCard(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(cSecond);
     updateStats();
@@ -1107,6 +1139,16 @@ function renderDealer() {
     const hasHidden = state.dealer.hand.some(c => c.hidden);
     if (hasHidden && state.phase !== 'RESOLVING') {
         ui.dealerScore.textContent = BlackjackLogic.getCardValue(state.dealer.hand[0]);
+        /* let the user click on the card to peek it */
+        let holeCard = ui.dealerCards.children[1];
+        if (holeCard) {
+            holeCard.onmouseup = () => {
+                holeCard.classList.add('hidden');
+            }
+            holeCard.onmousedown = () => {
+                holeCard.classList.remove('hidden');
+            }
+        }
     } else {
         ui.dealerScore.textContent = calcScore(state.dealer.hand);
     }
