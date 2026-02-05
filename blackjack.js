@@ -272,7 +272,6 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
 
     // if we took the last card, hide it
     if (state.shoe.length === 0) {
-        ui.topCardPreview = document.getElementById('top-card-preview')
         if (ui.topCardPreview ) {
             ui.topCardPreview.style.opacity = 0;
         }
@@ -840,7 +839,9 @@ function playerSplit() {
     playSound('card');
     h.cards.push(cFirst);
 
-    // only one drawing will be shown
+    // The two `drawCard` animations for the split hand often merge visually.
+    // This explicit `animateCardDraw` with a timeout creates a distinct
+    // second animation, simulating two separate card throws.
     setTimeout( function() {
         animateCardDraw(false, state.turnIndex);
     }, 100);
