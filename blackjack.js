@@ -723,7 +723,6 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    animateCardDraw(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
     playSound('card');
@@ -795,7 +794,6 @@ function playerDouble() {
     p.chips -= h.bet;
     h.bet *= 2;
 
-    animateCardDraw(false, state.turnIndex);
     const c = drawCard(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(c);
     updateStats();
@@ -824,11 +822,6 @@ function playerSplit() {
     const c2 = h.cards[1];
     if (BlackjackLogic.getCardValue(c1) !== BlackjackLogic.getCardValue(c2)) { playSound('error'); return; }
 
-    animateCardDraw(false, state.turnIndex);
-    setTimeout( function() {
-        animateCardDraw(false, state.turnIndex);
-    }, 100);
-
     playSound('chip');
     p.chips -= h.bet;
 
@@ -847,6 +840,12 @@ function playerSplit() {
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
+
+    // only one drawing will be shown
+    setTimeout( function() {
+        animateCardDraw(false, state.turnIndex);
+    }, 100);
+
 
     const cSecond = drawCard(false, state.turnIndex);
     state.runningCount += BlackjackLogic.getCardCount(cSecond);
@@ -878,7 +877,6 @@ function dealerTurn() {
             state.runningCount += BlackjackLogic.getCardCount(c);
             updateStats();
             playSound('card');
-            animateCardDraw(true);
             state.dealer.hand.push(c);
             score = calcScore(state.dealer.hand);
             renderDealer();
