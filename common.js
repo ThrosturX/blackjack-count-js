@@ -167,7 +167,7 @@ const CommonUtils = {
             }
             previewEl.innerHTML = '';
             previewEl.style.opacity = 0.92;
-            let topCard = this.createCardEl(shoe[0]);
+            let topCard = this.createCardEl(shoe[shoe.length - 1]);
             topCard.className += ' hidden';
             topCard.classList.add('top-card-preview-card');
             topCard.style.zIndex = visualLines + 1;

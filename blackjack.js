@@ -103,6 +103,19 @@ function init() {
         ui.toggleStats.classList.add('active'); // Default open
     }
 
+    if (ui.topCardPreview) {
+        ui.topCardPreview.onmouseup = () => {
+            const peekCard = ui.topCardPreview.children[0];
+            if (peekCard) peekCard.classList.add('hidden');
+            else console.log("no peek card!");
+        }
+        ui.topCardPreview.onmousedown = () => {
+            const peekCard = ui.topCardPreview.children[0];
+            if (peekCard) peekCard.classList.remove('hidden');
+            else console.log("no peek card!");
+        }
+    }
+
     setTimeout(updateShoeVisual, 100);
 }
 
@@ -1129,6 +1142,16 @@ function renderDealer() {
     const hasHidden = state.dealer.hand.some(c => c.hidden);
     if (hasHidden && state.phase !== 'RESOLVING') {
         ui.dealerScore.textContent = BlackjackLogic.getCardValue(state.dealer.hand[0]);
+        /* let the user click on the card to peek it */
+        let holeCard = ui.dealerCards.children[1];
+        if (holeCard) {
+            holeCard.onmouseup = () => {
+                holeCard.classList.add('hidden');
+            }
+            holeCard.onmousedown = () => {
+                holeCard.classList.remove('hidden');
+            }
+        }
     } else {
         ui.dealerScore.textContent = calcScore(state.dealer.hand);
     }

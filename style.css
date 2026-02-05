@@ -2068,17 +2068,12 @@ input:checked+.slider:before {
 
 .top-card-preview {
     position: absolute;
-    /* Position relative to .shoe-body — adjust these values based on your current shoe design */
     left: -18px;
-    /* Negative value = sticks out to the right (toward dealer/lip side) */
     top: 50%;
     transform: translateY(-50%) rotate(1deg);
-    /* slight tilt for realism */
     width: var(--card-w);
-    /* 70px or whatever your --card-w is */
     height: 70px;
-    pointer-events: none;
-    /* don't block clicks on table */
+    pointer-events: auto;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5),
         inset 0 0 8px rgba(255, 255, 255, 0.15);
     border-radius: 6px;
