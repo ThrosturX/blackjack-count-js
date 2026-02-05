@@ -49,6 +49,7 @@ const ui = {
     toggleStats: document.getElementById('toggle-stats'),
     fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
     minBet: document.getElementById('table-minimum-bet'),
+    topCardPreview: document.getElementById('top-card-preview'),
 };
 
 /* --- AUDIO HANDLING --- */
@@ -173,9 +174,9 @@ function createShoe(msg) {
     if (ui.seats.innerHTML === '') renderSeats();
 
     // hide the top card from the shoe if it was visible
-    const topCard = document.getElementById('top-card-preview')
-    if (topCard) {
-        topCard.style.opacity = 0;
+    ui.topCardPreview = document.getElementById('top-card-preview')
+    if (ui.topCardPreview) {
+        ui.topCardPreview.style.opacity = 0;
     }
 
     // reset the count hint since we just shuffled
@@ -271,9 +272,9 @@ function animateCardDraw(toDealer = true, seatIndex = null) {
 
     // if we took the last card, hide it
     if (state.shoe.length === 0) {
-        const topCard = document.getElementById('top-card-preview')
-        if (topCard) {
-            topCard.style.opacity = 0;
+        ui.topCardPreview = document.getElementById('top-card-preview')
+        if (ui.topCardPreview ) {
+            ui.topCardPreview.style.opacity = 0;
         }
     }
 }
