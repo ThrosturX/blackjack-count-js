@@ -345,13 +345,21 @@ function processAutoBets() {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
             let betAmt = p.lastBet || state.minBet;
-            if (tc >= 8) betAmt = state.maxBet;
-            else if (tc >= 6) betAmt = state.maxBet * 0.50;
-            else if (tc >= 4) betAmt = state.maxBet * 0.25;
-            else if (tc >= 3) betAmt = state.maxBet * 0.10;
-            else if (tc >= 2) betAmt = state.maxBet * 0.05;
-            else if (tc <= -2) betAmt = state.minBet;
-            else betAmt = 2 * state.minBet;
+            // determine the size of a "unit"
+            let unit = p.chips * 0.02;
+            // make sure the unit isn't too big
+            if (unit * 12 > state.maxBet) unit = state.maxBet / 12;
+            // make sure it isn't too small
+            if (unit < state.minBet) unit = state.minBet;
+
+            if (tc >= 8) betAmt = unit * 12;
+            else if (tc >= 6) betAmt = unit * 10;
+            else if (tc >= 4) betAmt = unit * 8;
+            else if (tc >= 3) betAmt = unit * 6;
+            else if (tc >= 2) betAmt = unit * 4;
+            else if (tc >= 1) betAmt = unit * 2;
+            else if (tc <= -2) betAmt = unit / 2;
+            else betAmt = unit;
             if (betAmt > p.chips) betAmt = p.chips;
 
             // check if we are using too much of our bankroll
@@ -368,6 +376,9 @@ function processAutoBets() {
                 // place a smaller bet
                 else betAmt = Math.floor(Math.max(state.minBet, Math.floor(betAmt / 2)))
             }
+
+            // round it off to the nearest $5
+            betAmt = Math.round(betAmt / 5) * 5
 
             if (betAmt >= state.minBet && betAmt <= p.chips) {
                 placeBetInternal(idx, betAmt);
@@ -1157,9 +1168,32 @@ function renderDealer() {
 function sit(idx) {
     if (state.players[idx]) return;
 
+    // determine what kind of clientele just sat down
+    let luck = Math.random()
+    let chips = 1000;
+
+    if (luck < 0.02) chips = 10000;
+    else if (luck < 0.12) chips = 5000;
+    else if (luck > 0.9) chips = 3000;
+    else if (luck > 0.49 && luck < 0.51) chips = 20000;
+
+    // add petty cash
+    for (let i=0; i<3; ++i) {
+        if (Math.random() < 0.13) chips += 250;
+        if (Math.random() < 0.12) chips += 500;
+        if (Math.random() < 0.14) chips += 300;
+    }
+    let pocket = Math.random()
+    for (let i=0; i<5; ++i) {
+        if (pocket + Math.random() < 0.1 * (i+1)) chips += 50;
+    }
+
+    // VIP
+    if (luck > 0.998) chips = 100000;
+
     state.players[idx] = {
         id: idx,
-        chips: 1000,
+        chips: chips,
         currentBet: 0,
         lastBet: state.minBet,
         hands: [],
@@ -1474,3 +1508,4 @@ const handleFirstInteraction = () => {
 window.addEventListener('click', handleFirstInteraction);
 window.addEventListener('keydown', handleFirstInteraction);
 window.addEventListener('touchstart', handleFirstInteraction);
+
