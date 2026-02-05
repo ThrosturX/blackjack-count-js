@@ -490,12 +490,12 @@ body.deck-neon-vibe .card.hidden {
 }
 
 body.deck-neon-vibe .card.hidden::before {
-    content: "⚡" !important;
+    content: "🌐" !important;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) !important;
-    font-size: 3.5em;
+    font-size: 3vw;
     color: var(--card-back-accent);
     text-shadow: 0 0 10px var(--card-back-accent), 0 0 20px var(--card-back-pattern-color);
     opacity: 0.8;
