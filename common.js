@@ -108,14 +108,6 @@ const CommonUtils = {
      * @param {number} deckCount - Total deck count for scaling.
      * @param {number} totalInitialCards - Initial total cards for separator positioning.
      */
-    /**
-     * Updates the visual representation of the shoe.
-     * Mouth is on the LEFT. Supports "unpacking" from 8-deck compression to 1:1 density.
-     */
-    /**
-     * Updates the visual representation of the shoe.
-     * Mouth is on the LEFT. Implements realistic 1px scaling and "unpacking" logic.
-     */
     updateShoeVisual: function (cardStack, shoe, isShuffling, deckCount, totalInitialCards) {
         if (!cardStack) return;
 
@@ -177,6 +169,7 @@ const CommonUtils = {
             previewEl.style.opacity = 0.92;
             let topCard = this.createCardEl(shoe[0]);
             topCard.className += ' hidden';
+            // This could be its own style but I'm tired
             topCard.style.cssText = `
                 position: absolute;
                 width: 50px;
