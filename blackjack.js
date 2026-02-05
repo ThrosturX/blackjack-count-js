@@ -1046,7 +1046,7 @@ function endRound() {
 /* --- HELPERS --- */
 
 function getDelay(base) {
-    return state.fastMode ? 250 : base;
+    return state.fastMode ? 180 : base;
 }
 
 function calcScore(cards, peek = false) {
