@@ -345,10 +345,10 @@ function processAutoBets() {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
             // counters aren't perfect, give him a "mental count"
-            const mc = tc * p.countingBias * (Math.random() - 0.5)
+            const mc = tc + (2 + Math.random()) * (p.countingBias * (Math.random() - 0.4))
             let betAmt = p.lastBet || state.minBet;
             // determine the size of a "unit"
-            let unit = p.chips * 0.02;
+            let unit = Math.round(p.chips / 200) * 4;
             // make sure the unit isn't too big
             if (unit * 12 > state.maxBet) unit = state.maxBet / 12;
             // make sure it isn't too small
@@ -380,8 +380,15 @@ function processAutoBets() {
                 else betAmt = Math.floor(Math.max(state.minBet, Math.floor(betAmt / 2)))
             }
 
-            // round it off to the nearest $5
-            betAmt = Math.round(betAmt / 5) * 5
+            // round it off to the nearest "minimum unit" ($5 or higher)
+            let magnitude = Math.pow(10, Math.floor(Math.log10(betAmt)));
+            let rawIncrement = (betAmt < 2 * magnitude) ? (magnitude / 10) : (magnitude / 2);
+
+            // We round the increment to the nearest 5 before using it to round the bet
+            let chipStep = Math.max(5, Math.round(rawIncrement / 5) * 5);
+
+            // Round the actual bet/payout using our "chip-safe" increment
+            betAmt = Math.round(betAmt / chipStep) * chipStep;
 
             if (betAmt >= state.minBet && betAmt <= p.chips) {
                 placeBetInternal(idx, betAmt);
