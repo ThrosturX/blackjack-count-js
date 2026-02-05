@@ -162,7 +162,10 @@ const CommonUtils = {
             const previewEl = document.getElementById('top-card-preview');
             if (!previewEl || shoe.length === 0) {
                 // no card to draw
-                previewEl.style.opacity = 0;
+                if (previewEl) {
+                    // if we have a draw pile/shoe and no card to draw, hide it
+                    previewEl.style.opacity = 0;
+                }
                 return;
             }
             previewEl.innerHTML = '';
