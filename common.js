@@ -168,12 +168,12 @@ const CommonUtils = {
             previewEl.innerHTML = '';
             previewEl.style.opacity = 0.92;
             let topCard = this.createCardEl(shoe[shoe.length - 1]);
-            topCard.className += ' hidden';
+            topCard.classList.add('hidden');
             topCard.classList.add('top-card-preview-card');
             topCard.style.zIndex = visualLines + 1;
-            let max = 2
-            let min = -3
-            let rot = Math.floor(Math.random() * (max - min + 1)) + min;
+            const TOP_CARD_ROTATION_MAX = 2;
+            const TOP_CARD_ROTATION_MIN = -3;
+            let rot = Math.floor(Math.random() * (TOP_CARD_ROTATION_MAX - TOP_CARD_ROTATION_MIN + 1)) + TOP_CARD_ROTATION_MIN;
             topCard.style.transform = `rotate(${rot}deg)`;
             previewEl.appendChild(topCard);
         });
