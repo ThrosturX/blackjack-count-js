@@ -107,12 +107,10 @@ function init() {
         ui.topCardPreview.onmouseup = () => {
             const peekCard = ui.topCardPreview.children[0];
             if (peekCard) peekCard.classList.add('hidden');
-            else console.log("no peek card!");
         }
         ui.topCardPreview.onmousedown = () => {
             const peekCard = ui.topCardPreview.children[0];
             if (peekCard) peekCard.classList.remove('hidden');
-            else console.log("no peek card!");
         }
     }
 
@@ -187,7 +185,6 @@ function createShoe(msg) {
     if (ui.seats.innerHTML === '') renderSeats();
 
     // hide the top card from the shoe if it was visible
-    ui.topCardPreview = document.getElementById('top-card-preview')
     if (ui.topCardPreview) {
         ui.topCardPreview.style.opacity = 0;
     }
