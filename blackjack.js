@@ -317,7 +317,7 @@ function processAutoBets() {
     let madeChanges = false;
 
     state.players.forEach((p, idx) => {
-        if (p && p.autoPlay && p.autoBet && !p.isReady) {
+        if (p && p.autoBet && !p.isReady) {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
             let betAmt = p.lastBet || state.minBet;
@@ -404,13 +404,11 @@ function toggleAuto(idx, type) {
 
     if (type === 'play') {
         p.autoPlay = !p.autoPlay;
-        if (!p.autoPlay) {
-            p.autoBet = false;
-        } else if (state.phase === 'PLAYING' && state.turnIndex === idx) {
+        if (p.autoPlay && state.phase === 'PLAYING' && state.turnIndex === idx) {
             // If it's this player's turn and they just enabled auto-play, trigger it
             runAutoPlay();
         }
-    } else if (type === 'bet' && p.autoPlay) {
+    } else if (type === 'bet') {
         p.autoBet = !p.autoBet;
         if (p.autoBet) {
             updateGameFlow();
@@ -1224,11 +1222,11 @@ function getSeatHTML(idx) {
                 <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
                     <span class="toggle-label">Auto Play</span>
                     <label class="toggle-switch">
-                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autobet-${idx}" disabled>
+                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autoplay-${idx}" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="toggle-container ${!p.autoPlay ? 'hidden-opacity' : ''}" onclick="toggleAuto(${idx}, 'bet')">
+                <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
                     <span class="toggle-label">Auto Bet</span>
                     <label class="toggle-switch auto-bet">
                         <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
