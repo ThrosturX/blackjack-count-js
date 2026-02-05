@@ -77,9 +77,11 @@ function playSound(type) {
 }
 
 /* --- INITIALIZATION --- */
-function init() {
+async function init() {
     state.players = Array(state.seatCount).fill(null);
     createShoe();
+
+    CommonUtils.populateThemeSelectors();
 
     // Initialize deck style
     if (ui.deckStyleSelect) {

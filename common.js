@@ -231,6 +231,51 @@ const CommonUtils = {
     getScoreDisplay: function (score) {
         if (score > 21) return 'BUST (' + score + ')';
         return score.toString();
+    },
+
+    populateThemeSelectors: function() {
+        const ui = {
+            deckStyleSelect: document.getElementById('deck-style-select'),
+            tableStyleSelect: document.getElementById('table-style-select'),
+        }
+
+        if (ui.deckStyleSelect) {
+            const selectedDeck = ui.deckStyleSelect.value;
+            ui.deckStyleSelect.innerHTML = '';
+            THEMES.deck.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme;
+                option.textContent = theme.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                if (theme === selectedDeck) {
+                    option.selected = true;
+                }
+                ui.deckStyleSelect.appendChild(option);
+            });
+        }
+
+        if (ui.tableStyleSelect) {
+            const selectedTable = ui.tableStyleSelect.value;
+            ui.tableStyleSelect.innerHTML = '';
+            
+            // Add default green felt theme, because it is not in themes.css
+            const defaultOption = document.createElement('option');
+            defaultOption.value = 'felt';
+            defaultOption.textContent = 'Green Felt';
+            if ('felt' === selectedTable) {
+                defaultOption.selected = true;
+            }
+            ui.tableStyleSelect.appendChild(defaultOption);
+
+            THEMES.table.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme;
+                option.textContent = theme.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                if (theme === selectedTable) {
+                    option.selected = true;
+                }
+                ui.tableStyleSelect.appendChild(option);
+            });
+        }
     }
 };
 

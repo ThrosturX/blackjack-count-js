@@ -3,6 +3,9 @@
  * Manages game state, UI updates, and user interactions
  */
 
+const SUITS = ["♥", "♦", "♣", "♠"];
+const VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
 // Game state
 const gameState = {
     tableau: [[], [], [], [], [], [], []],
@@ -36,6 +39,7 @@ const soundFiles = {
 // Initialize game on load
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(soundFiles);
+    CommonUtils.populateThemeSelectors();
     setupEventListeners();
     initGame();
 });
@@ -638,6 +642,71 @@ function showHint() {
     alert('Hint: Try drawing from the stock or recycling the waste pile!');
 }
 
+async function populateThemeSelectors() {
+    const ui = {
+        deckStyleSelect: document.getElementById('deck-style-select'),
+        tableStyleSelect: document.getElementById('table-style-select'),
+    }
+    try {
+        const response = await fetch('themes.css');
+        const themeContent = await response.text();
+
+        const deckRegex = /body\.(deck-[a-zA-Z0-9-]+)/g;
+        const tableRegex = /body\.(table-[a-zA-Z0-9-]+)/g;
+        let deckMatches;
+        const deckThemes = new Set();
+        while ((deckMatches = deckRegex.exec(themeContent)) !== null) {
+            deckThemes.add(deckMatches[1].replace('deck-', ''));
+        }
+
+        let tableMatches;
+        const tableThemes = new Set();
+        while ((tableMatches = tableRegex.exec(themeContent)) !== null) {
+            tableThemes.add(tableMatches[1].replace('table-', ''));
+        }
+
+        if (ui.deckStyleSelect) {
+            const selectedDeck = ui.deckStyleSelect.value;
+            ui.deckStyleSelect.innerHTML = '';
+            deckThemes.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme;
+                option.textContent = theme.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                if (theme === selectedDeck) {
+                    option.selected = true;
+                }
+                ui.deckStyleSelect.appendChild(option);
+            });
+        }
+
+        if (ui.tableStyleSelect) {
+            const selectedTable = ui.tableStyleSelect.value;
+            ui.tableStyleSelect.innerHTML = '';
+            
+            // Add default green felt theme, because it is not in themes.css
+            const defaultOption = document.createElement('option');
+            defaultOption.value = 'felt';
+            defaultOption.textContent = 'Green Felt';
+            if ('felt' === selectedTable) {
+                defaultOption.selected = true;
+            }
+            ui.tableStyleSelect.appendChild(defaultOption);
+
+            tableThemes.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme;
+                option.textContent = theme.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                if (theme === selectedTable) {
+                    option.selected = true;
+                }
+                ui.tableStyleSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error("Failed to load or parse themes:", error);
+    }
+}
+
 /**
  * Setup event listeners
  */
@@ -668,17 +737,13 @@ function setupEventListeners() {
     // Table style
     document.getElementById('table-style-select').addEventListener('change', (e) => {
         document.body.className = document.body.className.replace(/table-\w+/g, '');
-        if (e.target.value !== 'felt') {
-            document.body.classList.add(`table-${e.target.value}`);
-        }
+        document.body.classList.add(`table-${e.target.value}`);
     });
 
     // Deck style
     document.getElementById('deck-style-select').addEventListener('change', (e) => {
         document.body.className = document.body.className.replace(/deck-\w+/g, '');
-        if (e.target.value !== 'red') {
-            document.body.classList.add(`deck-${e.target.value}`);
-        }
+        document.body.classList.add(`deck-${e.target.value}`);
     });
 
     // Draw count
