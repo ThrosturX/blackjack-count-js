@@ -348,9 +348,9 @@ function processAutoBets() {
             const mc = tc + (2 + Math.random()) * (p.countingBias * (Math.random() - 0.4))
             let betAmt = p.lastBet || state.minBet;
             // determine the size of a "unit"
-            let unit = Math.round(p.chips / 200) * 4;
+            let unit = Math.round(p.chips / 200) * (2 - (p.conservative ? 1 : -p.countingBias)); // ~ 0.25 -> 0.5%
             // make sure the unit isn't too big
-            if (unit * 12 > state.maxBet) unit = state.maxBet / 12;
+            if (unit * 12 > state.maxBet) unit = state.maxBet / 8;
             // make sure it isn't too small
             if (unit < state.minBet) unit = state.minBet;
 
