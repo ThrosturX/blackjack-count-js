@@ -344,6 +344,8 @@ function processAutoBets() {
         if (p && p.autoBet && !p.isReady) {
             const decksRem = Math.max(1, state.shoe.length / 52);
             const tc = state.runningCount / decksRem;
+            // counters aren't perfect, give him a "mental count"
+            const mc = tc * p.countingBias * (Math.random() - 0.5)
             let betAmt = p.lastBet || state.minBet;
             // determine the size of a "unit"
             let unit = p.chips * 0.02;
@@ -352,13 +354,14 @@ function processAutoBets() {
             // make sure it isn't too small
             if (unit < state.minBet) unit = state.minBet;
 
+            // tc is used intentionally here
             if (tc >= 8) betAmt = unit * 12;
-            else if (tc >= 6) betAmt = unit * 10;
-            else if (tc >= 4) betAmt = unit * 8;
-            else if (tc >= 3) betAmt = unit * 6;
-            else if (tc >= 2) betAmt = unit * 4;
-            else if (tc >= 1) betAmt = unit * 2;
-            else if (tc <= -2) betAmt = unit / 2;
+            else if (mc >= 6) betAmt = unit * 10;
+            else if (mc >= 4) betAmt = unit * 8;
+            else if (mc >= 3) betAmt = unit * 6;
+            else if (mc >= 2) betAmt = unit * 4;
+            else if (mc >= 1) betAmt = unit * 2;
+            else if (mc <= -2) betAmt = unit / 2;
             else betAmt = unit;
             if (betAmt > p.chips) betAmt = p.chips;
 
@@ -890,6 +893,16 @@ function dealerTurn() {
     render();
     playSound('card');
 
+    // if nobody is playing, don't draw the rest of the dealer hand
+    let activePlayers = state.players.filter(p =>
+        p && p.hands.some(h => h.status === 'stand' || h.status === 'playing')
+    );
+
+    if (activePlayers.length === 0) {
+        resolveRound();
+        return;
+    }
+
     let score = calcScore(state.dealer.hand);
 
     function loop() {
@@ -958,7 +971,7 @@ function resolveRound() {
     render();
 
     // Move directly to finish (wait for user to see results)
-    setTimeout(finishRound, 4000);
+    setTimeout(finishRound, 1000 + getDelay(3000));
 }
 
 function finishRound() {
@@ -1200,7 +1213,8 @@ function sit(idx) {
         isReady: false,
         autoPlay: false,
         autoBet: false,
-        pendingStandUp: false
+        pendingStandUp: false,
+        countingBias: Math.random(),
     };
 
     if (state.phase === 'BETTING') {
