@@ -169,14 +169,8 @@ const CommonUtils = {
             previewEl.style.opacity = 0.92;
             let topCard = this.createCardEl(shoe[0]);
             topCard.className += ' hidden';
-            // This could be its own style but I'm tired
-            topCard.style.cssText = `
-                position: absolute;
-                width: 50px;
-                height: 70px;
-                left: -10px;
-                z-index: ${visualLines + 1}
-            `
+            topCard.classList.add('top-card-preview-card');
+            topCard.style.zIndex = visualLines + 1;
             let max = 2
             let min = -3
             let rot = Math.floor(Math.random() * (max - min + 1)) + min;
