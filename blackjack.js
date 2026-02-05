@@ -354,19 +354,25 @@ function processAutoBets() {
             // make sure it isn't too small
             if (unit < state.minBet) unit = state.minBet;
 
-            // tc is used intentionally here
-            if (tc >= 8) betAmt = unit * 12;
-            else if (mc >= 6) betAmt = unit * 10;
-            else if (mc >= 4) betAmt = unit * 8;
-            else if (mc >= 3) betAmt = unit * 6;
-            else if (mc >= 2) betAmt = unit * 4;
-            else if (mc >= 1) betAmt = unit * 2;
-            else if (mc <= -2) betAmt = unit / 2;
-            else betAmt = unit;
+            // Bet 1 unit for every true count (use mc to fudge)
+            betAmt = unit * Math.max(1, (Math.ceil(mc - 1)));
+
+            // if we are 'conservative' keep the spread lower
+            if (p.conservative) {
+                if (betAmt > 5 * unit) {
+                    betAmt = 5 * unit;
+                } else if (mc > 0) {
+                    betAmt = Math.max(unit, betAmt * 0.66);
+                }
+            }
+
             if (betAmt > p.chips) betAmt = p.chips;
 
-            // check if we are using too much of our bankroll
-            if (betAmt > p.chips * 0.06 && p.chips > state.minBet * 20) {
+            /*  simulate some player stress, like the feeling of
+             *  being poor or fear of an upcoming losing streak
+             *  maybe we think we are using too much of our bankroll
+             */
+            if (betAmt > p.chips * 0.06 && p.chips < state.minBet * 20) {
                 // only bet if the count is positive
                 if (tc > 0) betAmt = Math.floor(p.chips * 0.021 * tc);
                 // otherwise sit out most of the time
@@ -375,9 +381,14 @@ function processAutoBets() {
             } else if (3 * p.chips < state.maxBet * Math.random() - state.minBet * 2) {
                 // check if this AI player "feels" poor
                 // sit out if this AI might believe the deck is cold
-                if (tc < Math.random()) betAmt = 0
+                if (mc < Math.random()) betAmt = 0
                 // place a smaller bet
                 else betAmt = Math.floor(Math.max(state.minBet, Math.floor(betAmt / 2)))
+            }
+
+            // "never" bet more than 1/4 of bankroll on one round (unless we have to)
+            if (betAmt * 4 > p.chips) {
+                betAmt = state.minBet; // bet as little as possible to keep our seat
             }
 
             // round it off to the nearest "minimum unit" ($5 or higher)
@@ -1222,6 +1233,7 @@ function sit(idx) {
         autoBet: false,
         pendingStandUp: false,
         countingBias: Math.random(),
+        conservative: (Math.random() > 0.5 ? true : false),
     };
 
     if (state.phase === 'BETTING') {
