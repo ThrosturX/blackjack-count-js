@@ -37,7 +37,7 @@ const ui = {
     cardStack: document.getElementById('card-stack')
 };
 
-function init() {
+async function init() {
     state.players = Array(state.seatCount).fill(null);
     CommonUtils.preloadAudio({
         'card': ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav', 'card5.wav'],
@@ -46,6 +46,8 @@ function init() {
         'win': ['win.wav', 'winner.wav'],
         'error': ['error.wav']
     });
+
+    CommonUtils.populateThemeSelectors();
 
     if (ui.deckStyleSelect) {
         updateDeckStyle();
