@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casino Poker (Hold'em)</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
     <style>
         /* Poker specific styles */
         .community-cards {
@@ -67,15 +68,7 @@
         <div class="game-controls">
             <div class="controls-section" id="settings-area">
                 <div class="stats">Table:
-                    <select id="table-style-select">
-                        <option value="felt" selected>Green Felt</option>
-                        <option value="crimson">Crimson Velvet</option>
-                        <option value="lavender">Lavender Dusk</option>
-                        <option value="neon">Neon Nights</option>
-                        <option value="depths">Ocean Depths</option>
-                        <option value="waves">Rolling Waves</option>
-                        <option value="stone">Dark Stone</option>
-                    </select>
+                    <select id="table-style-select"></select>
                 </div>
                 <div class="stats">Seats:
                     <select id="seat-select">
@@ -87,21 +80,7 @@
                     </select>
                 </div>
                 <div class="stats">Style:
-                    <select id="deck-style-select">
-                        <option value="red" selected>Red Striped</option>
-                        <option value="blue">Blue Classic</option>
-                        <option value="green">Green Pattern</option>
-                        <option value="gold">Royal Gold</option>
-                        <option value="velvet">Regal Velvet</option>
-                        <option value="oceanic">Oceanic</option>
-                        <option value="whale">Cetaceous</option>
-                        <option value="mammoth">Woolly</option>
-                        <option value="dark">Midnight Luxe</option>
-                        <option value="cherry">Cherry Blossom</option>
-                        <option value="emerald">Emerald Luxe</option>
-                        <option value="ruby">Ruby Luxe</option>
-                        <option value="starlight">Starlight</option>
-                    </select>
+                    <select id="deck-style-select"></select>
                 </div>
             </div>
 
@@ -142,6 +121,7 @@
         </div>
     </main>
 
+    <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
     <script src="poker-logic.js"></script>
