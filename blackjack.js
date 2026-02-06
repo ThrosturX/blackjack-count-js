@@ -11,6 +11,7 @@ const state = {
     cutCardReached: false,
     tableSettingsChanged: false,
     runningCount: 0,
+    countingSystem: 'hi-lo',
     dealer: { hand: [] },
     players: [],
     phase: 'BETTING', // BETTING, SHUFFLING, DEALING, PLAYING, RESOLVING
@@ -49,6 +50,7 @@ const ui = {
     toggleStats: document.getElementById('toggle-stats'),
     fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
     minBet: document.getElementById('table-minimum-bet'),
+    countSystemSelect: document.getElementById('count-system-select'),
     topCardPreview: document.getElementById('top-card-preview'),
 };
 
@@ -91,6 +93,23 @@ function init() {
     if (ui.tableStyleSelect) {
         updateTableStyle();
         ui.tableStyleSelect.addEventListener('change', updateTableStyle);
+    }
+
+    if (ui.countSystemSelect) {
+        const initCounting = () => {
+            populateCountingSystems();
+            ui.countSystemSelect.addEventListener('change', (e) => {
+                state.countingSystem = e.target.value;
+                state.runningCount = 0;
+                updateStats();
+                updateCountHint();
+            });
+        };
+        if (window.AddonLoader && window.AddonLoader.ready) {
+            window.AddonLoader.ready.then(initCounting);
+        } else {
+            initCounting();
+        }
     }
 
     // Initialize independent toggles
@@ -149,6 +168,64 @@ function updateTableStyle() {
     });
     // Add selected table class
     document.body.classList.add(`table-${style}`);
+}
+
+function getCountingCatalog() {
+    if (window.AssetRegistry && typeof window.AssetRegistry.getCountingSystems === 'function') {
+        return window.AssetRegistry.getCountingSystems();
+    }
+    return {
+        core: [{ id: 'hi-lo', name: 'Hi-Lo' }],
+        extras: [{ id: 'ko', name: 'KO (Unbalanced)' }]
+    };
+}
+
+function populateCountingSystems() {
+    const catalog = getCountingCatalog();
+    const select = ui.countSystemSelect;
+    if (!select) return;
+
+    select.innerHTML = '';
+    catalog.core.forEach(system => {
+        const option = document.createElement('option');
+        option.value = system.id;
+        option.textContent = system.name;
+        option.dataset.themeGroup = 'core';
+        select.appendChild(option);
+    });
+    catalog.extras.forEach(system => {
+        const option = document.createElement('option');
+        option.value = system.id;
+        option.textContent = system.name;
+        option.dataset.themeGroup = 'extras';
+        select.appendChild(option);
+    });
+    select.value = state.countingSystem;
+}
+
+function getCardCountValue(card) {
+    switch (state.countingSystem) {
+        case 'zen':
+            if (['10', 'J', 'Q', 'K'].includes(card.val)) return -2;
+            if (['A'].includes(card.val)) return -1;
+            if (['4', '5', '6'].includes(card.val)) return 2;
+            if (['2', '3', '7'].includes(card.val)) return 1;
+            return 0;
+        case 'wong-halves':
+            if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+            if (['9'].includes(card.val)) return -0.5;
+            if (['2', '7'].includes(card.val)) return 0.5;
+            if (['3', '4', '6'].includes(card.val)) return 1;
+            if (['5'].includes(card.val)) return 1.5;
+            return 0;
+        case 'ko':
+            if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+            if (['2', '3', '4', '5', '6', '7'].includes(card.val)) return 1;
+            return 0;
+        case 'hi-lo':
+        default:
+            return BlackjackLogic.getCardCount(card);
+    }
 }
 
 ui.fastModeCheckbox.addEventListener('change', (event) => {
@@ -609,7 +686,7 @@ function dealHands() {
             if (c.isSplitCard) state.cutCardReached = true;
 
             if (!c.hidden) {
-                state.runningCount += BlackjackLogic.getCardCount(c);
+                state.runningCount += getCardCountValue(c);
                 updateStats();
                 playSound('card');
             }
@@ -619,7 +696,7 @@ function dealHands() {
             const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
-            state.runningCount += BlackjackLogic.getCardCount(c);
+            state.runningCount += getCardCountValue(c);
             updateStats();
             playSound('card');
             p.hands[0].cards.push(c);
@@ -656,7 +733,7 @@ function checkBlackjack() {
         // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
-        state.runningCount += BlackjackLogic.getCardCount(state.dealer.hand[1]);
+        state.runningCount += getCardCountValue(state.dealer.hand[1]);
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('dealer-bj');
@@ -763,7 +840,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(c);
+    state.runningCount += getCardCountValue(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -835,7 +912,7 @@ function playerDouble() {
     h.bet *= 2;
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(c);
+    state.runningCount += getCardCountValue(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -876,7 +953,7 @@ function playerSplit() {
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
     const cFirst = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(cFirst);
+    state.runningCount += getCardCountValue(cFirst);
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
@@ -890,7 +967,7 @@ function playerSplit() {
 
 
     const cSecond = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(cSecond);
+    state.runningCount += getCardCountValue(cSecond);
     updateStats();
     playSound('card');
     newHand.cards.push(cSecond);
@@ -907,7 +984,7 @@ function dealerTurn() {
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
-    state.runningCount += BlackjackLogic.getCardCount(hole);
+    state.runningCount += getCardCountValue(hole);
     render();
     playSound('card');
 
@@ -926,7 +1003,7 @@ function dealerTurn() {
     function loop() {
         if (score < 17) {
             const c = drawCard(true, null);
-            state.runningCount += BlackjackLogic.getCardCount(c);
+            state.runningCount += getCardCountValue(c);
             updateStats();
             playSound('card');
             state.dealer.hand.push(c);
@@ -1549,4 +1626,3 @@ const handleFirstInteraction = () => {
 window.addEventListener('click', handleFirstInteraction);
 window.addEventListener('keydown', handleFirstInteraction);
 window.addEventListener('touchstart', handleFirstInteraction);
-

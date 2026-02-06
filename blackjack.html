@@ -64,6 +64,9 @@
                         <option value="8">8</option>
                     </select>
                 </div>
+                <div class="stats">Counting:
+                    <select id="count-system-select"></select>
+                </div>
                 <div class="stats">Deck:
                     <select id="deck-style-select"></select>
                 </div>
@@ -128,8 +131,16 @@
         <span id="count-hint" class="count-hint ch-neutral"></span>
     </div>
 
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "scripts": ["addons/themes-pack.js", "addons/counting-pack.js"],
+        "styles": []
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
     <script src="assets.js"></script>
-    <script src="settings.js"></script>
+    <script src="addons.js"></script>
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>

@@ -1,42 +1,16 @@
 (() => {
     const fallbackThemes = {
-        table: {
-            core: new Map([
+        core: {
+            table: new Map([
                 ['Green Felt', 'felt']
             ]),
-            extras: new Map([
-                ['Crimson Velvet', 'crimson'],
-                ['Lavender Dusk', 'lavender'],
-                ['Ocean Depths', 'depths'],
-                ['Rolling Waves', 'waves'],
-                ['Dark Stone', 'stone'],
-                ['Neon Nights', 'neon'],
-                ['Cyberpunk Grid', 'cyber'],
-                ['Obsidian Floor', 'obsidian'],
-                ['The Abyss', 'abyss']
+            deck: new Map([
+                ['Red Striped', 'red']
             ])
         },
-        deck: {
-            core: new Map([
-                ['Red Striped', 'red']
-            ]),
-            extras: new Map([
-                ['Blue Classic', 'blue'],
-                ['Green Pattern', 'green'],
-                ['Royal Gold', 'gold'],
-                ['Regal Velvet', 'velvet'],
-                ['Oceanic', 'oceanic'],
-                ['Cetaceous', 'whale'],
-                ['Woolly', 'mammoth'],
-                ['Emerald Luxe', 'emerald'],
-                ['Ruby Luxe', 'ruby'],
-                ['Cherry Blossom', 'cherry'],
-                ['Starlight', 'starlight'],
-                ['Midnight Luxe', 'dark'],
-                ['Midnight Onyx', 'luxury-dark'],
-                ['Neon Vibe', 'neon-vibe'],
-                ['Ghost Ship', 'ghost']
-            ])
+        extras: {
+            table: new Map(),
+            deck: new Map()
         }
     };
 
@@ -82,13 +56,26 @@
             ? registry.getThemeCatalog()
             : fallbackThemes;
         const allowExtras = themesCssLoaded();
-        populateSelect(document.getElementById('table-style-select'), catalog.table, 'felt', allowExtras);
-        populateSelect(document.getElementById('deck-style-select'), catalog.deck, 'red', allowExtras);
+        populateSelect(document.getElementById('table-style-select'), {
+            core: catalog.core.table,
+            extras: catalog.extras.table
+        }, 'felt', allowExtras);
+        populateSelect(document.getElementById('deck-style-select'), {
+            core: catalog.core.deck,
+            extras: catalog.extras.deck
+        }, 'red', allowExtras);
+    };
+
+    const whenAddonsReady = () => {
+        if (window.AddonLoader && window.AddonLoader.ready) {
+            return window.AddonLoader.ready.then(initThemes);
+        }
+        return initThemes();
     };
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initThemes);
+        document.addEventListener('DOMContentLoaded', whenAddonsReady);
     } else {
-        initThemes();
+        whenAddonsReady();
     }
 })();

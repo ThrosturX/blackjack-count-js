@@ -1,0 +1,7 @@
+{
+    "scripts": [
+        "addons/themes-pack.js",
+        "addons/counting-pack.js"
+    ],
+    "styles": []
+}
