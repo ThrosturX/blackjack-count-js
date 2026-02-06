@@ -1,42 +1,43 @@
 (() => {
-    const tableThemes = {
-        core: new Map([
-            ['Green Felt', 'felt']
-        ]),
-        extras: new Map([
-            ['Crimson Velvet', 'crimson'],
-            ['Lavender Dusk', 'lavender'],
-            ['Ocean Depths', 'depths'],
-            ['Rolling Waves', 'waves'],
-            ['Dark Stone', 'stone'],
-            ['Neon Nights', 'neon'],
-            ['Cyberpunk Grid', 'cyber'],
-            ['Obsidian Floor', 'obsidian'],
-            ['The Abyss', 'abyss']
-        ])
-    };
-
-    const deckThemes = {
-        core: new Map([
-            ['Red Striped', 'red']
-        ]),
-        extras: new Map([
-            ['Blue Classic', 'blue'],
-            ['Green Pattern', 'green'],
-            ['Royal Gold', 'gold'],
-            ['Regal Velvet', 'velvet'],
-            ['Oceanic', 'oceanic'],
-            ['Cetaceous', 'whale'],
-            ['Woolly', 'mammoth'],
-            ['Emerald Luxe', 'emerald'],
-            ['Ruby Luxe', 'ruby'],
-            ['Cherry Blossom', 'cherry'],
-            ['Starlight', 'starlight'],
-            ['Midnight Luxe', 'dark'],
-            ['Midnight Onyx', 'luxury-dark'],
-            ['Neon Vibe', 'neon-vibe'],
-            ['Ghost Ship', 'ghost']
-        ])
+    const fallbackThemes = {
+        table: {
+            core: new Map([
+                ['Green Felt', 'felt']
+            ]),
+            extras: new Map([
+                ['Crimson Velvet', 'crimson'],
+                ['Lavender Dusk', 'lavender'],
+                ['Ocean Depths', 'depths'],
+                ['Rolling Waves', 'waves'],
+                ['Dark Stone', 'stone'],
+                ['Neon Nights', 'neon'],
+                ['Cyberpunk Grid', 'cyber'],
+                ['Obsidian Floor', 'obsidian'],
+                ['The Abyss', 'abyss']
+            ])
+        },
+        deck: {
+            core: new Map([
+                ['Red Striped', 'red']
+            ]),
+            extras: new Map([
+                ['Blue Classic', 'blue'],
+                ['Green Pattern', 'green'],
+                ['Royal Gold', 'gold'],
+                ['Regal Velvet', 'velvet'],
+                ['Oceanic', 'oceanic'],
+                ['Cetaceous', 'whale'],
+                ['Woolly', 'mammoth'],
+                ['Emerald Luxe', 'emerald'],
+                ['Ruby Luxe', 'ruby'],
+                ['Cherry Blossom', 'cherry'],
+                ['Starlight', 'starlight'],
+                ['Midnight Luxe', 'dark'],
+                ['Midnight Onyx', 'luxury-dark'],
+                ['Neon Vibe', 'neon-vibe'],
+                ['Ghost Ship', 'ghost']
+            ])
+        }
     };
 
     const createOption = (label, value, group) => {
@@ -76,9 +77,13 @@
     };
 
     const initThemes = () => {
+        const registry = window.AssetRegistry;
+        const catalog = registry && typeof registry.getThemeCatalog === 'function'
+            ? registry.getThemeCatalog()
+            : fallbackThemes;
         const allowExtras = themesCssLoaded();
-        populateSelect(document.getElementById('table-style-select'), tableThemes, 'felt', allowExtras);
-        populateSelect(document.getElementById('deck-style-select'), deckThemes, 'red', allowExtras);
+        populateSelect(document.getElementById('table-style-select'), catalog.table, 'felt', allowExtras);
+        populateSelect(document.getElementById('deck-style-select'), catalog.deck, 'red', allowExtras);
     };
 
     if (document.readyState === 'loading') {
