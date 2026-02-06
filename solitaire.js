@@ -680,21 +680,41 @@ function setupEventListeners() {
         btn.classList.toggle('active');
     });
 
-    // Table style
-    document.getElementById('table-style-select').addEventListener('change', (e) => {
-        document.body.className = document.body.className.replace(/table-\w+/g, '');
-        if (e.target.value !== 'felt') {
-            document.body.classList.add(`table-${e.target.value}`);
+    const applyTableStyle = () => {
+        const select = document.getElementById('table-style-select');
+        if (!select) return;
+        const style = select.value;
+        Array.from(document.body.classList).forEach(cls => {
+            if (cls.startsWith('table-')) document.body.classList.remove(cls);
+        });
+        if (style) {
+            document.body.classList.add(`table-${style}`);
         }
-    });
+    };
 
-    // Deck style
-    document.getElementById('deck-style-select').addEventListener('change', (e) => {
-        document.body.className = document.body.className.replace(/deck-\w+/g, '');
-        if (e.target.value !== 'red') {
-            document.body.classList.add(`deck-${e.target.value}`);
+    const applyDeckStyle = () => {
+        const select = document.getElementById('deck-style-select');
+        if (!select) return;
+        const style = select.value;
+        Array.from(document.body.classList).forEach(cls => {
+            if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+        });
+        if (style) {
+            document.body.classList.add(`deck-${style}`);
         }
-    });
+    };
+
+    const tableSelect = document.getElementById('table-style-select');
+    if (tableSelect) {
+        tableSelect.addEventListener('change', applyTableStyle);
+        applyTableStyle();
+    }
+
+    const deckSelect = document.getElementById('deck-style-select');
+    if (deckSelect) {
+        deckSelect.addEventListener('change', applyDeckStyle);
+        applyDeckStyle();
+    }
 
     // Draw count
     document.getElementById('draw-count-select').addEventListener('change', (e) => {

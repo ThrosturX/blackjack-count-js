@@ -403,9 +403,11 @@ body.deck-ruby .card:not(.hidden) .suit-center {
 body.table-cyber {
     --felt-color: #050505;
     --felt-border: #00f2ff;
+    --table-bg: radial-gradient(circle, #1a0033 0%, #050505 100%);
     background: radial-gradient(circle, #1a0033 0%, #050505 100%);
 }
-body.table-cyber #table {
+body.table-cyber #table,
+body.table-cyber #solitaire-table {
     background-image: 
         linear-gradient(rgba(0, 242, 255, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0, 242, 255, 0.1) 1px, transparent 1px);
@@ -458,10 +460,11 @@ body.deck-neon-vibe .card.hidden::before {
 body.table-obsidian {
     --felt-color: #0f0f0f;
     --felt-border: #d4af37;
+    --table-bg: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
     background: #000;
 }
-body.table-obsidian #table {
-    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+body.table-obsidian #table,
+body.table-obsidian #solitaire-table {
     border: 3px solid #d4af37;
 }
 
@@ -482,9 +485,10 @@ body.deck-luxury-dark .card:not(.hidden) {
 body.table-abyss {
     --felt-color: #00040a;
     --felt-border: #1a3a5f;
+    --table-bg: radial-gradient(circle, #001529 0%, #00040a 100%);
 }
-body.table-abyss #table {
-    background: radial-gradient(circle, #001529 0%, #00040a 100%);
+body.table-abyss #table,
+body.table-abyss #solitaire-table {
     border: 2px solid #2196f3;
     box-shadow: inset 0 0 100px #000;
 }

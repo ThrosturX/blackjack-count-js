@@ -73,20 +73,25 @@
     };
 
     const populateSeq = new WeakMap();
+    const hasOptionValue = (select, value) => {
+        if (!select || !value) return false;
+        return Array.from(select.options).some(option => option.value === value);
+    };
+    const resolveSelectValue = (select, preferredValue, fallbackValue) => {
+        if (hasOptionValue(select, preferredValue)) return preferredValue;
+        if (hasOptionValue(select, fallbackValue)) return fallbackValue;
+        return select.options.length ? select.options[0].value : '';
+    };
     const populateSelect = (select, themes, defaultValue, allowExtras, preferredValue) => {
         if (!select) return;
 
         const seq = (populateSeq.get(select) || 0) + 1;
         populateSeq.set(select, seq);
         const previousValue = select.value;
-        const currentValue = select.value || preferredValue || defaultValue;
+        const desiredValue = select.value || preferredValue || defaultValue;
         select.innerHTML = '';
         addOptions(select, themes.core, 'core');
-        if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
-            select.value = currentValue;
-        } else {
-            select.value = defaultValue;
-        }
+        select.value = resolveSelectValue(select, desiredValue, defaultValue);
         if (select.value !== previousValue) {
             select.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -95,12 +100,11 @@
             requestAnimationFrame(() => {
                 if (seq !== populateSeq.get(select)) return;
                 addOptions(select, themes.extras, 'extras');
-                if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
-                    const before = select.value;
-                    select.value = currentValue;
-                    if (select.value !== before) {
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
+                const before = select.value;
+                const resolved = resolveSelectValue(select, desiredValue, before);
+                if (resolved && resolved !== before) {
+                    select.value = resolved;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
         }
@@ -138,10 +142,6 @@
             extras: catalog.extras.deck
         }, 'red', allowExtras, storedSettings.deck);
 
-        if (catalog.extras.table.size === 0 && catalog.extras.deck.size === 0) {
-            applySelectValue(tableSelect, 'diner');
-            applySelectValue(deckSelect, 'worn');
-        }
     };
 
     const whenAddonsReady = () => {
