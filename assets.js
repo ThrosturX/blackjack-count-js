@@ -80,8 +80,8 @@
             ['Diner Grit', 'diner']
         ],
         deck: [
-            ['Sun Deck', 'sun'],
-            ['Water Deck', 'water']
+            ['Old Sun', 'sun'],
+            ['Water', 'water']
         ]
     });
 

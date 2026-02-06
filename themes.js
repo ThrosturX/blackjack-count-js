@@ -89,17 +89,38 @@
         populateSeq.set(select, seq);
         const previousValue = select.value;
         const desiredValue = select.value || preferredValue || defaultValue;
+        const desiredInExtras = allowExtras && Array.from(themes.extras.values()).includes(desiredValue);
         select.innerHTML = '';
         addOptions(select, themes.core, 'core');
-        select.value = resolveSelectValue(select, desiredValue, defaultValue);
-        if (select.value !== previousValue) {
-            select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (desiredInExtras) {
+            // Avoid temporary fallback when the desired value lives in extras.
+            let desiredLabel = null;
+            for (const [label, value] of themes.extras.entries()) {
+                if (value === desiredValue) {
+                    desiredLabel = label;
+                    break;
+                }
+            }
+            const activeOption = createOption(desiredLabel || `${desiredValue} (Active)`, desiredValue, 'active');
+            activeOption.dataset.tempActive = 'true';
+            select.appendChild(activeOption);
+            select.value = desiredValue;
+        } else {
+            select.value = resolveSelectValue(select, desiredValue, defaultValue);
+            if (select.value !== previousValue) {
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (allowExtras) {
             requestAnimationFrame(() => {
                 if (seq !== populateSeq.get(select)) return;
                 addOptions(select, themes.extras, 'extras');
+                const tempActive = select.querySelector('option[data-temp-active="true"]');
+                if (tempActive && hasOptionValue(select, desiredValue)) {
+                    // Remove the temporary option once real extras are added.
+                    tempActive.remove();
+                }
                 const before = select.value;
                 const resolved = resolveSelectValue(select, desiredValue, before);
                 if (resolved && resolved !== before) {
