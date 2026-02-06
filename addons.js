@@ -41,17 +41,40 @@
 
     const addons = new Map();
 
+    const probeResource = async (url) => {
+        if (!url) return false;
+        const protocol = window.location && window.location.protocol;
+        if (protocol === 'file:') return true;
+        try {
+            const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+            return response.ok;
+        } catch (err) {
+            return false;
+        }
+    };
+
     const loadAddon = async (addon) => {
         const id = addon.id;
         if (!id) return null;
         const scripts = Array.isArray(addon.scripts) ? addon.scripts : [];
         const styles = Array.isArray(addon.styles) ? addon.styles : [];
-        const links = [];
+        const availableStyles = [];
         for (const href of styles) {
+            if (await probeResource(href)) availableStyles.push(href);
+        }
+        const availableScripts = [];
+        for (const src of scripts) {
+            if (await probeResource(src)) availableScripts.push(src);
+        }
+        if (availableStyles.length !== styles.length || availableScripts.length !== scripts.length) {
+            return null;
+        }
+        const links = [];
+        for (const href of availableStyles) {
             links.push(await loadStyle(href));
         }
         const loadedScripts = [];
-        for (const src of scripts) {
+        for (const src of availableScripts) {
             loadedScripts.push(await loadScript(src));
         }
         const entry = {

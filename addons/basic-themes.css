@@ -178,6 +178,17 @@ body.deck-emerald .card.black::before {
     pointer-events: none;
 }
 
+body.deck-emerald .card.hidden::before {
+    content: "💎";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5em;
+    opacity: 0.15;
+    pointer-events: none;
+}
+
 /* --- Mammoth Style --- */
 body.deck-mammoth {
     --card-back-color: #ccb49e;
@@ -393,6 +404,17 @@ body.deck-ruby .card.black::before {
     opacity: 0.15;
     pointer-events: none;
     filter: hue-rotate(-30deg);
+}
+
+body.deck-ruby .card.hidden::before {
+    content: "💎";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5em;
+    opacity: 0.15;
+    pointer-events: none;
 }
 
 body.deck-ruby .card:not(.hidden) .suit-center {

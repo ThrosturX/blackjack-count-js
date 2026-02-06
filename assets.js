@@ -47,10 +47,15 @@
 
     const getThemeCatalog = () => {
         const defaultThemesEnabled = isAddonEnabled('default-themes');
-        const build = (items) => {
+        const wornCardsAvailable = !!(window.AddonLoader
+            && window.AddonLoader.addons
+            && window.AddonLoader.addons.has('worn-cards'));
+        const build = (items, kind) => {
             const map = new Map();
             items.forEach(item => {
-                if (item.packId === 'hidden-defaults' && defaultThemesEnabled) return;
+                if (item.packId === 'hidden-defaults' && defaultThemesEnabled) {
+                    if (!(kind === 'deck' && wornCardsAvailable)) return;
+                }
                 if (!isAddonEnabled(item.packId)) return;
                 map.set(item.label, item.id);
             });
@@ -58,12 +63,12 @@
         };
         return {
             core: {
-                table: build(themeCatalog.core.table),
-                deck: build(themeCatalog.core.deck)
+                table: build(themeCatalog.core.table, 'table'),
+                deck: build(themeCatalog.core.deck, 'deck')
             },
             extras: {
-                table: build(themeCatalog.extras.table),
-                deck: build(themeCatalog.extras.deck)
+                table: build(themeCatalog.extras.table, 'table'),
+                deck: build(themeCatalog.extras.deck, 'deck')
             }
         };
     };
