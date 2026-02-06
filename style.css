@@ -1270,11 +1270,52 @@ body.deck-oceanic .card.black::before {
     color: #ddd;
 }
 
+.money-anchor {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+}
+
 .chip-stack {
     color: var(--gold);
     font-weight: bold;
 }
 
+.player-loss::before {
+    color: var(--red);
+    font-weight: bold;
+    content: "-$";
+    margin-right: 2px;
+}
+
+.player-loss {
+    color: var(--red);
+    font-weight: bold;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    white-space: nowrap;
+    font-size: 0.6rem;
+    opacity: 0.6;
+}
+
+.player-profit::before {
+    color: var(--green);
+    font-weight: bold;
+    content: "$";
+    margin-right: 2px;
+}
+
+.player-profit {
+    color: var(--green);
+    font-weight: bold;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    white-space: nowrap;
+    font-size: 0.6rem;
+    opacity: 0.6;
+}
 
 .player-hand-area {
     flex-grow: 1;

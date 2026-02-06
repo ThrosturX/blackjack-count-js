@@ -974,13 +974,17 @@ function resolveRound() {
                 // Return original bet + profit
                 p.chips += h.bet + h.profit;
                 state.casinoProfit -= h.profit;
+                p.profit += h.profit;
             } else if (h.result === 'push') {
+                // get the bet back
                 p.chips += h.bet;
                 // No profit change
             } else {
                 // Loss
                 state.casinoProfit += h.bet;
                 h.profit = -h.bet;
+                // log the loss
+                p.profit -= h.bet;
             }
         });
     });
@@ -1226,6 +1230,7 @@ function sit(idx) {
         id: idx,
         chips: chips,
         currentBet: 0,
+        profit: 0,
         lastBet: state.minBet,
         hands: [],
         isReady: false,
@@ -1391,7 +1396,10 @@ function getSeatHTML(idx) {
                 <div class="seat ${classList}" id="seat-${idx}">
                     <div class="seat-info">
                         <span>Player ${idx + 1} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
-                        <span class="chip-stack">$${p.chips}</span>
+                        <div class='money-anchor'>
+                            <span class="chip-stack">$${p.chips}</span>
+                            <span class="${p.profit >= 0 ? 'player-profit' : 'player-loss'}">${Math.abs(p.profit)}</span>
+                        </div>
                     </div>
 
                     <div class="player-hand-area">
