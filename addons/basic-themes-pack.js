@@ -5,7 +5,6 @@
         id: 'basic-themes',
         group: 'extras',
         table: [
-            ['Crimson Velvet', 'crimson'],
             ['Lavender Dusk', 'lavender'],
             ['Ocean Depths', 'depths'],
             ['Rolling Waves', 'waves'],
@@ -16,17 +15,15 @@
             ['The Abyss', 'abyss']
         ],
         deck: [
-            ['Blue Classic', 'blue'],
-            ['Green Pattern', 'green'],
             ['Royal Gold', 'gold'],
             ['Regal Velvet', 'velvet'],
             ['Oceanic', 'oceanic'],
             ['Cetaceous', 'whale'],
             ['Woolly', 'mammoth'],
-            ['Emerald Luxe', 'emerald'],
-            ['Ruby Luxe', 'ruby'],
             ['Cherry Blossom', 'cherry'],
             ['Starlight', 'starlight'],
+            ['Emerald Luxe', 'emerald'],
+            ['Ruby Luxe', 'ruby'],
             ['Midnight Luxe', 'dark'],
             ['Midnight Onyx', 'luxury-dark'],
             ['Neon Vibe', 'neon-vibe'],

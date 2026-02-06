@@ -1,6 +1,12 @@
 {
     "addons": [
         {
+            "id": "default-themes",
+            "label": "Default Themes",
+            "scripts": ["addons/default-themes-pack.js"],
+            "styles": ["addons/default-themes.css"]
+        },
+        {
             "id": "basic-themes",
             "label": "Basic Themes",
             "scripts": ["addons/basic-themes-pack.js"],

@@ -61,10 +61,10 @@
     <header>
         <h1>Texas Hold'em Poker</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle">Settings</button>
-            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-themes" class="btn-toggle active">Themes</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-stats" class="btn-toggle">Stats</button>
+            <button id="toggle-stats" class="btn-toggle active">Stats</button>
         </div>
 
         <div class="game-controls">
@@ -92,6 +92,10 @@
             <div class="controls-section collapsed" id="addons-area">
                 <div class="stats">Add-ons:
                     <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="default-themes" checked>
+                        Default Themes
+                    </label>
+                    <label class="addon-toggle">
                         <input type="checkbox" data-addon-id="basic-themes" checked>
                         Basic Themes
                     </label>
@@ -103,7 +107,7 @@
                         <input type="checkbox" data-addon-id="premium-effects" checked>
                         Premium Effects
                     </label>
-                    <button type="button" id="reset-addons" class="btn-toggle">Reset Add-ons</button>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle">Toggle All</button>
                 </div>
             </div>
 
@@ -148,6 +152,12 @@
     <script id="addons-manifest" type="application/json">
     {
         "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "scripts": ["addons/default-themes-pack.js"],
+                "styles": ["addons/default-themes.css"]
+            },
             {
                 "id": "basic-themes",
                 "label": "Basic Themes",

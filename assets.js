@@ -46,9 +46,11 @@
     };
 
     const getThemeCatalog = () => {
+        const defaultThemesEnabled = isAddonEnabled('default-themes');
         const build = (items) => {
             const map = new Map();
             items.forEach(item => {
+                if (item.packId === 'hidden-defaults' && defaultThemesEnabled) return;
                 if (!isAddonEnabled(item.packId)) return;
                 map.set(item.label, item.id);
             });
@@ -72,12 +74,13 @@
     });
 
     registerThemePack({
+        id: 'hidden-defaults',
         group: 'core',
         table: [
-            ['Green Felt', 'felt']
+            ['Diner Grit', 'diner']
         ],
         deck: [
-            ['Red Striped', 'red']
+            ['Worn Deck', 'worn']
         ]
     });
 

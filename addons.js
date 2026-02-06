@@ -46,8 +46,14 @@
         if (!id) return null;
         const scripts = Array.isArray(addon.scripts) ? addon.scripts : [];
         const styles = Array.isArray(addon.styles) ? addon.styles : [];
-        const links = await Promise.all(styles.map(loadStyle));
-        const loadedScripts = await Promise.all(scripts.map(loadScript));
+        const links = [];
+        for (const href of styles) {
+            links.push(await loadStyle(href));
+        }
+        const loadedScripts = [];
+        for (const src of scripts) {
+            loadedScripts.push(await loadScript(src));
+        }
         const entry = {
             id,
             label: addon.label || id,
@@ -81,7 +87,9 @@
         const useFetch = window.location && window.location.protocol !== 'file:';
         const manifest = inline || (useFetch ? await loadFromManifest() : { addons: [] });
         const list = Array.isArray(manifest.addons) ? manifest.addons : [];
-        await Promise.all(list.map(loadAddon));
+        for (const addon of list) {
+            await loadAddon(addon);
+        }
         return Array.from(addons.values());
     })();
 

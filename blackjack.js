@@ -128,6 +128,7 @@ function init() {
     }
     if (ui.toggleAddons) {
         ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
+        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
     }
     if (ui.toggleStats) {
         ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
@@ -203,6 +204,7 @@ function populateCountingSystems() {
     const select = ui.countSystemSelect;
     if (!select) return;
 
+    const currentValue = select.value || state.countingSystem;
     select.innerHTML = '';
     catalog.core.forEach(system => {
         const option = document.createElement('option');
@@ -218,7 +220,14 @@ function populateCountingSystems() {
         option.dataset.themeGroup = 'extras';
         select.appendChild(option);
     });
-    select.value = state.countingSystem;
+    if (currentValue && !select.querySelector(`option[value="${currentValue}"]`)) {
+        const option = document.createElement('option');
+        option.value = currentValue;
+        option.textContent = `${currentValue} (Active)`;
+        option.dataset.themeGroup = 'active';
+        select.appendChild(option);
+    }
+    select.value = currentValue || state.countingSystem;
 }
 
 function getCardCountValue(card) {
@@ -1633,12 +1642,27 @@ ui.minBet.addEventListener('change', (e) => {
 
 
 // Start
-const handleFirstInteraction = () => {
+const handleFirstInteraction = (event) => {
     init();
     // Clean up all listeners so it doesn't fire again
     window.removeEventListener('click', handleFirstInteraction);
     window.removeEventListener('keydown', handleFirstInteraction);
     window.removeEventListener('touchstart', handleFirstInteraction);
+
+    if (event && event.type === 'click') {
+        const toggle = event.target && event.target.closest ? event.target.closest('.btn-toggle') : null;
+        if (toggle) {
+            if (toggle.id === 'toggle-settings') {
+                toggleControlsArea('settings');
+            } else if (toggle.id === 'toggle-themes') {
+                toggleControlsArea('themes');
+            } else if (toggle.id === 'toggle-addons') {
+                toggleControlsArea('addons');
+            } else if (toggle.id === 'toggle-stats') {
+                toggleControlsArea('stats');
+            }
+        }
+    }
 };
 
 window.addEventListener('click', handleFirstInteraction);

@@ -78,6 +78,7 @@ function init() {
     }
     if (ui.toggleAddons) {
         ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
+        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
     }
     if (ui.toggleStats) {
         ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));

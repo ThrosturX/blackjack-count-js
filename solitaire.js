@@ -665,12 +665,13 @@ function setupEventListeners() {
         btn.classList.toggle('active');
     });
 
-    document.getElementById('toggle-addons').addEventListener('click', () => {
-        const addonsArea = document.getElementById('addons-area');
-        const btn = document.getElementById('toggle-addons');
+    const addonsArea = document.getElementById('addons-area');
+    const addonsBtn = document.getElementById('toggle-addons');
+    addonsBtn.addEventListener('click', () => {
         addonsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
+        addonsBtn.classList.toggle('active');
     });
+    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
 
     document.getElementById('toggle-stats').addEventListener('click', () => {
         const statsArea = document.getElementById('stats-area');

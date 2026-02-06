@@ -34,15 +34,22 @@
 
         const seq = (populateSeq.get(select) || 0) + 1;
         populateSeq.set(select, seq);
+        const currentValue = select.value;
         select.innerHTML = '';
         addOptions(select, themes.core, 'core');
-        select.value = defaultValue;
+        if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+            select.value = currentValue;
+        } else {
+            select.value = defaultValue;
+        }
 
         if (allowExtras) {
             requestAnimationFrame(() => {
                 if (seq !== populateSeq.get(select)) return;
                 addOptions(select, themes.extras, 'extras');
-                select.value = defaultValue;
+                if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                    select.value = currentValue;
+                }
             });
         }
     };
@@ -54,6 +61,13 @@
         return value === '1';
     };
 
+    const applySelectValue = (select, value) => {
+        if (!select) return;
+        if (select.value === value) return;
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
     const initThemes = () => {
         const registry = window.AssetRegistry;
         const catalog = registry && typeof registry.getThemeCatalog === 'function'
@@ -61,14 +75,21 @@
             : fallbackThemes;
         const addonsLoaded = window.AddonLoader && window.AddonLoader.addons && window.AddonLoader.addons.size > 0;
         const allowExtras = themesCssLoaded() || addonsLoaded;
-        populateSelect(document.getElementById('table-style-select'), {
+        const tableSelect = document.getElementById('table-style-select');
+        const deckSelect = document.getElementById('deck-style-select');
+        populateSelect(tableSelect, {
             core: catalog.core.table,
             extras: catalog.extras.table
         }, 'felt', allowExtras);
-        populateSelect(document.getElementById('deck-style-select'), {
+        populateSelect(deckSelect, {
             core: catalog.core.deck,
             extras: catalog.extras.deck
         }, 'red', allowExtras);
+
+        if (catalog.extras.table.size === 0 && catalog.extras.deck.size === 0) {
+            applySelectValue(tableSelect, 'diner');
+            applySelectValue(deckSelect, 'worn');
+        }
     };
 
     const whenAddonsReady = () => {
@@ -99,14 +120,15 @@
             toggle.dataset.addonBound = 'true';
         });
 
-        const resetButtons = document.querySelectorAll('#reset-addons');
+        const resetButtons = document.querySelectorAll('#toggle-addons-all');
         resetButtons.forEach(button => {
             if (button.dataset.addonBound === 'true') return;
             button.addEventListener('click', () => {
                 const toggles = document.querySelectorAll('[data-addon-id]');
+                const allEnabled = Array.from(toggles).every(input => input.checked);
                 toggles.forEach(input => {
-                    input.checked = true;
-                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, true);
+                    input.checked = !allEnabled;
+                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, !allEnabled);
                 });
                 initThemes();
                 if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
