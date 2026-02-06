@@ -82,6 +82,11 @@ header {
     color: #000;
 }
 
+.btn-toggle.btn-mini {
+    padding: 2px 8px;
+    font-size: 0.6rem;
+}
+
 h1 {
     margin: 0;
     color: var(--gold);
