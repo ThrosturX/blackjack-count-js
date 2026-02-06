@@ -28,15 +28,19 @@
         }
     };
 
+    const populateSeq = new WeakMap();
     const populateSelect = (select, themes, defaultValue, allowExtras) => {
         if (!select) return;
 
+        const seq = (populateSeq.get(select) || 0) + 1;
+        populateSeq.set(select, seq);
         select.innerHTML = '';
         addOptions(select, themes.core, 'core');
         select.value = defaultValue;
 
         if (allowExtras) {
             requestAnimationFrame(() => {
+                if (seq !== populateSeq.get(select)) return;
                 addOptions(select, themes.extras, 'extras');
                 select.value = defaultValue;
             });
@@ -55,7 +59,8 @@
         const catalog = registry && typeof registry.getThemeCatalog === 'function'
             ? registry.getThemeCatalog()
             : fallbackThemes;
-        const allowExtras = themesCssLoaded();
+        const addonsLoaded = window.AddonLoader && window.AddonLoader.addons && window.AddonLoader.addons.size > 0;
+        const allowExtras = themesCssLoaded() || addonsLoaded;
         populateSelect(document.getElementById('table-style-select'), {
             core: catalog.core.table,
             extras: catalog.extras.table
@@ -73,9 +78,53 @@
         return initThemes();
     };
 
+    const initAddonToggles = () => {
+        const toggleEls = document.querySelectorAll('[data-addon-id]');
+        if (!toggleEls.length || !window.AddonLoader) return;
+        const addons = window.AddonLoader.addons || new Map();
+        toggleEls.forEach(toggle => {
+            if (toggle.dataset.addonBound === 'true') return;
+            const id = toggle.getAttribute('data-addon-id');
+            const addon = addons.get(id);
+            if (addon) {
+                toggle.checked = addon.enabled;
+            }
+            toggle.addEventListener('change', () => {
+                window.AddonLoader.setAddonEnabled(id, toggle.checked);
+                initThemes();
+                if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
+                    window.CountingUI.refresh();
+                }
+            });
+            toggle.dataset.addonBound = 'true';
+        });
+
+        const resetButtons = document.querySelectorAll('#reset-addons');
+        resetButtons.forEach(button => {
+            if (button.dataset.addonBound === 'true') return;
+            button.addEventListener('click', () => {
+                const toggles = document.querySelectorAll('[data-addon-id]');
+                toggles.forEach(input => {
+                    input.checked = true;
+                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, true);
+                });
+                initThemes();
+                if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
+                    window.CountingUI.refresh();
+                }
+            });
+            button.dataset.addonBound = 'true';
+        });
+        window.addEventListener('addons:changed', () => initThemes());
+    };
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', whenAddonsReady);
+        document.addEventListener('DOMContentLoaded', () => {
+            whenAddonsReady().then(initAddonToggles);
+        });
     } else {
-        whenAddonsReady();
+        whenAddonsReady().then(initAddonToggles);
     }
+
+    window.ThemeUI = { refresh: initThemes };
 })();

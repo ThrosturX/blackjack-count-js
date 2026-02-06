@@ -15,22 +15,45 @@
         <h1>Klondike Solitaire</h1>
         <div class="header-toggles">
             <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
             <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
         <div class="game-controls">
             <div class="controls-section" id="settings-area">
+                <div class="stats">Draw:
+                    <select id="draw-count-select">
+                        <option value="1">Draw 1</option>
+                        <option value="3" selected>Draw 3</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls-section" id="theme-area">
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
                 <div class="stats">Deck:
                     <select id="deck-style-select"></select>
                 </div>
-                <div class="stats">Draw:
-                    <select id="draw-count-select">
-                        <option value="1">Draw 1</option>
-                        <option value="3" selected>Draw 3</option>
-                    </select>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="basic-themes" checked>
+                        Basic Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-themes" checked>
+                        Premium Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-effects" checked>
+                        Premium Effects
+                    </label>
+                    <button type="button" id="reset-addons" class="btn-toggle">Reset Add-ons</button>
                 </div>
             </div>
 
@@ -99,6 +122,32 @@
         <button id="hint-btn" class="game-btn">Hint</button>
         <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
     </div>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Premium Effects",
+                "styles": ["addons/premium-effects.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
 
     <script src="assets.js"></script>
     <script src="addons.js"></script>

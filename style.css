@@ -119,6 +119,7 @@ h1 {
     margin: 0;
     padding: 0;
     pointer-events: none;
+    display: none;
 }
 
 .stats {
@@ -134,6 +135,18 @@ select {
     color: white;
     border: 1px solid #555;
     border-radius: 3px;
+}
+
+.addon-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 10px;
+    font-size: 0.85rem;
+}
+
+.addon-toggle input {
+    margin: 0;
 }
 
 #table {

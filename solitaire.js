@@ -658,6 +658,20 @@ function setupEventListeners() {
         btn.classList.toggle('active');
     });
 
+    document.getElementById('toggle-themes').addEventListener('click', () => {
+        const themeArea = document.getElementById('theme-area');
+        const btn = document.getElementById('toggle-themes');
+        themeArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
+    document.getElementById('toggle-addons').addEventListener('click', () => {
+        const addonsArea = document.getElementById('addons-area');
+        const btn = document.getElementById('toggle-addons');
+        addonsArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
     document.getElementById('toggle-stats').addEventListener('click', () => {
         const statsArea = document.getElementById('stats-area');
         const btn = document.getElementById('toggle-stats');

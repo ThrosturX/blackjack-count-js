@@ -15,6 +15,8 @@
         <h1>Blackjack</h1>
         <div class="header-toggles">
             <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
             <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
@@ -35,9 +37,6 @@
                         <option value="50">$50</option>
                         <option value="100">$100</option>
                     </select>
-                </div>
-                <div class="stats">Table:
-                    <select id="table-style-select"></select>
                 </div>
                 <div class="stats">Seats:
                     <select id="seat-select">
@@ -64,11 +63,39 @@
                         <option value="8">8</option>
                     </select>
                 </div>
-                <div class="stats">Counting:
-                    <select id="count-system-select"></select>
+            </div>
+
+            <div class="controls-section" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
                 </div>
                 <div class="stats">Deck:
                     <select id="deck-style-select"></select>
+                </div>
+                <div class="stats">Counting:
+                    <select id="count-system-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="basic-themes" checked>
+                        Basic Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-themes" checked>
+                        Premium Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-effects" checked>
+                        Premium Effects
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="counting-pack" checked>
+                        Counting Systems
+                    </label>
+                    <button type="button" id="reset-addons" class="btn-toggle">Reset Add-ons</button>
                 </div>
             </div>
 
@@ -134,8 +161,30 @@
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">
     {
-        "scripts": ["addons/themes-pack.js", "addons/counting-pack.js"],
-        "styles": []
+        "addons": [
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Premium Effects",
+                "styles": ["addons/premium-effects.css"]
+            },
+            {
+                "id": "counting-pack",
+                "label": "Counting Systems",
+                "scripts": ["addons/counting-pack.js"]
+            }
+        ]
     }
     </script>
     <!-- End Addon Manifest (Cordoned for local file:// testing) -->

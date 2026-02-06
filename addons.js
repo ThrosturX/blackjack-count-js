@@ -12,8 +12,8 @@
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = href;
-        link.onload = () => resolve({ href, loaded: true });
-        link.onerror = () => resolve({ href, loaded: false });
+        link.onload = () => resolve({ href, loaded: true, element: link });
+        link.onerror = () => resolve({ href, loaded: false, element: link });
         document.head.appendChild(link);
     });
 
@@ -30,28 +30,60 @@
     const loadFromManifest = async () => {
         try {
             const response = await fetch('addons/manifest.json', { cache: 'no-store' });
-            if (!response.ok) return { scripts: [], loaded: false };
+            if (!response.ok) return { addons: [], loaded: false };
             const data = await response.json();
-            const scripts = Array.isArray(data.scripts) ? data.scripts : [];
-            const styles = Array.isArray(data.styles) ? data.styles : [];
-            return { scripts, styles, loaded: true };
+            const addons = Array.isArray(data.addons) ? data.addons : [];
+            return { addons, loaded: true };
         } catch (err) {
-            return { scripts: [], styles: [], loaded: false };
+            return { addons: [], loaded: false };
         }
+    };
+
+    const addons = new Map();
+
+    const loadAddon = async (addon) => {
+        const id = addon.id;
+        if (!id) return null;
+        const scripts = Array.isArray(addon.scripts) ? addon.scripts : [];
+        const styles = Array.isArray(addon.styles) ? addon.styles : [];
+        const links = await Promise.all(styles.map(loadStyle));
+        const loadedScripts = await Promise.all(scripts.map(loadScript));
+        const entry = {
+            id,
+            label: addon.label || id,
+            styles,
+            scripts,
+            links,
+            loadedScripts,
+            enabled: true
+        };
+        addons.set(id, entry);
+        return entry;
+    };
+
+    const setAddonEnabled = (id, enabled) => {
+        const addon = addons.get(id);
+        if (!addon) return;
+        addon.enabled = enabled;
+        addon.links.forEach(link => {
+            if (link && link.element) {
+                link.element.disabled = !enabled;
+            }
+        });
+        if (window.AssetRegistry && typeof window.AssetRegistry.setAddonEnabled === 'function') {
+            window.AssetRegistry.setAddonEnabled(id, enabled);
+        }
+        window.dispatchEvent(new CustomEvent('addons:changed', { detail: { id, enabled } }));
     };
 
     const ready = (async () => {
         const inline = parseInlineManifest();
         const useFetch = window.location && window.location.protocol !== 'file:';
-        const manifest = inline || (useFetch ? await loadFromManifest() : { scripts: [], styles: [] });
-        const scripts = Array.isArray(manifest.scripts) ? manifest.scripts : [];
-        const styles = Array.isArray(manifest.styles) ? manifest.styles : [];
-        const loads = [
-            ...styles.map(loadStyle),
-            ...scripts.map(loadScript)
-        ];
-        return Promise.all(loads);
+        const manifest = inline || (useFetch ? await loadFromManifest() : { addons: [] });
+        const list = Array.isArray(manifest.addons) ? manifest.addons : [];
+        await Promise.all(list.map(loadAddon));
+        return Array.from(addons.values());
     })();
 
-    window.AddonLoader = { ready };
+    window.AddonLoader = { ready, addons, setAddonEnabled };
 })();

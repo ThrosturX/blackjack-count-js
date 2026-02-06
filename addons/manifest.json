@@ -1,7 +1,26 @@
 {
-    "scripts": [
-        "addons/themes-pack.js",
-        "addons/counting-pack.js"
-    ],
-    "styles": []
+    "addons": [
+        {
+            "id": "basic-themes",
+            "label": "Basic Themes",
+            "scripts": ["addons/basic-themes-pack.js"],
+            "styles": ["addons/basic-themes.css"]
+        },
+        {
+            "id": "premium-themes",
+            "label": "Premium Themes",
+            "scripts": ["addons/themes-pack.js"],
+            "styles": ["addons/premium-themes.css"]
+        },
+        {
+            "id": "premium-effects",
+            "label": "Premium Effects",
+            "styles": ["addons/premium-effects.css"]
+        },
+        {
+            "id": "counting-pack",
+            "label": "Counting Systems",
+            "scripts": ["addons/counting-pack.js"]
+        }
+    ]
 }
