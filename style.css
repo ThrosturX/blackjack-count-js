@@ -1302,7 +1302,7 @@ body.deck-oceanic .card.black::before {
 .player-profit::before {
     color: var(--green);
     font-weight: bold;
-    content: "$";
+    content: "+ $";
     margin-right: 2px;
 }
 
