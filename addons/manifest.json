@@ -24,6 +24,11 @@
             "styles": ["addons/premium-effects.css"]
         },
         {
+            "id": "worn-cards",
+            "label": "Worn Cards",
+            "styles": ["addons/worn-cards.css"]
+        },
+        {
             "id": "counting-pack",
             "label": "Counting Systems",
             "scripts": ["addons/counting-pack.js"]

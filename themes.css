@@ -16,132 +16,79 @@ body.table-diner {
     --table-shadow: inset 0 0 80px rgba(0, 0, 0, 0.7), inset 0 0 25px rgba(160, 110, 60, 0.25), 0 0 20px rgba(0, 0, 0, 0.4);
 }
 
-body.deck-worn {
-    --card-back-color: #6b3a3a;
-    --card-back-pattern-color: #c28f7a;
+/* Vintage deck styles (clean base, no wear overlay). */
+body.deck-water {
+    --card-back-color: #3a416b;
+    --card-back-pattern-color: #7a82c2;
     --card-back-accent: #e6c8a2;
-    --card-edge-color: #9b7b66;
-    --worn-back-base: #6b3a3a;
-    --worn-back-ink: #c28f7a;
-    --worn-back-highlight: #e6c8a2;
-    --worn-back-shadow: rgba(60, 35, 30, 0.38);
-    --worn-back-bg:
-        repeating-conic-gradient(from 10deg at 50% 50%, rgba(235, 215, 185, 0.18) 0 12deg, transparent 12deg 24deg),
-        repeating-linear-gradient(45deg, rgba(120, 70, 60, 0.16) 0 8px, transparent 8px 16px),
-        repeating-linear-gradient(-45deg, rgba(235, 215, 185, 0.12) 0 8px, transparent 8px 16px),
-        radial-gradient(circle at 50% 50%, rgba(235, 215, 185, 0.2) 0%, transparent 52%),
-        linear-gradient(135deg, var(--worn-back-base) 0%, #7a4944 45%, #4b2f2b 100%);
-    --worn-back-bg-size: 120% 140%, 26px 26px, 26px 26px, 120% 140%, 120% 140%;
-    --worn-back-bg-position: 50% 50%, 6px 4px, -6px -4px, 50% 50%, 50% 50%;
-    --card-back-bg: var(--worn-back-bg);
-    --card-back-bg-size: var(--worn-back-bg-size);
+    --card-edge-color: #6d669b;
+    --card-back-bg:
+        repeating-conic-gradient(from 10deg at 50% 50%, rgba(235, 215, 185, 0.16) 0 12deg, transparent 12deg 24deg),
+        repeating-linear-gradient(45deg, rgba(120, 70, 60, 0.12) 0 8px, transparent 8px 16px),
+        repeating-linear-gradient(-45deg, rgba(235, 215, 185, 0.1) 0 8px, transparent 8px 16px),
+        radial-gradient(circle at 50% 50%, rgba(235, 215, 185, 0.18) 0%, transparent 52%),
+        linear-gradient(135deg, #2c3357 0%, #3a416b 45%, #1d2342 100%);
+    --card-back-bg-size: 120% 140%, 26px 26px, 26px 26px, 120% 140%, 120% 140%;
+    --card-back-bg-position: 50% 50%, 6px 4px, -6px -4px, 50% 50%, 50% 50%;
 }
 
-body.deck-worn .card.hidden {
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
-        radial-gradient(circle at 22% 32%, rgba(0, 0, 0, 0.25) 0%, transparent 42%),
-        radial-gradient(circle at 80% 68%, rgba(0, 0, 0, 0.2) 0%, transparent 48%),
-        radial-gradient(circle at 55% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 38%),
-        var(--card-back-bg);
-    background-size: auto, auto, auto, auto, var(--card-back-bg-size);
-    background-position: 0 0, 0 0, 0 0, 0 0, var(--worn-back-bg-position, center);
-    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
+body.deck-water .card.hidden,
+body.deck-water .card-back {
     border: 2px solid var(--card-back-accent);
-    box-shadow: inset 0 0 18px rgba(90, 70, 45, 0.35), 0 0 6px rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 0 14px rgba(70, 60, 90, 0.2), 0 0 6px rgba(0, 0, 0, 0.35);
+    background-position: var(--card-back-bg-position, 50% 50%);
+    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
 }
 
-body.deck-worn .card.hidden::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle at var(--wear-scuff-x, 28%) var(--wear-scuff-y, 30%), rgba(255, 255, 255, 0.08) 0%, transparent 48%),
-        radial-gradient(circle at var(--wear-scuff2-x, 72%) var(--wear-scuff2-y, 68%), rgba(40, 30, 20, 0.22) 0%, transparent 55%),
-        linear-gradient(var(--wear-scratch-angle, 25deg),
-            rgba(40, 30, 20, 0.2) 0,
-            rgba(40, 30, 20, 0.2) 1px,
-            transparent 2px),
-        linear-gradient(var(--wear-scratch-angle-2, -25deg),
-            rgba(255, 255, 255, 0.08) 0,
-            rgba(255, 255, 255, 0.08) 1px,
-            transparent 2px);
-    pointer-events: none;
-    mix-blend-mode: multiply;
-}
-
-body.deck-worn .card:not(.hidden) {
-    background:
-        radial-gradient(circle at var(--wear-scuff-x, 18%) var(--wear-scuff-y, 20%), rgba(255, 255, 255, 0.16) 0%, transparent 45%),
-        radial-gradient(circle at var(--wear-scuff2-x, 75%) var(--wear-scuff2-y, 78%), rgba(120, 90, 60, 0.22) 0%, transparent 50%),
-        linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 45%),
-        linear-gradient(135deg, #f3e6cd 0%, #e7d3b3 55%, #d7bea0 100%);
+body.deck-water .card:not(.hidden) {
+    background: linear-gradient(135deg, #f3e6cd 0%, #e7d3b3 55%, #d7bea0 100%);
     border: 1px solid #b89f7a;
     color: #3a2a1d;
-    box-shadow: inset 0 0 12px rgba(90, 70, 45, 0.28), 2px 2px 5px rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 0 12px rgba(90, 70, 45, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.4);
 }
 
-body.deck-worn .card.red {
+body.deck-water .card.red {
     color: rgba(140, 70, 60, 0.85);
 }
 
-body.deck-worn .card.black {
+body.deck-water .card.black {
     color: rgba(60, 50, 40, 0.85);
 }
 
-body.deck-worn .card:not(.hidden)::after {
-    content: "";
-    position: absolute;
-    inset: 6px;
-    border: 1px dashed rgba(90, 70, 45, 0.25);
-    background:
-        linear-gradient(var(--wear-fold-angle, 35deg),
-            rgba(255, 255, 255, var(--wear-fold-alpha, 0)) 0%,
-            rgba(255, 255, 255, 0) 18%);
-    background-position: var(--wear-fold-x, 12%) var(--wear-fold-y, 12%);
-    background-repeat: no-repeat;
-    pointer-events: none;
-    mix-blend-mode: screen;
+body.deck-sun {
+    --card-back-color: #6b2f2f;
+    --card-back-pattern-color: #c97a63;
+    --card-back-accent: #f1d2a4;
+    --card-edge-color: #a1685a;
+    --card-back-bg:
+        repeating-conic-gradient(from 10deg at 50% 50%, rgba(235, 205, 175, 0.16) 0 12deg, transparent 12deg 24deg),
+        repeating-linear-gradient(45deg, rgba(160, 90, 60, 0.14) 0 8px, transparent 8px 16px),
+        repeating-linear-gradient(-45deg, rgba(235, 200, 160, 0.12) 0 8px, transparent 8px 16px),
+        radial-gradient(circle at 50% 50%, rgba(240, 205, 170, 0.18) 0%, transparent 52%),
+        linear-gradient(135deg, #5d2424 0%, #6b3434 45%, #3c1a1a 100%);
+    --card-back-bg-size: 120% 140%, 26px 26px, 26px 26px, 120% 140%, 120% 140%;
+    --card-back-bg-position: 50% 50%, 6px 4px, -6px -4px, 50% 50%, 50% 50%;
 }
 
-body.deck-worn .card:not(.hidden)::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle at var(--wear-stain-x, 60%) var(--wear-stain-y, 40%), rgba(120, 90, 60, calc(var(--wear-stain-alpha, 0) * 0.6)) 0%, transparent calc(var(--wear-stain-size, 24%) * 0.9)),
-        radial-gradient(circle at var(--wear-stain-x, 60%) var(--wear-stain-y, 40%), rgba(70, 50, 35, calc(var(--wear-stain-alpha, 0) * 0.45)) 12%, transparent calc(var(--wear-stain-size, 24%) * 1.25)),
-        radial-gradient(circle at var(--wear-graphite-x, 60%) var(--wear-graphite-y, 40%), rgba(60, 60, 60, var(--wear-graphite-alpha, 0)) 0%, transparent var(--wear-graphite-size, 28%)),
-        radial-gradient(circle at var(--wear-dust-x, 30%) var(--wear-dust-y, 70%), rgba(255, 245, 225, var(--wear-dust-alpha, 0)) 0%, transparent var(--wear-dust-size, 45%)),
-        radial-gradient(circle at var(--wear-nicotine-x, 65%) var(--wear-nicotine-y, 35%), rgba(200, 170, 110, var(--wear-nicotine-alpha, 0)) 0%, transparent var(--wear-nicotine-size, 36%)),
-        radial-gradient(circle at var(--wear-matte-x, 55%) var(--wear-matte-y, 55%), rgba(240, 235, 220, var(--wear-matte-alpha, 0)) 0%, transparent var(--wear-matte-size, 32%)),
-        linear-gradient(var(--wear-warp-angle, 25deg),
-            rgba(255, 255, 255, var(--wear-warp-alpha, 0)) 0%,
-            rgba(255, 255, 255, 0) 18%),
-        linear-gradient(var(--wear-ink-angle, -20deg),
-            rgba(45, 35, 30, var(--wear-ink-alpha, 0)) 0%,
-            rgba(45, 35, 30, 0) 12%),
-        linear-gradient(var(--wear-tear-angle, 10deg),
-            rgba(40, 25, 18, 0.55) 0%,
-            rgba(40, 25, 18, 0.55) 2%,
-            rgba(255, 255, 255, 0.65) 3%,
-            rgba(255, 255, 255, 0) var(--wear-tear-size, 32%)),
-        linear-gradient(var(--wear-tear-angle, 10deg),
-            rgba(255, 255, 255, 0.55) 0%,
-            rgba(255, 255, 255, 0) 10%),
-        linear-gradient(var(--wear-scratch-angle, 25deg),
-            rgba(70, 50, 30, var(--wear-scratch-alpha, 0.12)) 0,
-            rgba(70, 50, 30, var(--wear-scratch-alpha, 0.12)) 1px,
-            transparent 2px),
-        linear-gradient(var(--wear-scratch-angle-2, -30deg),
-            rgba(255, 255, 255, 0.08) 0,
-            rgba(255, 255, 255, 0.08) 1px,
-            transparent 2px),
-        radial-gradient(circle at 18% 22%, rgba(80, 60, 40, 0.22) 0%, transparent 42%),
-        radial-gradient(circle at 65% 30%, rgba(120, 90, 60, 0.18) 0%, transparent 40%),
-        radial-gradient(circle at 78% 80%, rgba(60, 45, 30, 0.24) 0%, transparent 48%),
-        linear-gradient(115deg, rgba(255, 255, 255, 0.08) 0%, transparent 45%),
-        linear-gradient(200deg, rgba(60, 45, 30, 0.12) 0%, transparent 55%);
-    pointer-events: none;
-    mix-blend-mode: multiply;
+body.deck-sun .card.hidden,
+body.deck-sun .card-back {
+    border: 2px solid var(--card-back-accent);
+    box-shadow: inset 0 0 16px rgba(90, 70, 45, 0.28), 0 0 6px rgba(0, 0, 0, 0.35);
+    background-position: var(--card-back-bg-position, 50% 50%);
+    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
+}
+
+body.deck-sun .card:not(.hidden) {
+    background: linear-gradient(135deg, #f6e2c9 0%, #e8caa6 55%, #d9b18b 100%);
+    border: 1px solid #c29a71;
+    color: #3a251a;
+    box-shadow: inset 0 0 12px rgba(90, 70, 45, 0.24), 2px 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+body.deck-sun .card.red {
+    color: rgba(150, 70, 55, 0.9);
+}
+
+body.deck-sun .card.black {
+    color: rgba(65, 50, 40, 0.9);
 }
