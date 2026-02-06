@@ -1,6 +1,7 @@
 const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
+const SETTINGS_STORAGE_KEY = 'bj_table.settings';
 
 /* --- STATE --- */
 const state = {
@@ -100,6 +101,35 @@ function init() {
     }
 
     if (ui.countSystemSelect) {
+        const loadSettings = () => {
+            try {
+                const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                if (!data || typeof data !== 'object') return null;
+                return data;
+            } catch (err) {
+                return null;
+            }
+        };
+        const persistSettings = (updates = {}) => {
+            if (window.__settingsResetInProgress) return;
+            try {
+                const current = loadSettings() || { addons: {} };
+                const next = {
+                    ...current,
+                    ...updates,
+                    addons: { ...(current.addons || {}) }
+                };
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+            } catch (err) {
+                // Ignore storage failures.
+            }
+        };
+        const stored = loadSettings();
+        if (stored && stored.countingSystem) {
+            state.countingSystem = stored.countingSystem;
+        }
         const initCounting = () => {
             populateCountingSystems();
             ui.countSystemSelect.addEventListener('change', (e) => {
@@ -107,6 +137,7 @@ function init() {
                 state.runningCount = 0;
                 updateStats();
                 updateCountHint();
+                persistSettings({ countingSystem: state.countingSystem });
             });
         };
         if (window.AddonLoader && window.AddonLoader.ready) {
@@ -228,6 +259,9 @@ function populateCountingSystems() {
         select.appendChild(option);
     }
     select.value = currentValue || state.countingSystem;
+    if (select.value && select.value !== state.countingSystem) {
+        state.countingSystem = select.value;
+    }
 }
 
 function getCardCountValue(card) {

@@ -78,6 +78,7 @@
 
         const seq = (populateSeq.get(select) || 0) + 1;
         populateSeq.set(select, seq);
+        const previousValue = select.value;
         const currentValue = select.value || preferredValue || defaultValue;
         select.innerHTML = '';
         addOptions(select, themes.core, 'core');
@@ -86,13 +87,20 @@
         } else {
             select.value = defaultValue;
         }
+        if (select.value !== previousValue) {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         if (allowExtras) {
             requestAnimationFrame(() => {
                 if (seq !== populateSeq.get(select)) return;
                 addOptions(select, themes.extras, 'extras');
                 if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                    const before = select.value;
                     select.value = currentValue;
+                    if (select.value !== before) {
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
             });
         }
@@ -216,6 +224,7 @@
             button.addEventListener('click', () => {
                 clearSettings();
                 isResetting = true;
+                window.__settingsResetInProgress = true;
                 const toggles = document.querySelectorAll('[data-addon-id]');
                 toggles.forEach(input => {
                     input.checked = true;
@@ -224,10 +233,12 @@
                 initThemes();
                 applySelectValue(document.getElementById('table-style-select'), 'felt');
                 applySelectValue(document.getElementById('deck-style-select'), 'red');
+                applySelectValue(document.getElementById('count-system-select'), 'hi-lo');
                 if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
                     window.CountingUI.refresh();
                 }
                 isResetting = false;
+                window.__settingsResetInProgress = false;
             });
             button.dataset.addonBound = 'true';
         });
