@@ -1,5 +1,11 @@
 /* Worn card overlay effect (toggleable add-on). */
-body[class*="deck-"] .card.hidden {
+
+/* Hidden cards: full worn treatment only for compatible decks. */
+body.deck-red .card.hidden,
+body.deck-blue .card.hidden,
+body.deck-green .card.hidden,
+body.deck-water .card.hidden,
+body.deck-sun .card.hidden {
     background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
         radial-gradient(circle at 22% 32%, rgba(0, 0, 0, 0.25) 0%, transparent 42%),
@@ -13,7 +19,11 @@ body[class*="deck-"] .card.hidden {
     box-shadow: inset 0 0 18px rgba(90, 70, 45, 0.35), 0 0 6px rgba(0, 0, 0, 0.35);
 }
 
-body[class*="deck-"] .card.hidden::before {
+body.deck-red .card.hidden::before,
+body.deck-blue .card.hidden::before,
+body.deck-green .card.hidden::before,
+body.deck-water .card.hidden::before,
+body.deck-sun .card.hidden::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -32,7 +42,36 @@ body[class*="deck-"] .card.hidden::before {
     mix-blend-mode: multiply;
 }
 
-body[class*="deck-"] .card:not(.hidden) {
+/* Hidden cards for decks with custom back art: overlay only. */
+body[class*="deck-"] .card.hidden::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at var(--wear-scuff-x, 28%) var(--wear-scuff-y, 30%), rgba(255, 255, 255, 0.08) 0%, transparent 48%),
+        radial-gradient(circle at var(--wear-scuff2-x, 72%) var(--wear-scuff2-y, 68%), rgba(40, 30, 20, 0.22) 0%, transparent 55%);
+    mix-blend-mode: multiply;
+    opacity: 0.6;
+}
+
+body.deck-red .card.hidden::after,
+body.deck-blue .card.hidden::after,
+body.deck-green .card.hidden::after,
+body.deck-water .card.hidden::after,
+body.deck-sun .card.hidden::after {
+    content: none;
+}
+
+/*
+ * Face-card wear: only apply to compatible decks so we don't stomp
+ * deck-specific face art (emoji, icons, custom faces).
+ */
+body.deck-red .card:not(.hidden),
+body.deck-blue .card:not(.hidden),
+body.deck-green .card:not(.hidden),
+body.deck-water .card:not(.hidden),
+body.deck-sun .card:not(.hidden) {
     background:
         radial-gradient(circle at var(--wear-scuff-x, 18%) var(--wear-scuff-y, 20%), rgba(255, 255, 255, 0.16) 0%, transparent 45%),
         radial-gradient(circle at var(--wear-scuff2-x, 75%) var(--wear-scuff2-y, 78%), rgba(120, 90, 60, 0.22) 0%, transparent 50%),
@@ -43,15 +82,27 @@ body[class*="deck-"] .card:not(.hidden) {
     box-shadow: inset 0 0 12px rgba(90, 70, 45, 0.28), 2px 2px 5px rgba(0, 0, 0, 0.4);
 }
 
-body[class*="deck-"] .card.red {
+body.deck-red .card.red,
+body.deck-blue .card.red,
+body.deck-green .card.red,
+body.deck-water .card.red,
+body.deck-sun .card.red {
     color: rgba(140, 70, 60, 0.85);
 }
 
-body[class*="deck-"] .card.black {
+body.deck-red .card.black,
+body.deck-blue .card.black,
+body.deck-green .card.black,
+body.deck-water .card.black,
+body.deck-sun .card.black {
     color: rgba(60, 50, 40, 0.85);
 }
 
-body[class*="deck-"] .card:not(.hidden)::after {
+body.deck-red .card:not(.hidden)::after,
+body.deck-blue .card:not(.hidden)::after,
+body.deck-green .card:not(.hidden)::after,
+body.deck-water .card:not(.hidden)::after,
+body.deck-sun .card:not(.hidden)::after {
     content: "";
     position: absolute;
     inset: 6px;
@@ -66,7 +117,11 @@ body[class*="deck-"] .card:not(.hidden)::after {
     mix-blend-mode: screen;
 }
 
-body[class*="deck-"] .card:not(.hidden)::before {
+body.deck-red .card:not(.hidden)::before,
+body.deck-blue .card:not(.hidden)::before,
+body.deck-green .card:not(.hidden)::before,
+body.deck-water .card:not(.hidden)::before,
+body.deck-sun .card:not(.hidden)::before {
     content: "";
     position: absolute;
     inset: 0;
