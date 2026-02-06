@@ -22,13 +22,16 @@ body.deck-worn {
     --card-back-accent: #ead2ad;
     --card-edge-color: #a0886a;
     --card-back-bg:
-        radial-gradient(circle at 50% 45%, rgba(235, 215, 185, 0.22) 0%, transparent 55%),
+        radial-gradient(circle at 8px 8px, rgba(235, 215, 185, 0.28) 0 2px, transparent 3px),
+        radial-gradient(circle at 20px 20px, rgba(120, 80, 50, 0.25) 0 3px, transparent 6px),
+        radial-gradient(circle at 14px 14px, rgba(255, 245, 230, 0.16) 0 9px, transparent 12px),
+        radial-gradient(circle at 50% 45%, rgba(235, 215, 185, 0.2) 0%, transparent 55%),
         radial-gradient(circle at 50% 45%, rgba(120, 80, 50, 0.18) 0%, transparent 62%),
         radial-gradient(circle at 22% 28%, rgba(255, 255, 255, 0.12) 0%, transparent 42%),
         radial-gradient(circle at 78% 72%, rgba(50, 35, 20, 0.28) 0%, transparent 45%),
         linear-gradient(160deg, rgba(255, 245, 230, 0.1) 0%, transparent 60%),
         linear-gradient(135deg, #5f3f2d 0%, #6b4b36 45%, #4b3325 100%);
-    --card-back-bg-size: auto;
+    --card-back-bg-size: 26px 26px, 26px 26px, 52px 52px, auto, auto, auto, auto, auto, auto;
 }
 
 body.deck-worn .card.hidden {
@@ -38,15 +41,34 @@ body.deck-worn .card.hidden {
         radial-gradient(circle at 80% 68%, rgba(0, 0, 0, 0.2) 0%, transparent 48%),
         radial-gradient(circle at 55% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 38%),
         var(--card-back-bg);
-    background-size: var(--card-back-bg-size);
+    background-size: auto, auto, auto, auto, var(--card-back-bg-size);
     border: 2px solid var(--card-back-accent);
     box-shadow: inset 0 0 18px rgba(90, 70, 45, 0.35), 0 0 6px rgba(0, 0, 0, 0.35);
 }
 
+body.deck-worn .card.hidden::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at var(--wear-scuff-x, 28%) var(--wear-scuff-y, 30%), rgba(255, 255, 255, 0.08) 0%, transparent 48%),
+        radial-gradient(circle at var(--wear-scuff2-x, 72%) var(--wear-scuff2-y, 68%), rgba(40, 30, 20, 0.22) 0%, transparent 55%),
+        linear-gradient(var(--wear-scratch-angle, 25deg),
+            rgba(40, 30, 20, 0.2) 0,
+            rgba(40, 30, 20, 0.2) 1px,
+            transparent 2px),
+        linear-gradient(var(--wear-scratch-angle-2, -25deg),
+            rgba(255, 255, 255, 0.08) 0,
+            rgba(255, 255, 255, 0.08) 1px,
+            transparent 2px);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
 body.deck-worn .card:not(.hidden) {
     background:
-        radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.16) 0%, transparent 45%),
-        radial-gradient(circle at 75% 78%, rgba(120, 90, 60, 0.22) 0%, transparent 50%),
+        radial-gradient(circle at var(--wear-scuff-x, 18%) var(--wear-scuff-y, 20%), rgba(255, 255, 255, 0.16) 0%, transparent 45%),
+        radial-gradient(circle at var(--wear-scuff2-x, 75%) var(--wear-scuff2-y, 78%), rgba(120, 90, 60, 0.22) 0%, transparent 50%),
         linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 45%),
         linear-gradient(135deg, #f3e6cd 0%, #e7d3b3 55%, #d7bea0 100%);
     border: 1px solid #b89f7a;
@@ -54,12 +76,27 @@ body.deck-worn .card:not(.hidden) {
     box-shadow: inset 0 0 12px rgba(90, 70, 45, 0.28), 2px 2px 5px rgba(0, 0, 0, 0.4);
 }
 
+body.deck-worn .card.red {
+    color: rgba(140, 70, 60, 0.85);
+}
+
+body.deck-worn .card.black {
+    color: rgba(60, 50, 40, 0.85);
+}
+
 body.deck-worn .card:not(.hidden)::after {
     content: "";
     position: absolute;
     inset: 6px;
     border: 1px dashed rgba(90, 70, 45, 0.25);
+    background:
+        linear-gradient(var(--wear-fold-angle, 35deg),
+            rgba(255, 255, 255, var(--wear-fold-alpha, 0)) 0%,
+            rgba(255, 255, 255, 0) 18%);
+    background-position: var(--wear-fold-x, 12%) var(--wear-fold-y, 12%);
+    background-repeat: no-repeat;
     pointer-events: none;
+    mix-blend-mode: screen;
 }
 
 body.deck-worn .card:not(.hidden)::before {
@@ -67,6 +104,15 @@ body.deck-worn .card:not(.hidden)::before {
     position: absolute;
     inset: 0;
     background:
+        radial-gradient(circle at var(--wear-stain-x, 60%) var(--wear-stain-y, 40%), rgba(90, 60, 40, var(--wear-stain-alpha, 0)) 0%, transparent var(--wear-stain-size, 24%)),
+        linear-gradient(var(--wear-scratch-angle, 25deg),
+            rgba(70, 50, 30, var(--wear-scratch-alpha, 0.12)) 0,
+            rgba(70, 50, 30, var(--wear-scratch-alpha, 0.12)) 1px,
+            transparent 2px),
+        linear-gradient(var(--wear-scratch-angle-2, -30deg),
+            rgba(255, 255, 255, 0.08) 0,
+            rgba(255, 255, 255, 0.08) 1px,
+            transparent 2px),
         radial-gradient(circle at 18% 22%, rgba(80, 60, 40, 0.22) 0%, transparent 42%),
         radial-gradient(circle at 65% 30%, rgba(120, 90, 60, 0.18) 0%, transparent 40%),
         radial-gradient(circle at 78% 80%, rgba(60, 45, 30, 0.24) 0%, transparent 48%),

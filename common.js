@@ -6,6 +6,57 @@ const CommonUtils = {
     audioAssets: {},
 
     /**
+     * Applies deterministic wear variables based on suit/value.
+     * @param {HTMLElement} cardEl
+     * @param {Object} card
+     */
+    applyDeterministicWear: function (cardEl, card) {
+        if (!cardEl || !card) return;
+        const identity = `${card.val}${card.suit}`;
+        let hash = 0;
+        for (let i = 0; i < identity.length; i++) {
+            hash = (hash * 31 + identity.charCodeAt(i)) >>> 0;
+        }
+        let state = hash || 1;
+        const rand = () => {
+            state = (1664525 * state + 1013904223) >>> 0;
+            return state / 4294967296;
+        };
+
+        const scuffX = Math.round(15 + rand() * 70);
+        const scuffY = Math.round(12 + rand() * 70);
+        const scuff2X = Math.round(10 + rand() * 75);
+        const scuff2Y = Math.round(15 + rand() * 70);
+        const scratchAngle = Math.round(-60 + rand() * 120);
+        const scratchAngle2 = Math.round(-60 + rand() * 120);
+        const scratchAlpha = (0.06 + rand() * 0.12).toFixed(3);
+        const foldAlpha = rand() > 0.6 ? (0.08 + rand() * 0.12).toFixed(3) : '0';
+        const foldAngle = Math.round(15 + rand() * 150);
+        const foldX = Math.round(5 + rand() * 25);
+        const foldY = Math.round(5 + rand() * 25);
+        const stainAlpha = rand() > 0.88 ? (0.12 + rand() * 0.18).toFixed(3) : '0';
+        const stainX = Math.round(20 + rand() * 60);
+        const stainY = Math.round(20 + rand() * 60);
+        const stainSize = Math.round(18 + rand() * 16);
+
+        cardEl.style.setProperty('--wear-scuff-x', `${scuffX}%`);
+        cardEl.style.setProperty('--wear-scuff-y', `${scuffY}%`);
+        cardEl.style.setProperty('--wear-scuff2-x', `${scuff2X}%`);
+        cardEl.style.setProperty('--wear-scuff2-y', `${scuff2Y}%`);
+        cardEl.style.setProperty('--wear-scratch-angle', `${scratchAngle}deg`);
+        cardEl.style.setProperty('--wear-scratch-angle-2', `${scratchAngle2}deg`);
+        cardEl.style.setProperty('--wear-scratch-alpha', scratchAlpha);
+        cardEl.style.setProperty('--wear-fold-alpha', foldAlpha);
+        cardEl.style.setProperty('--wear-fold-angle', `${foldAngle}deg`);
+        cardEl.style.setProperty('--wear-fold-x', `${foldX}%`);
+        cardEl.style.setProperty('--wear-fold-y', `${foldY}%`);
+        cardEl.style.setProperty('--wear-stain-alpha', stainAlpha);
+        cardEl.style.setProperty('--wear-stain-x', `${stainX}%`);
+        cardEl.style.setProperty('--wear-stain-y', `${stainY}%`);
+        cardEl.style.setProperty('--wear-stain-size', `${stainSize}%`);
+    },
+
+    /**
      * Preloads audio assets.
      * @param {Object} soundFiles - Mapping of sound types to arrays of filenames.
      */
@@ -77,10 +128,15 @@ const CommonUtils = {
     createCardEl: function (card) {
         const div = document.createElement('div');
         div.className = `card ${card.color}${card.hidden ? ' hidden' : ''}${card.isSplitCard ? ' split-card' : ''}`;
+        div.dataset.suit = card.suit;
+        div.dataset.val = card.val;
+        div.dataset.rank = card.rank;
+        div.dataset.color = card.color;
         // if we can give it a random rotation, let's do that
         if (card.rotation !== undefined) {
             div.style.transform = `rotate(${card.rotation}deg)`;
         }
+        this.applyDeterministicWear(div, card);
 
         const valTop = document.createElement('div');
         valTop.className = 'val-top';
