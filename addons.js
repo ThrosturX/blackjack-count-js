@@ -69,10 +69,7 @@
         if (availableStyles.length !== styles.length || availableScripts.length !== scripts.length) {
             return null;
         }
-        const links = [];
-        for (const href of availableStyles) {
-            links.push(await loadStyle(href));
-        }
+        const links = await Promise.all(availableStyles.map(loadStyle));
         const loadedScripts = [];
         for (const src of availableScripts) {
             loadedScripts.push(await loadScript(src));
