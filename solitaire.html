@@ -120,65 +120,94 @@
             {
                 "id": "default-themes",
                 "label": "Default Themes",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/default-themes-pack.js"],
                 "styles": ["addons/default-themes.css"]
             },
             {
                 "id": "basic-themes",
                 "label": "Basic Themes",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/basic-themes-pack.js"],
                 "styles": ["addons/basic-themes.css"]
             },
             {
                 "id": "cyberpunk-themes",
                 "label": "Cyberpunk Themes",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/cyberpunk-pack.js"],
                 "styles": ["addons/cyberpunk-pack.css"]
             },
             {
                 "id": "dark-elegance-themes",
                 "label": "Dark Elegance",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/dark-elegance-pack.js"],
                 "styles": ["addons/dark-elegance-pack.css"]
             },
             {
                 "id": "luxe-collection",
                 "label": "Luxe Collection",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/luxe-pack.js"],
                 "styles": ["addons/luxe-pack.css"]
             },
             {
                 "id": "wildlife-themes",
                 "label": "Wildlife",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/wildlife-pack.js"],
                 "styles": ["addons/wildlife-pack.css"]
             },
             {
                 "id": "ghostly-themes",
                 "label": "Ghostly",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "scripts": ["addons/ghostly-pack.js"],
                 "styles": ["addons/ghostly-pack.css"]
             },
             {
                 "id": "premium-themes",
                 "label": "Premium Themes",
+                "requiresEntitlement": true,
+                "rewardId": 25262,
+                "optInDefault": false,
                 "scripts": ["addons/themes-pack.js"],
                 "styles": ["addons/premium-themes.css"]
             },
             {
                 "id": "premium-effects",
                 "label": "Premium Effects",
+                "requiresEntitlement": true,
+                "rewardId": 25262,
+                "optInDefault": false,
                 "styles": ["addons/premium-effects.css"]
             },
             {
                 "id": "worn-cards",
                 "label": "Worn Cards",
+                "requiresEntitlement": false,
+                "optInDefault": false,
                 "styles": ["addons/worn-cards.css"]
             }
         ]
     }
     </script>
     <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+    <script>
+        window.AddonEntitlementsConfig = {
+            gameId: 4266975,
+            workerUrl: 'https://your-worker.example.com/entitlements',
+            clientId: 'e137d33a349d74ae31250b6922c1a295'
+        };
+    </script>
 
     <script src="assets.js"></script>
     <script src="addons.js"></script>
