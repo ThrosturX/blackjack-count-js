@@ -12,6 +12,7 @@ const state = {
     cutCardReached: false,
     tableSettingsChanged: false,
     runningCount: 0,
+    sideCounts: {},
     countingSystem: 'hi-lo',
     dealer: { hand: [] },
     players: [],
@@ -128,13 +129,14 @@ function init() {
         };
         const stored = loadSettings();
         if (stored && stored.countingSystem) {
-            state.countingSystem = stored.countingSystem;
+            state.countingSystem = stored.countingSystem === 'reko' ? 'ko' : stored.countingSystem;
         }
         const initCounting = () => {
             populateCountingSystems();
             ui.countSystemSelect.addEventListener('change', (e) => {
                 state.countingSystem = e.target.value;
                 state.runningCount = 0;
+                resetSideCounts();
                 updateStats();
                 updateCountHint();
                 persistSettings({ countingSystem: state.countingSystem });
@@ -230,6 +232,46 @@ function getCountingCatalog() {
     };
 }
 
+function getActiveCountingSystem() {
+    const catalog = getCountingCatalog();
+    return [...catalog.core, ...catalog.extras].find(system => system.id === state.countingSystem) || null;
+}
+
+function isBalancedSystem() {
+    const system = getActiveCountingSystem();
+    if (!system) return true;
+    if (typeof system.balanced === 'boolean') return system.balanced;
+    return true;
+}
+
+function resetSideCounts() {
+    state.sideCounts = {};
+}
+
+function updateSideCounts(card) {
+    const system = getActiveCountingSystem();
+    if (!system || !Array.isArray(system.sideCounts)) return;
+    if (!state.sideCounts) state.sideCounts = {};
+    system.sideCounts.forEach(side => {
+        const values = Array.isArray(side.values) ? side.values : [];
+        if (values.includes(card.val)) {
+            state.sideCounts[side.id] = (state.sideCounts[side.id] || 0) + 1;
+        }
+    });
+}
+
+function getSideCountText() {
+    const system = getActiveCountingSystem();
+    if (!system || !Array.isArray(system.sideCounts) || !system.sideCounts.length) return '';
+    const parts = system.sideCounts.map(side => {
+        const value = state.sideCounts && typeof state.sideCounts[side.id] === 'number'
+            ? state.sideCounts[side.id]
+            : 0;
+        return `${side.name}: ${value}`;
+    });
+    return parts.length ? ` | ${parts.join(' • ')}` : '';
+}
+
 function populateCountingSystems() {
     const catalog = getCountingCatalog();
     const select = ui.countSystemSelect;
@@ -279,14 +321,30 @@ function getCardCountValue(card) {
             if (['3', '4', '6'].includes(card.val)) return 1;
             if (['5'].includes(card.val)) return 1.5;
             return 0;
+        case 'hi-opt-ii':
+            if (['10', 'J', 'Q', 'K'].includes(card.val)) return -2;
+            if (['4', '5'].includes(card.val)) return 2;
+            if (['2', '3', '6', '7'].includes(card.val)) return 1;
+            return 0;
         case 'ko':
             if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
             if (['2', '3', '4', '5', '6', '7'].includes(card.val)) return 1;
+            return 0;
+        case 'red-7':
+            if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+            if (['2', '3', '4', '5', '6'].includes(card.val)) return 1;
+            if (card.val === '7' && card.color === 'red') return 1;
             return 0;
         case 'hi-lo':
         default:
             return BlackjackLogic.getCardCount(card);
     }
+}
+
+function applyCount(card) {
+    state.runningCount += getCardCountValue(card);
+    updateSideCounts(card);
+    updateStats();
 }
 
 ui.fastModeCheckbox.addEventListener('change', (event) => {
@@ -300,6 +358,7 @@ function createShoe(msg) {
 
     state.shoe = [];
     state.runningCount = 0;
+    resetSideCounts();
     state.cutCardReached = false;
     state.totalInitialCards = 0;
     state.isShuffling = true;
@@ -366,7 +425,12 @@ function updateStats() {
     ui.cardsLeft.textContent = state.shoe.length;
     const decksRem = Math.max(1, state.shoe.length / 52);
     const trueCount = (state.runningCount / decksRem).toFixed(1);
-    ui.runCount.textContent = `${state.runningCount} (TC:${trueCount})`;
+    const sideText = getSideCountText();
+    if (isBalancedSystem()) {
+        ui.runCount.textContent = `${state.runningCount} (TC:${trueCount})${sideText}`;
+    } else {
+        ui.runCount.textContent = `RC:${state.runningCount}${sideText}`;
+    }
 
     // Update shoe visualization
     updateShoeVisual();
@@ -636,6 +700,7 @@ function drawCard(toDealer = true, seatIndex = null) {
         // Create new shoe without changing phase to SHUFFLING
         const tempShoe = [];
         state.runningCount = 0;
+        resetSideCounts();
 
         // Create cards
         for (let i = 0; i < state.deckCount; i++) {
@@ -731,8 +796,7 @@ function dealHands() {
             if (c.isSplitCard) state.cutCardReached = true;
 
             if (!c.hidden) {
-                state.runningCount += getCardCountValue(c);
-                updateStats();
+                applyCount(c);
                 playSound('card');
             }
             renderDealer();
@@ -741,8 +805,7 @@ function dealHands() {
             const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
-            state.runningCount += getCardCountValue(c);
-            updateStats();
+            applyCount(c);
             playSound('card');
             p.hands[0].cards.push(c);
             renderSeat(action.idx);
@@ -778,8 +841,7 @@ function checkBlackjack() {
         // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
-        state.runningCount += getCardCountValue(state.dealer.hand[1]);
-        updateStats();
+        applyCount(state.dealer.hand[1]);
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('dealer-bj');
 
@@ -885,8 +947,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += getCardCountValue(c);
-    updateStats();
+    applyCount(c);
     playSound('card');
     h.cards.push(c);
 
@@ -957,8 +1018,7 @@ function playerDouble() {
     h.bet *= 2;
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += getCardCountValue(c);
-    updateStats();
+    applyCount(c);
     playSound('card');
     h.cards.push(c);
     h.status = 'stand';
@@ -998,8 +1058,7 @@ function playerSplit() {
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
     const cFirst = drawCard(false, state.turnIndex);
-    state.runningCount += getCardCountValue(cFirst);
-    updateStats();
+    applyCount(cFirst);
     playSound('card');
     h.cards.push(cFirst);
 
@@ -1012,8 +1071,7 @@ function playerSplit() {
 
 
     const cSecond = drawCard(false, state.turnIndex);
-    state.runningCount += getCardCountValue(cSecond);
-    updateStats();
+    applyCount(cSecond);
     playSound('card');
     newHand.cards.push(cSecond);
 
@@ -1029,7 +1087,7 @@ function dealerTurn() {
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
-    state.runningCount += getCardCountValue(hole);
+    applyCount(hole);
     render();
     playSound('card');
 
@@ -1048,8 +1106,7 @@ function dealerTurn() {
     function loop() {
         if (score < 17) {
             const c = drawCard(true, null);
-            state.runningCount += getCardCountValue(c);
-            updateStats();
+            applyCount(c);
             playSound('card');
             state.dealer.hand.push(c);
             score = calcScore(state.dealer.hand);
@@ -1241,6 +1298,11 @@ function updateStrategyHint() {
 }
 
 function updateCountHint() {
+    if (!isBalancedSystem()) {
+        ui.countHint.textContent = `Unbalanced Count (RC:${state.runningCount})`;
+        ui.countHint.className = "count-hint ch-neutral";
+        return;
+    }
     const decksRem = Math.max(1, state.shoe.length / 52);
     const tc = (state.runningCount / decksRem);
 

@@ -93,7 +93,7 @@
     registerCountingSystems({
         id: 'core-counting',
         group: 'core',
-        systems: [{ id: 'hi-lo', name: 'Hi-Lo', description: '2-6 +1, 7-9 0, 10-A -1.' }]
+        systems: [{ id: 'hi-lo', name: 'Hi-Lo', description: '2-6 +1, 7-9 0, 10-A -1.', balanced: true }]
     });
 
     window.AssetRegistry = {

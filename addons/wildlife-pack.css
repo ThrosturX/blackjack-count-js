@@ -1,5 +1,15 @@
 /* --- WILDLIFE CARD THEMES --- */
 
+/* --- Open Ocean Table --- */
+body.table-ocean {
+    --table-bg:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(0, 255, 255, 0.08), transparent 45%),
+        linear-gradient(135deg, #0a2a3a 0%, #0b3f5c 45%, #0a2a3a 100%);
+    --table-border: #0b4a6b;
+    --table-shadow: inset 0 0 80px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(0, 188, 212, 0.2), 0 0 20px rgba(0, 172, 193, 0.25);
+}
+
 /* --- Oceanic Style --- */
 body.deck-oceanic {
     --card-back-color: #006064;
