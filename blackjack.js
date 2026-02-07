@@ -333,15 +333,7 @@ function createShoe(msg) {
     // Remove the old fill animation code and replace with:
     updateShoeVisual();
 
-    // Show shuffling message for a moment
-    setTimeout(() => {
-        state.isShuffling = false;
-        state.phase = 'BETTING';
-        ui.overlay.classList.remove('show');
-        updateGameFlow();
-    }, getDelay(800));
-
-    // Update shoe visual after shuffle
+    // Show shuffling message for a moment, then finish
     setTimeout(() => {
         state.isShuffling = false;
         state.phase = 'BETTING';
@@ -349,14 +341,6 @@ function createShoe(msg) {
         updateShoeVisual(); // Show full stack
         updateGameFlow();
     }, getDelay(800));
-}
-
-function finishShuffle() {
-    state.isShuffling = false;
-    state.phase = 'BETTING';
-    ui.overlay.classList.remove('show');
-    updateShoeVisual();
-    updateGameFlow(); // Check for auto-bets immediately
 }
 
 function updateCasinoProfit() {
