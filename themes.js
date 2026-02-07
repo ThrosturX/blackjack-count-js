@@ -198,27 +198,47 @@
         }
     };
 
+    const getAddonToggleContainer = () => document.getElementById('addons-toggle-list');
+
+    const createAddonToggleLabel = (addon) => {
+        const label = document.createElement('label');
+        label.className = 'addon-toggle';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.dataset.addonId = addon.id;
+        input.checked = addon.enabled;
+
+        input.addEventListener('change', () => {
+            window.AddonLoader.setAddonEnabled(addon.id, input.checked);
+            persistSettings({ addons: { [addon.id]: input.checked } });
+            initThemes();
+            if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
+                window.CountingUI.refresh();
+            }
+        });
+
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(` ${addon.label || addon.id}`));
+        return label;
+    };
+
     const initAddonToggles = () => {
+        const container = getAddonToggleContainer();
+        if (container) {
+            container.innerHTML = '';
+            if (!window.AddonLoader || !window.AddonLoader.addons) {
+                container.textContent = 'Loading add-ons…';
+            } else if (!window.AddonLoader.addons.size) {
+                container.textContent = 'No add-ons available.';
+            } else {
+                window.AddonLoader.addons.forEach(addon => {
+                    container.appendChild(createAddonToggleLabel(addon));
+                });
+            }
+        }
+
         const toggleEls = document.querySelectorAll('[data-addon-id]');
         if (!toggleEls.length || !window.AddonLoader) return;
-        const addons = window.AddonLoader.addons || new Map();
-        toggleEls.forEach(toggle => {
-            if (toggle.dataset.addonBound === 'true') return;
-            const id = toggle.getAttribute('data-addon-id');
-            const addon = addons.get(id);
-            if (addon) {
-                toggle.checked = addon.enabled;
-            }
-            toggle.addEventListener('change', () => {
-                window.AddonLoader.setAddonEnabled(id, toggle.checked);
-                persistSettings({ addons: { [id]: toggle.checked } });
-                initThemes();
-                if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
-                    window.CountingUI.refresh();
-                }
-            });
-            toggle.dataset.addonBound = 'true';
-        });
 
         const resetButtons = document.querySelectorAll('#toggle-addons-all');
         resetButtons.forEach(button => {

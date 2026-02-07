@@ -154,6 +154,13 @@ select {
     margin: 0;
 }
 
+.addon-toggle-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
 #table {
     position: relative;
     width: 95vw;

@@ -41,34 +41,25 @@
 
     const addons = new Map();
 
-    const probeResource = async (url) => {
-        if (!url) return false;
-        const protocol = window.location && window.location.protocol;
-        if (protocol === 'file:') return true;
-        try {
-            const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-            return response.ok;
-        } catch (err) {
-            return false;
-        }
-    };
-
     const loadAddon = async (addon) => {
         const id = addon.id;
         if (!id) return null;
         const scripts = Array.isArray(addon.scripts) ? addon.scripts : [];
         const styles = Array.isArray(addon.styles) ? addon.styles : [];
-        const styleProbes = await Promise.all(styles.map(probeResource));
-        const availableStyles = styles.filter((_, i) => styleProbes[i]);
-        const scriptProbes = await Promise.all(scripts.map(probeResource));
-        const availableScripts = scripts.filter((_, i) => scriptProbes[i]);
-        if (availableStyles.length !== styles.length || availableScripts.length !== scripts.length) {
-            return null;
-        }
-        const links = await Promise.all(availableStyles.map(loadStyle));
+        const links = await Promise.all(styles.map(loadStyle));
         const loadedScripts = [];
-        for (const src of availableScripts) {
+        for (const src of scripts) {
             loadedScripts.push(await loadScript(src));
+        }
+        const stylesLoaded = links.every(link => link && link.loaded);
+        const scriptsLoaded = loadedScripts.every(script => script && script.loaded);
+        if (!stylesLoaded || !scriptsLoaded) {
+            links.forEach(link => {
+                if (link && link.element && link.element.parentNode) {
+                    link.element.parentNode.removeChild(link.element);
+                }
+            });
+            return null;
         }
         const entry = {
             id,
