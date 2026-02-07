@@ -1,0 +1,197 @@
+/* --- WILDLIFE CARD THEMES --- */
+
+/* --- Oceanic Style --- */
+body.deck-oceanic {
+    --card-back-color: #006064;
+    --card-back-pattern-color: #00838f;
+    --card-back-accent: #84ffff;
+    --card-edge-color: #00acc1;
+    --card-back-bg:
+        radial-gradient(circle at 100% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        radial-gradient(circle at 0% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        linear-gradient(60deg, var(--card-back-color) 25%, var(--card-back-pattern-color) 25%, var(--card-back-pattern-color) 50%, var(--card-back-color) 50%, var(--card-back-color) 75%, var(--card-back-pattern-color) 75%, var(--card-back-pattern-color) 100%);
+    --card-back-bg-size: 20px 35px;
+}
+
+/* Oceanic uses unique whale design for hidden cards to prevent color leaking */
+body.deck-oceanic .card.hidden {
+    background: linear-gradient(135deg, #004d5a 0%, #003840 100%) !important;
+    border: 2px solid var(--card-back-accent) !important;
+    position: relative;
+}
+
+body.deck-oceanic .card.hidden::before {
+    content: "🐳" !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    font-size: 3em;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+body.deck-oceanic .card {
+    background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 50%, #b2ebf2 100%);
+    border: 1px solid #4dd0e1;
+    box-shadow: inset 0 0 10px rgba(0, 172, 193, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body.deck-oceanic .card.red {
+    color: #ff7043;
+}
+
+body.deck-oceanic .card.black {
+    color: #006064;
+}
+
+body.deck-oceanic .card.red::before {
+    content: "🐚";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+body.deck-oceanic .card.black::before {
+    content: "🌊";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+/* --- Cetaceous (Whale) Style --- */
+body.deck-whale {
+    --card-back-color: #006064;
+    --card-back-pattern-color: #1194a0;
+    --card-back-accent: #b5fdfd;
+    --card-edge-color: #11afc4;
+    --card-back-bg:
+        radial-gradient(circle at 100% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        radial-gradient(circle at 0% 50%, transparent 20%, rgba(255, 255, 255, 0.1) 21%, transparent 34%, transparent 100%),
+        linear-gradient(60deg, var(--card-back-color) 25%, var(--card-back-pattern-color) 25%, var(--card-back-pattern-color) 50%, var(--card-back-color) 50%, var(--card-back-color) 75%, var(--card-back-pattern-color) 75%, var(--card-back-pattern-color) 100%);
+    --card-back-bg-size: 20px 35px;
+}
+
+body.deck-whale .card:not(.hidden) {
+    background: linear-gradient(135deg, #e1faf7 0%, #f8f4f9 100%);
+    box-shadow: inset 0 0 8px rgba(74, 0, 106, 0.12), 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body.deck-whale .card.red::before {
+    content: "🐬";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+body.deck-whale .card.red:not(.hidden)::before {
+    filter: hue-rotate(120deg) brightness(1.2);
+}
+
+body.deck-whale .card:not(.hidden) .suit-center {
+    opacity: 0.1;
+}
+
+body.deck-whale .card.black::before {
+    content: "🫍";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* whale uses unique whale design for hidden cards to prevent color leaking */
+body.deck-whale .card.hidden {
+    background: linear-gradient(135deg, #004d5a 0%, #003840 100%) !important;
+    border: 2px solid var(--card-back-accent) !important;
+    position: relative;
+}
+
+body.deck-whale .card.hidden::before {
+    content: "🐳" !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    font-size: 3em;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* --- Woolly (Mammoth) Style --- */
+body.deck-mammoth {
+    --card-back-color: #ccb49e;
+    --card-back-pattern-color: #a09f88;
+    --card-back-accent: #8a7663;
+    --card-edge-color: #91857d;
+}
+
+body.deck-mammoth .card {
+    background: linear-gradient(135deg, #fae7e0 0%, #ffffff 50%, #f2d4b2 100%);
+    border: 1px solid #614623;
+    box-shadow: inset 0 0 10px rgba(0, 61, 193, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body.deck-mammoth .card.red {
+    color: #632f0c;
+}
+
+body.deck-mammoth .card.black {
+    color: #414546;
+}
+
+body.deck-mammoth .card.red::before {
+    content: "🦣";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+body.deck-mammoth .card.black::before {
+    content: "🐘";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+body.deck-mammoth .card.hidden {
+    position: relative;
+    background: linear-gradient(135deg, #fae7e0 0%, #fffdf5f6 50%, #f2d4b2 100%);
+    background-size: var(--card-back-bg-size);
+    border: 1px solid rgba(56, 30, 5, 0.432);
+    box-shadow: inset 0 0 15px rgba(176, 190, 197, 0.1), 2px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+body.deck-mammoth .card.hidden::before {
+    content: "🪾" !important;
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    font-size: 4em;
+    opacity: 0.2;
+    pointer-events: none;
+}

@@ -8,26 +8,13 @@
             ['Lavender Dusk', 'lavender'],
             ['Ocean Depths', 'depths'],
             ['Rolling Waves', 'waves'],
-            ['Dark Stone', 'stone'],
-            ['Neon Nights', 'neon'],
-            ['Cyberpunk Grid', 'cyber'],
-            ['Obsidian Floor', 'obsidian'],
-            ['The Abyss', 'abyss']
+            ['Dark Stone', 'stone']
         ],
         deck: [
             ['Royal Gold', 'gold'],
             ['Regal Velvet', 'velvet'],
-            ['Oceanic', 'oceanic'],
-            ['Cetaceous', 'whale'],
-            ['Woolly', 'mammoth'],
             ['Cherry Blossom', 'cherry'],
-            ['Starlight', 'starlight'],
-            ['Emerald Luxe', 'emerald'],
-            ['Ruby Luxe', 'ruby'],
-            ['Midnight Luxe', 'dark'],
-            ['Midnight Onyx', 'luxury-dark'],
-            ['Neon Vibe', 'neon-vibe'],
-            ['Ghost Ship', 'ghost']
+            ['Starlight', 'starlight']
         ]
     });
 })();
