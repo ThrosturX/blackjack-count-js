@@ -202,11 +202,35 @@
 
     const createAddonToggleLabel = (addon) => {
         const label = document.createElement('label');
-        label.className = 'addon-toggle';
+        label.className = 'addon-toggle-card';
+
+        const meta = document.createElement('div');
+        meta.className = 'addon-toggle-meta';
+        const title = document.createElement('span');
+        title.className = 'addon-toggle-title';
+        title.textContent = addon.label || addon.id;
+        const badge = document.createElement('span');
+        badge.className = 'addon-toggle-badge';
+        badge.textContent = 'Addon';
+        const description = document.createElement('span');
+        description.className = 'addon-toggle-description';
+        description.textContent = 'Toggle to apply styles or scripts';
+        meta.append(title, badge, description);
+
+        const control = document.createElement('div');
+        control.className = 'addon-toggle-control';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.dataset.addonId = addon.id;
         input.checked = addon.enabled;
+
+        const indicator = document.createElement('span');
+        indicator.className = 'addon-toggle-indicator';
+        const updateIndicator = () => {
+            indicator.textContent = input.checked ? 'Enabled' : 'Disabled';
+            label.classList.toggle('addon-toggle-card--active', input.checked);
+        };
+        updateIndicator();
 
         input.addEventListener('change', () => {
             window.AddonLoader.setAddonEnabled(addon.id, input.checked);
@@ -215,10 +239,11 @@
             if (window.CountingUI && typeof window.CountingUI.refresh === 'function') {
                 window.CountingUI.refresh();
             }
+            updateIndicator();
         });
 
-        label.appendChild(input);
-        label.appendChild(document.createTextNode(` ${addon.label || addon.id}`));
+        control.append(input, indicator);
+        label.append(meta, control);
         return label;
     };
 
@@ -226,10 +251,15 @@
         const container = getAddonToggleContainer();
         if (container) {
             container.innerHTML = '';
+            container.classList.remove('addon-toggle-empty');
+            const showMessage = (message) => {
+                container.classList.add('addon-toggle-empty');
+                container.textContent = message;
+            };
             if (!window.AddonLoader || !window.AddonLoader.addons) {
-                container.textContent = 'Loading add-ons…';
+                showMessage('Loading add-ons…');
             } else if (!window.AddonLoader.addons.size) {
-                container.textContent = 'No add-ons available.';
+                showMessage('No add-ons available.');
             } else {
                 window.AddonLoader.addons.forEach(addon => {
                     container.appendChild(createAddonToggleLabel(addon));

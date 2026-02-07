@@ -142,23 +142,92 @@ select {
     border-radius: 3px;
 }
 
-.addon-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-right: 10px;
-    font-size: 0.85rem;
-}
-
-.addon-toggle input {
-    margin: 0;
-}
-
 .addon-toggle-list {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    align-items: stretch;
+}
+
+.addon-toggle-list.addon-toggle-empty {
+    min-height: 60px;
     align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.addon-toggle-card {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 80px;
+    flex: 1 1 240px;
+    max-width: 360px;
+}
+
+.addon-toggle-card--active {
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(255, 209, 91, 0.25);
+}
+
+.addon-toggle-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.addon-toggle-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.addon-toggle-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 999px;
+    align-self: flex-start;
+    background: rgba(74, 106, 255, 0.15);
+    color: #6ab0ff;
+}
+
+.addon-toggle-description {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.addon-toggle-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 102px;
+}
+
+.addon-toggle-control input {
+    accent-color: var(--gold);
+    width: 18px;
+    height: 18px;
+}
+
+.addon-toggle-indicator {
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
 }
 
 #table {
