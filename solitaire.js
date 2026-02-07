@@ -318,6 +318,39 @@ function handleDragStart(e) {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', cardEl.innerHTML);
 
+    // Build a custom drag image showing the full stack of cards being dragged
+    const dragPreview = document.createElement('div');
+    dragPreview.style.position = 'absolute';
+    dragPreview.style.top = '-9999px';
+    dragPreview.style.left = '-9999px';
+    dragPreview.style.pointerEvents = 'none';
+    dragPreview.style.zIndex = '10000';
+
+    dragState.draggedCards.forEach((card, i) => {
+        const clone = CommonUtils.createCardEl(card);
+        clone.style.position = 'absolute';
+        clone.style.top = `${i * 25}px`;
+        clone.style.left = '0';
+        clone.style.margin = '0';
+        clone.style.transform = 'none';
+        dragPreview.appendChild(clone);
+    });
+
+    // Size the container so the browser captures the full stack
+    const cardWidth = 70;
+    const cardHeight = 100;
+    const stackHeight = cardHeight + (dragState.draggedCards.length - 1) * 25;
+    dragPreview.style.width = `${cardWidth}px`;
+    dragPreview.style.height = `${stackHeight}px`;
+
+    document.body.appendChild(dragPreview);
+    e.dataTransfer.setDragImage(dragPreview, cardWidth / 2, 20);
+
+    // Clean up the off-screen element after the browser has captured it
+    requestAnimationFrame(() => {
+        document.body.removeChild(dragPreview);
+    });
+
     setTimeout(() => {
         cardEl.classList.add('dragging');
     }, 0);
