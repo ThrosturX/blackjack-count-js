@@ -150,7 +150,9 @@
         const catalog = registry && typeof registry.getThemeCatalog === 'function'
             ? registry.getThemeCatalog()
             : fallbackThemes;
-        const addonsLoaded = window.AddonLoader && window.AddonLoader.addons && window.AddonLoader.addons.size > 0;
+        const addonsLoaded = window.AddonLoader
+            && window.AddonLoader.addons
+            && Array.from(window.AddonLoader.addons.values()).some(addon => addon.loaded && addon.enabled);
         const allowExtras = themesCssLoaded() || addonsLoaded;
         const tableSelect = document.getElementById('table-style-select');
         const deckSelect = document.getElementById('deck-style-select');
@@ -224,14 +226,19 @@
 
     const initAddonToggles = () => {
         const container = getAddonToggleContainer();
+        const addonsAvailable = window.AddonLoader && window.AddonLoader.addons;
+        const addonsList = addonsAvailable ? Array.from(window.AddonLoader.addons.values()) : [];
+        const visibleAddons = addonsList.filter(addon => addon.allowed);
         if (container) {
             container.innerHTML = '';
-            if (!window.AddonLoader || !window.AddonLoader.addons) {
+            if (!addonsAvailable) {
                 container.textContent = 'Loading add-ons…';
-            } else if (!window.AddonLoader.addons.size) {
+            } else if (addonsList.some(addon => addon.requiresEntitlement) && !window.AddonLoader.entitlementsLoaded()) {
+                container.textContent = 'Checking add-ons…';
+            } else if (!visibleAddons.length) {
                 container.textContent = 'No add-ons available.';
             } else {
-                window.AddonLoader.addons.forEach(addon => {
+                visibleAddons.forEach(addon => {
                     container.appendChild(createAddonToggleLabel(addon));
                 });
             }
@@ -268,8 +275,10 @@
                 window.__settingsResetInProgress = true;
                 const toggles = document.querySelectorAll('[data-addon-id]');
                 toggles.forEach(input => {
-                    input.checked = true;
-                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, true);
+                    const addon = window.AddonLoader.addons.get(input.dataset.addonId);
+                    const defaultEnabled = addon ? addon.optInDefault === true : false;
+                    input.checked = defaultEnabled;
+                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, defaultEnabled);
                 });
                 initThemes();
                 applySelectValue(document.getElementById('table-style-select'), 'felt');
