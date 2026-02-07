@@ -1235,9 +1235,8 @@ input:checked+.slider:before {
 }
 
 /* Drag feedback */
-.card.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg);
+.drag-layer .card {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
 .pile.drag-over-valid {
@@ -1248,6 +1247,10 @@ input:checked+.slider:before {
 .pile.drag-over-invalid {
     background: rgba(235, 87, 87, 0.2);
     border-color: var(--red);
+}
+
+.drag-layer {
+    pointer-events: none;
 }
 
 /* Game controls bar */

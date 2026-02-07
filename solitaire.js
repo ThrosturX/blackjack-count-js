@@ -19,11 +19,21 @@ const gameState = {
 };
 
 // Drag state
+const DRAG_MOVE_THRESHOLD = 6;
+const CARD_HEIGHT = 100;
+const STACK_OFFSET = 25;
+
 const dragState = {
     draggedCards: [],
     sourcePile: null,
     sourceIndex: null,
-    draggedElement: null
+    draggedElements: [],
+    dragLayer: null,
+    pointerOffsetX: 0,
+    pointerOffsetY: 0,
+    isDragging: false,
+    pendingDrag: null,
+    activePointerId: null
 };
 
 // Sound files
@@ -131,18 +141,13 @@ function updateTableau() {
 
             // Only allow interaction with face-up cards
             if (!card.hidden) {
-                cardEl.draggable = true;
-                cardEl.addEventListener('dragstart', handleDragStart);
+                cardEl.addEventListener('pointerdown', handlePointerDown);
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
             }
 
             columnEl.appendChild(cardEl);
         });
-
-        // Make column a drop zone
-        columnEl.addEventListener('dragover', handleDragOver);
-        columnEl.addEventListener('drop', handleDrop);
     }
 }
 
@@ -168,9 +173,6 @@ function updateFoundations() {
             foundationEl.appendChild(placeholder);
         }
 
-        // Make foundation a drop zone
-        foundationEl.addEventListener('dragover', handleDragOver);
-        foundationEl.addEventListener('drop', handleDrop);
     }
 }
 
@@ -224,11 +226,10 @@ function updateWaste() {
             cardEl.style.position = 'absolute';
             cardEl.style.left = `${(i - startIndex) * 20}px`;
 
-            // Only top card is draggable
+            // Only top card responds to drag
             if (i === gameState.waste.length - 1) {
-                cardEl.draggable = true;
                 cardEl.dataset.waste = 'true';
-                cardEl.addEventListener('dragstart', handleDragStart);
+                cardEl.addEventListener('pointerdown', handlePointerDown);
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
                 cardEl.style.zIndex = 10;
@@ -292,100 +293,155 @@ function recycleWaste() {
 }
 
 /**
- * Handle drag start
+ * Handle pointer down to initiate a drag
  */
-function handleDragStart(e) {
-    const cardEl = e.target;
+function handlePointerDown(e) {
+    if (e.button !== 0) return;
+    const cardEl = e.target.closest('.card');
+    if (!cardEl) return;
 
-    // Check if dragging from waste
+    dragState.pendingDrag = {
+        cardEl,
+        startX: e.clientX,
+        startY: e.clientY
+    };
+    dragState.activePointerId = e.pointerId;
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+    if (cardEl.setPointerCapture) {
+        cardEl.setPointerCapture(e.pointerId);
+    }
+    e.preventDefault();
+}
+
+function handlePointerMove(e) {
+    if (dragState.activePointerId !== e.pointerId) return;
+
+    if (dragState.pendingDrag && !dragState.isDragging) {
+        const dx = e.clientX - dragState.pendingDrag.startX;
+        const dy = e.clientY - dragState.pendingDrag.startY;
+        if (Math.hypot(dx, dy) > DRAG_MOVE_THRESHOLD) {
+            startPointerDrag(e);
+        }
+    }
+
+    if (dragState.isDragging) {
+        updateDragLayerPosition(e.clientX, e.clientY);
+    }
+}
+
+function handlePointerUp(e) {
+    if (dragState.activePointerId !== e.pointerId) return;
+
+    if (dragState.isDragging) {
+        finishDrag(e.clientX, e.clientY);
+    } else {
+        dragState.pendingDrag = null;
+    }
+
+    cleanupPointerHandlers();
+}
+
+function startPointerDrag(e) {
+    const { cardEl } = dragState.pendingDrag;
+    if (!cardEl) return;
+
+    // Determine source pile and cards
     if (cardEl.dataset.waste) {
         const card = gameState.waste[gameState.waste.length - 1];
         dragState.draggedCards = [card];
         dragState.sourcePile = 'waste';
         dragState.sourceIndex = gameState.waste.length - 1;
     } else {
-        // Dragging from tableau
-        const col = parseInt(cardEl.dataset.column);
-        const index = parseInt(cardEl.dataset.index);
-
-        // Get all cards from this position to the end
+        const col = parseInt(cardEl.dataset.column, 10);
+        const index = parseInt(cardEl.dataset.index, 10);
         dragState.draggedCards = gameState.tableau[col].slice(index);
         dragState.sourcePile = 'tableau';
         dragState.sourceIndex = col;
     }
 
-    dragState.draggedElement = cardEl;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', cardEl.innerHTML);
+    // Collect actual DOM elements for the stack
+    dragState.draggedElements = collectDraggedElements(cardEl);
 
-    // Build a custom drag image showing the full stack of cards being dragged
-    const dragPreview = document.createElement('div');
-    dragPreview.style.position = 'absolute';
-    dragPreview.style.top = '-9999px';
-    dragPreview.style.left = '-9999px';
-    dragPreview.style.pointerEvents = 'none';
-    dragPreview.style.zIndex = '10000';
-
-    dragState.draggedCards.forEach((card, i) => {
-        const clone = CommonUtils.createCardEl(card);
-        clone.style.position = 'absolute';
-        clone.style.top = `${i * 25}px`;
-        clone.style.left = '0';
-        clone.style.margin = '0';
-        clone.style.transform = 'none';
-        dragPreview.appendChild(clone);
-    });
-
-    // Size the container so the browser captures the full stack
-    const cardWidth = 70;
-    const cardHeight = 100;
-    const stackHeight = cardHeight + (dragState.draggedCards.length - 1) * 25;
-    dragPreview.style.width = `${cardWidth}px`;
-    dragPreview.style.height = `${stackHeight}px`;
-
-    document.body.appendChild(dragPreview);
-    e.dataTransfer.setDragImage(dragPreview, cardWidth / 2, 20);
-
-    // Clean up the off-screen element after the browser has captured it
-    requestAnimationFrame(() => {
-        document.body.removeChild(dragPreview);
-    });
-
-    setTimeout(() => {
-        cardEl.classList.add('dragging');
-    }, 0);
+    createDragLayer(e);
+    dragState.isDragging = true;
+    dragState.pendingDrag = null;
 }
 
-/**
- * Handle drag over
- */
-function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    return false;
+function collectDraggedElements(cardEl) {
+    if (cardEl.dataset.waste) {
+        return [cardEl];
+    }
+
+    const columnEl = document.getElementById(`tableau-${cardEl.dataset.column}`);
+    if (!columnEl) return [];
+
+    const cardEls = Array.from(columnEl.querySelectorAll('.card'));
+    const startIndex = cardEls.findIndex(el => parseInt(el.dataset.index, 10) >= parseInt(cardEl.dataset.index, 10));
+    return startIndex >= 0 ? cardEls.slice(startIndex) : [];
 }
 
-/**
- * Handle drop
- */
-function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
+function createDragLayer(e) {
+    if (dragState.draggedElements.length === 0) return;
 
-    const targetEl = e.currentTarget;
+    const topCardEl = dragState.draggedElements[0];
+    const initialRect = topCardEl.getBoundingClientRect();
+    dragState.pointerOffsetX = e.clientX - initialRect.left;
+    dragState.pointerOffsetY = e.clientY - initialRect.top;
+
+    const layer = document.createElement('div');
+    layer.className = 'drag-layer';
+    layer.style.position = 'fixed';
+    layer.style.left = '0';
+    layer.style.top = '0';
+    layer.style.pointerEvents = 'none';
+    layer.style.zIndex = '1000';
+    layer.style.width = `${initialRect.width}px`;
+    layer.style.height = `${CARD_HEIGHT + (dragState.draggedElements.length - 1) * STACK_OFFSET}px`;
+
+    dragState.draggedElements.forEach((el, idx) => {
+        el.style.position = 'absolute';
+        el.style.left = '0';
+        el.style.top = `${idx * STACK_OFFSET}px`;
+        el.style.margin = '0';
+        el.style.transform = 'none';
+        el.style.transition = 'none';
+        layer.appendChild(el);
+    });
+
+    document.body.appendChild(layer);
+    dragState.dragLayer = layer;
+    updateDragLayerPosition(e.clientX, e.clientY);
+}
+
+function updateDragLayerPosition(clientX, clientY) {
+    if (!dragState.dragLayer) return;
+    dragState.dragLayer.style.left = `${clientX - dragState.pointerOffsetX}px`;
+    dragState.dragLayer.style.top = `${clientY - dragState.pointerOffsetY}px`;
+}
+
+function finishDrag(clientX, clientY) {
     let isValid = false;
     let moveType = '';
+    const dropTarget = document.elementFromPoint(clientX, clientY);
 
-    // Determine target pile
-    if (targetEl.classList.contains('tableau-column')) {
-        const targetCol = parseInt(targetEl.id.split('-')[1]);
-        isValid = attemptTableauMove(targetCol);
-        moveType = dragState.sourcePile === 'waste' ? 'waste-to-tableau' : 'tableau-to-tableau';
-    } else if (targetEl.classList.contains('foundation-pile')) {
-        const targetFoundation = parseInt(targetEl.id.split('-')[1]);
-        isValid = attemptFoundationMove(targetFoundation);
-        moveType = dragState.sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+    if (dropTarget) {
+        const tableauCol = dropTarget.closest('.tableau-column');
+        if (tableauCol) {
+            const targetCol = parseInt(tableauCol.id.split('-')[1], 10);
+            isValid = attemptTableauMove(targetCol);
+            moveType = dragState.sourcePile === 'waste' ? 'waste-to-tableau' : 'tableau-to-tableau';
+        } else {
+            const foundationPile = dropTarget.closest('.foundation-pile');
+            if (foundationPile) {
+                const targetFoundation = parseInt(foundationPile.id.split('-')[1], 10);
+                isValid = attemptFoundationMove(targetFoundation);
+                moveType = dragState.sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+            }
+        }
     }
+
+    cleanupDragVisuals();
 
     if (isValid) {
         gameState.score += SolitaireLogic.scoreMove(moveType);
@@ -393,18 +449,35 @@ function handleDrop(e) {
         CommonUtils.playSound('card');
         updateUI();
         checkWinCondition();
+    } else {
+        updateUI();
     }
 
-    // Clear drag state
-    if (dragState.draggedElement) {
-        dragState.draggedElement.classList.remove('dragging');
+    resetDragState();
+}
+
+function cleanupDragVisuals() {
+    if (dragState.dragLayer) {
+        dragState.dragLayer.remove();
+        dragState.dragLayer = null;
     }
+    dragState.draggedElements = [];
+}
+
+function cleanupPointerHandlers() {
+    document.removeEventListener('pointermove', handlePointerMove);
+    document.removeEventListener('pointerup', handlePointerUp);
+    dragState.activePointerId = null;
+}
+
+function resetDragState() {
     dragState.draggedCards = [];
     dragState.sourcePile = null;
     dragState.sourceIndex = null;
-    dragState.draggedElement = null;
-
-    return false;
+    dragState.pointerOffsetX = 0;
+    dragState.pointerOffsetY = 0;
+    dragState.isDragging = false;
+    dragState.pendingDrag = null;
 }
 
 /**
