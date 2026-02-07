@@ -58,14 +58,10 @@
         if (!id) return null;
         const scripts = Array.isArray(addon.scripts) ? addon.scripts : [];
         const styles = Array.isArray(addon.styles) ? addon.styles : [];
-        const availableStyles = [];
-        for (const href of styles) {
-            if (await probeResource(href)) availableStyles.push(href);
-        }
-        const availableScripts = [];
-        for (const src of scripts) {
-            if (await probeResource(src)) availableScripts.push(src);
-        }
+        const styleProbes = await Promise.all(styles.map(probeResource));
+        const availableStyles = styles.filter((_, i) => styleProbes[i]);
+        const scriptProbes = await Promise.all(scripts.map(probeResource));
+        const availableScripts = scripts.filter((_, i) => scriptProbes[i]);
         if (availableStyles.length !== styles.length || availableScripts.length !== scripts.length) {
             return null;
         }
