@@ -226,7 +226,7 @@ function getCountingCatalog() {
     }
     return {
         core: [{ id: 'hi-lo', name: 'Hi-Lo' }],
-        extras: [{ id: 'ko', name: 'KO (Unbalanced)' }]
+        extras: [{ id: 'ko', name: 'KO (U)' }]
     };
 }
 

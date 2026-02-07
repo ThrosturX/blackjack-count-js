@@ -126,12 +126,24 @@ body.deck-cherry .card:not(.hidden) {
     box-shadow: inset 0 0 10px rgba(248, 187, 208, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-body.deck-cherry .card.red::before {
+body.deck-cherry .card::before {
     content: "🌸";
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    font-size: 3em;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+body.deck-cherry .card.hidden::before {
+    content: "🍒";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    rotate: 5deg;
     font-size: 3em;
     opacity: 0.18;
     pointer-events: none;
@@ -368,7 +380,7 @@ body.deck-ruby {
     --card-back-color: #4a0000;
     --card-back-pattern-color: #8b0000;
     --card-back-accent: #ffcdd2;
-    --card-edge-color: #ff8a80;
+    --card-edge-color: #4b0701;
     --card-back-bg:
         repeating-linear-gradient(45deg, transparent, transparent 15px, rgba(139, 0, 0, 0.3) 15px, rgba(139, 0, 0, 0.3) 30px),
         repeating-linear-gradient(-45deg, transparent, transparent 15px, rgba(139, 0, 0, 0.3) 15px, rgba(139, 0, 0, 0.3) 30px),
@@ -376,14 +388,19 @@ body.deck-ruby {
     --card-back-bg-size: auto;
 }
 
+body.deck-ruby .card.hidden {
+    border: 2px solid #580101;
+}
+
 body.deck-ruby .card:not(.hidden) {
-    background: linear-gradient(135deg, #3b141a 0%, #1f0c10 50%, #3b141a 100%);
-    border: 1px solid #8b0000;
-    color: #f6d4d4;
+    background: linear-gradient(135deg, #3b141a 0%, #4a0000 50%, #3b141a 100%);
+    border: 2px solid #8b0000;
+    color: #c7672b;
     box-shadow: inset 0 0 12px rgba(139, 0, 0, 0.22), 2px 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 body.deck-ruby .card.red::before {
+    color: black;
     content: "💎";
     position: absolute;
     top: 50%;
