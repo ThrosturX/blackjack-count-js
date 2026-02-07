@@ -118,6 +118,10 @@ h1 {
     white-space: nowrap;
 }
 
+#addons-area {
+    white-space: normal;
+}
+
 .controls-section.collapsed {
     max-height: 0;
     opacity: 0;
@@ -147,6 +151,30 @@ select {
     flex-wrap: wrap;
     gap: 10px;
     align-items: stretch;
+    justify-content: center;
+    max-height: calc(45vh + 120px);
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 209, 91, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.addon-toggle-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 999px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 209, 91, 0.45);
+    border-radius: 999px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 209, 91, 0.7);
 }
 
 .addon-toggle-list.addon-toggle-empty {
@@ -168,11 +196,11 @@ select {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    align-items: center;
+    align-items: flex-start;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    min-height: 80px;
-    flex: 1 1 240px;
-    max-width: 360px;
+    height: 120px;
+    flex: 0 0 280px;
+    max-width: 280px;
 }
 
 .addon-toggle-card--active {
@@ -187,10 +215,19 @@ select {
     min-width: 0;
 }
 
+.addon-toggle-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
 .addon-toggle-title {
     font-weight: 600;
     font-size: 0.95rem;
     color: #fff;
+    white-space: normal;
 }
 
 .addon-toggle-badge {
@@ -207,6 +244,8 @@ select {
 .addon-toggle-description {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
+    line-height: 1.2;
+    white-space: normal;
 }
 
 .addon-toggle-control {

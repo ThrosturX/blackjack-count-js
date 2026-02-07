@@ -64,6 +64,7 @@
         const entry = {
             id,
             label: addon.label || id,
+            description: addon.description || '',
             styles,
             scripts,
             links,

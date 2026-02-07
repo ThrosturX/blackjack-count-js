@@ -206,16 +206,41 @@
 
         const meta = document.createElement('div');
         meta.className = 'addon-toggle-meta';
+        const titleRow = document.createElement('div');
+        titleRow.className = 'addon-toggle-title-row';
         const title = document.createElement('span');
         title.className = 'addon-toggle-title';
         title.textContent = addon.label || addon.id;
         const badge = document.createElement('span');
         badge.className = 'addon-toggle-badge';
-        badge.textContent = 'Addon';
+        const idLower = String(addon.id || '').toLowerCase();
+        const labelLower = String(addon.label || '').toLowerCase();
+        const descriptionLower = String(addon.description || '').toLowerCase();
+        const classify = (text) => {
+            if (text.includes('theme')) return 'Themes';
+            if (text.includes('effect')) return 'Effects';
+            if (text.includes('count')) return 'Counting';
+            if (text.includes('deck') || text.includes('card')) return 'Cards';
+            if (text.includes('sound') || text.includes('audio')) return 'Audio';
+            return '';
+        };
+        const badgeText = classify(descriptionLower) || classify(idLower) || classify(labelLower) || 'Addon';
+        badge.textContent = badgeText;
         const description = document.createElement('span');
         description.className = 'addon-toggle-description';
-        description.textContent = 'Toggle to apply styles or scripts';
-        meta.append(title, badge, description);
+        description.textContent = addon.description || (badgeText === 'Themes'
+            ? 'Adds extra table and deck styles'
+            : badgeText === 'Effects'
+                ? 'Adds visual effects and polish'
+                : badgeText === 'Counting'
+                    ? 'Adds extra counting systems'
+                    : badgeText === 'Cards'
+                        ? 'Adds card/deck styling'
+                        : badgeText === 'Audio'
+                            ? 'Adds sound variations'
+                            : 'Toggle to apply styles or scripts');
+        titleRow.append(title, badge);
+        meta.append(titleRow, description);
 
         const control = document.createElement('div');
         control.className = 'addon-toggle-control';
