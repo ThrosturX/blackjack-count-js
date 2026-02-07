@@ -1,6 +1,7 @@
 const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
+const SETTINGS_STORAGE_KEY = 'bj_table.settings';
 
 /* --- STATE --- */
 const state = {
@@ -11,6 +12,7 @@ const state = {
     cutCardReached: false,
     tableSettingsChanged: false,
     runningCount: 0,
+    countingSystem: 'hi-lo',
     dealer: { hand: [] },
     players: [],
     phase: 'BETTING', // BETTING, SHUFFLING, DEALING, PLAYING, RESOLVING
@@ -44,11 +46,16 @@ const ui = {
     strategyText: document.getElementById('strategy-text'),
     countHint: document.getElementById('count-hint'),
     settingsArea: document.getElementById('settings-area'),
+    themeArea: document.getElementById('theme-area'),
+    addonsArea: document.getElementById('addons-area'),
     statsArea: document.getElementById('stats-area'),
     toggleSettings: document.getElementById('toggle-settings'),
+    toggleThemes: document.getElementById('toggle-themes'),
+    toggleAddons: document.getElementById('toggle-addons'),
     toggleStats: document.getElementById('toggle-stats'),
     fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
     minBet: document.getElementById('table-minimum-bet'),
+    countSystemSelect: document.getElementById('count-system-select'),
     topCardPreview: document.getElementById('top-card-preview'),
 };
 
@@ -93,10 +100,66 @@ function init() {
         ui.tableStyleSelect.addEventListener('change', updateTableStyle);
     }
 
+    if (ui.countSystemSelect) {
+        const loadSettings = () => {
+            try {
+                const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                if (!data || typeof data !== 'object') return null;
+                return data;
+            } catch (err) {
+                return null;
+            }
+        };
+        const persistSettings = (updates = {}) => {
+            if (window.__settingsResetInProgress) return;
+            try {
+                const current = loadSettings() || { addons: {} };
+                const next = {
+                    ...current,
+                    ...updates,
+                    addons: { ...(current.addons || {}) }
+                };
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+            } catch (err) {
+                // Ignore storage failures.
+            }
+        };
+        const stored = loadSettings();
+        if (stored && stored.countingSystem) {
+            state.countingSystem = stored.countingSystem;
+        }
+        const initCounting = () => {
+            populateCountingSystems();
+            ui.countSystemSelect.addEventListener('change', (e) => {
+                state.countingSystem = e.target.value;
+                state.runningCount = 0;
+                updateStats();
+                updateCountHint();
+                persistSettings({ countingSystem: state.countingSystem });
+            });
+        };
+        if (window.AddonLoader && window.AddonLoader.ready) {
+            window.AddonLoader.ready.then(initCounting);
+        } else {
+            initCounting();
+        }
+        window.CountingUI = { refresh: populateCountingSystems };
+    }
+
     // Initialize independent toggles
     if (ui.toggleSettings) {
         ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
         ui.toggleSettings.classList.add('active'); // Default open
+    }
+    if (ui.toggleThemes) {
+        ui.toggleThemes.addEventListener('click', () => toggleControlsArea('themes'));
+        ui.toggleThemes.classList.add('active'); // Default open
+    }
+    if (ui.toggleAddons) {
+        ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
+        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
     }
     if (ui.toggleStats) {
         ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
@@ -121,6 +184,12 @@ function toggleControlsArea(type) {
     if (type === 'settings') {
         const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
         ui.toggleSettings.classList.toggle('active', !isCollapsed);
+    } else if (type === 'themes') {
+        const isCollapsed = ui.themeArea.classList.toggle('collapsed');
+        ui.toggleThemes.classList.toggle('active', !isCollapsed);
+    } else if (type === 'addons') {
+        const isCollapsed = ui.addonsArea.classList.toggle('collapsed');
+        ui.toggleAddons.classList.toggle('active', !isCollapsed);
     } else if (type === 'stats') {
         const isCollapsed = ui.statsArea.classList.toggle('collapsed');
         ui.toggleStats.classList.toggle('active', !isCollapsed);
@@ -149,6 +218,75 @@ function updateTableStyle() {
     });
     // Add selected table class
     document.body.classList.add(`table-${style}`);
+}
+
+function getCountingCatalog() {
+    if (window.AssetRegistry && typeof window.AssetRegistry.getCountingSystems === 'function') {
+        return window.AssetRegistry.getCountingSystems();
+    }
+    return {
+        core: [{ id: 'hi-lo', name: 'Hi-Lo' }],
+        extras: [{ id: 'ko', name: 'KO (U)' }]
+    };
+}
+
+function populateCountingSystems() {
+    const catalog = getCountingCatalog();
+    const select = ui.countSystemSelect;
+    if (!select) return;
+
+    const currentValue = select.value || state.countingSystem;
+    select.innerHTML = '';
+    catalog.core.forEach(system => {
+        const option = document.createElement('option');
+        option.value = system.id;
+        option.textContent = system.name;
+        option.dataset.themeGroup = 'core';
+        select.appendChild(option);
+    });
+    catalog.extras.forEach(system => {
+        const option = document.createElement('option');
+        option.value = system.id;
+        option.textContent = system.name;
+        option.dataset.themeGroup = 'extras';
+        select.appendChild(option);
+    });
+    if (currentValue && !select.querySelector(`option[value="${currentValue}"]`)) {
+        const option = document.createElement('option');
+        option.value = currentValue;
+        option.textContent = `${currentValue} (Active)`;
+        option.dataset.themeGroup = 'active';
+        select.appendChild(option);
+    }
+    select.value = currentValue || state.countingSystem;
+    if (select.value && select.value !== state.countingSystem) {
+        state.countingSystem = select.value;
+    }
+}
+
+function getCardCountValue(card) {
+    switch (state.countingSystem) {
+        case 'zen':
+            if (['10', 'J', 'Q', 'K'].includes(card.val)) return -2;
+            if (['A'].includes(card.val)) return -1;
+            if (['4', '5', '6'].includes(card.val)) return 2;
+            if (['2', '3', '7'].includes(card.val)) return 1;
+            return 0;
+        case 'wong-halves':
+            if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+            if (['9'].includes(card.val)) return -0.5;
+            if (['2', '7'].includes(card.val)) return 0.5;
+            if (['3', '4', '6'].includes(card.val)) return 1;
+            if (['5'].includes(card.val)) return 1.5;
+            return 0;
+        case 'ko':
+            if (['10', 'J', 'Q', 'K', 'A'].includes(card.val)) return -1;
+            if (['2', '3', '4', '5', '6', '7'].includes(card.val)) return 1;
+            return 0;
+        case 'hi-lo':
+        default:
+            return BlackjackLogic.getCardCount(card);
+    }
 }
 
 ui.fastModeCheckbox.addEventListener('change', (event) => {
@@ -609,7 +747,7 @@ function dealHands() {
             if (c.isSplitCard) state.cutCardReached = true;
 
             if (!c.hidden) {
-                state.runningCount += BlackjackLogic.getCardCount(c);
+                state.runningCount += getCardCountValue(c);
                 updateStats();
                 playSound('card');
             }
@@ -619,7 +757,7 @@ function dealHands() {
             const c = drawCard(false, action.idx);
             if (c.isSplitCard) state.cutCardReached = true;
 
-            state.runningCount += BlackjackLogic.getCardCount(c);
+            state.runningCount += getCardCountValue(c);
             updateStats();
             playSound('card');
             p.hands[0].cards.push(c);
@@ -656,7 +794,7 @@ function checkBlackjack() {
         // Dealer has blackjack, the round is over for everyone.
         state.dealer.hand[1].hidden = false;
         renderDealer();
-        state.runningCount += BlackjackLogic.getCardCount(state.dealer.hand[1]);
+        state.runningCount += getCardCountValue(state.dealer.hand[1]);
         updateStats();
         showOverlay("Dealer", "Blackjack!", "", "msg-bj");
         playSound('dealer-bj');
@@ -763,7 +901,7 @@ function playerHit() {
     }
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(c);
+    state.runningCount += getCardCountValue(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -835,7 +973,7 @@ function playerDouble() {
     h.bet *= 2;
 
     const c = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(c);
+    state.runningCount += getCardCountValue(c);
     updateStats();
     playSound('card');
     h.cards.push(c);
@@ -876,7 +1014,7 @@ function playerSplit() {
     p.hands.splice(state.splitIndex + 1, 0, newHand);
 
     const cFirst = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(cFirst);
+    state.runningCount += getCardCountValue(cFirst);
     updateStats();
     playSound('card');
     h.cards.push(cFirst);
@@ -890,7 +1028,7 @@ function playerSplit() {
 
 
     const cSecond = drawCard(false, state.turnIndex);
-    state.runningCount += BlackjackLogic.getCardCount(cSecond);
+    state.runningCount += getCardCountValue(cSecond);
     updateStats();
     playSound('card');
     newHand.cards.push(cSecond);
@@ -907,7 +1045,7 @@ function dealerTurn() {
 
     const hole = state.dealer.hand[1];
     hole.hidden = false;
-    state.runningCount += BlackjackLogic.getCardCount(hole);
+    state.runningCount += getCardCountValue(hole);
     render();
     playSound('card');
 
@@ -926,7 +1064,7 @@ function dealerTurn() {
     function loop() {
         if (score < 17) {
             const c = drawCard(true, null);
-            state.runningCount += BlackjackLogic.getCardCount(c);
+            state.runningCount += getCardCountValue(c);
             updateStats();
             playSound('card');
             state.dealer.hand.push(c);
@@ -1538,15 +1676,29 @@ ui.minBet.addEventListener('change', (e) => {
 
 
 // Start
-const handleFirstInteraction = () => {
+const handleFirstInteraction = (event) => {
     init();
     // Clean up all listeners so it doesn't fire again
     window.removeEventListener('click', handleFirstInteraction);
     window.removeEventListener('keydown', handleFirstInteraction);
     window.removeEventListener('touchstart', handleFirstInteraction);
+
+    if (event && event.type === 'click') {
+        const toggle = event.target && event.target.closest ? event.target.closest('.btn-toggle') : null;
+        if (toggle) {
+            if (toggle.id === 'toggle-settings') {
+                toggleControlsArea('settings');
+            } else if (toggle.id === 'toggle-themes') {
+                toggleControlsArea('themes');
+            } else if (toggle.id === 'toggle-addons') {
+                toggleControlsArea('addons');
+            } else if (toggle.id === 'toggle-stats') {
+                toggleControlsArea('stats');
+            }
+        }
+    }
 };
 
 window.addEventListener('click', handleFirstInteraction);
 window.addEventListener('keydown', handleFirstInteraction);
 window.addEventListener('touchstart', handleFirstInteraction);
-

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casino Blackjack</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
 </head>
 
 <body>
@@ -13,8 +14,10 @@
     <header>
         <h1>Blackjack</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle">Settings</button>
-            <button id="toggle-stats" class="btn-toggle">Stats</button>
+            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-themes" class="btn-toggle active">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
+            <button id="toggle-stats" class="btn-toggle active">Stats</button>
         </div>
 
         <div class="game-controls">
@@ -33,20 +36,6 @@
                         <option value="30">$30</option>
                         <option value="50">$50</option>
                         <option value="100">$100</option>
-                    </select>
-                </div>
-                <div class="stats">Table:
-                    <select id="table-style-select">
-                        <option value="felt" selected>Green Felt</option>
-                        <option value="crimson">Crimson Velvet</option>
-                        <option value="lavender">Lavender Dusk</option>
-                        <option value="depths">Ocean Depths</option>
-                        <option value="waves">Rolling Waves</option>
-                        <option value="stone">Dark Stone</option>
-                        <option value="neon">Neon Nights</option>
-                        <option value="cyber">Cyberpunk Grid</option>
-                        <option value="obsidian">Obsidian Floor</option>
-                        <option value="abyss">The Abyss</option>
                     </select>
                 </div>
                 <div class="stats">Seats:
@@ -74,25 +63,48 @@
                         <option value="8">8</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="controls-section" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
                 <div class="stats">Deck:
-                    <select id="deck-style-select">
-                        <option value="red" selected>Red Striped</option>
-                        <option value="blue">Blue Classic</option>
-                        <option value="green">Green Pattern</option>
-                        <option value="gold">Royal Gold</option>
-                        <option value="velvet">Regal Velvet</option>
-                        <option value="oceanic">Oceanic</option>
-                        <option value="whale">Cetaceous</option>
-                        <option value="mammoth">Woolly</option>
-                        <option value="emerald">Emerald Luxe</option>
-                        <option value="ruby">Ruby Luxe</option>
-                        <option value="cherry">Cherry Blossom</option>
-                        <option value="starlight">Starlight</option>
-                        <option value="dark">Midnight Luxe</option>
-                        <option value="luxury-dark">Midnight Onyx</option>
-                        <option value="neon-vibe">Neon Vibe</option>
-                        <option value="ghost">Ghost Ship</option>
-                    </select>
+                    <select id="deck-style-select"></select>
+                </div>
+                <div class="stats">Counting:
+                    <select id="count-system-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="default-themes" checked>
+                        Default Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="basic-themes" checked>
+                        Basic Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-themes" checked>
+                        Premium Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-effects" checked>
+                        Premium Effects
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="worn-cards" checked>
+                        Worn Cards
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="counting-pack" checked>
+                        Counting Systems
+                    </label>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                    <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
                 </div>
             </div>
 
@@ -155,6 +167,50 @@
         <span id="count-hint" class="count-hint ch-neutral"></span>
     </div>
 
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "scripts": ["addons/default-themes-pack.js"],
+                "styles": ["addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Premium Effects",
+                "styles": ["addons/premium-effects.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "styles": ["addons/worn-cards.css"]
+            },
+            {
+                "id": "counting-pack",
+                "label": "Counting Systems",
+                "scripts": ["addons/counting-pack.js"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+    <script src="assets.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
     <script src="blackjack-logic.js"></script>

@@ -1,0 +1,37 @@
+{
+    "addons": [
+        {
+            "id": "default-themes",
+            "label": "Default Themes",
+            "scripts": ["addons/default-themes-pack.js"],
+            "styles": ["addons/default-themes.css"]
+        },
+        {
+            "id": "basic-themes",
+            "label": "Basic Themes",
+            "scripts": ["addons/basic-themes-pack.js"],
+            "styles": ["addons/basic-themes.css"]
+        },
+        {
+            "id": "premium-themes",
+            "label": "Premium Themes",
+            "scripts": ["addons/themes-pack.js"],
+            "styles": ["addons/premium-themes.css"]
+        },
+        {
+            "id": "premium-effects",
+            "label": "Premium Effects",
+            "styles": ["addons/premium-effects.css"]
+        },
+        {
+            "id": "worn-cards",
+            "label": "Worn Cards",
+            "styles": ["addons/worn-cards.css"]
+        },
+        {
+            "id": "counting-pack",
+            "label": "Counting Systems",
+            "scripts": ["addons/counting-pack.js"]
+        }
+    ]
+}

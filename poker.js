@@ -31,8 +31,12 @@ const ui = {
     tableStyleSelect: document.getElementById('table-style-select'),
     seatSelect: document.getElementById('seat-select'),
     toggleSettings: document.getElementById('toggle-settings'),
+    toggleThemes: document.getElementById('toggle-themes'),
+    toggleAddons: document.getElementById('toggle-addons'),
     toggleStats: document.getElementById('toggle-stats'),
     settingsArea: document.getElementById('settings-area'),
+    themeArea: document.getElementById('theme-area'),
+    addonsArea: document.getElementById('addons-area'),
     statsArea: document.getElementById('stats-area'),
     cardStack: document.getElementById('card-stack')
 };
@@ -69,6 +73,13 @@ function init() {
     if (ui.toggleSettings) {
         ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
     }
+    if (ui.toggleThemes) {
+        ui.toggleThemes.addEventListener('click', () => toggleControlsArea('themes'));
+    }
+    if (ui.toggleAddons) {
+        ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
+        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
+    }
     if (ui.toggleStats) {
         ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
     }
@@ -81,6 +92,12 @@ function toggleControlsArea(type) {
     if (type === 'settings') {
         const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
         ui.toggleSettings.classList.toggle('active', !isCollapsed);
+    } else if (type === 'themes') {
+        const isCollapsed = ui.themeArea.classList.toggle('collapsed');
+        ui.toggleThemes.classList.toggle('active', !isCollapsed);
+    } else if (type === 'addons') {
+        const isCollapsed = ui.addonsArea.classList.toggle('collapsed');
+        ui.toggleAddons.classList.toggle('active', !isCollapsed);
     } else if (type === 'stats') {
         const isCollapsed = ui.statsArea.classList.toggle('collapsed');
         ui.toggleStats.classList.toggle('active', !isCollapsed);

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klondike Solitaire</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
 </head>
 
 <body>
@@ -13,45 +14,55 @@
     <header>
         <h1>Klondike Solitaire</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle">Settings</button>
-            <button id="toggle-stats" class="btn-toggle">Stats</button>
+            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-themes" class="btn-toggle active">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
+            <button id="toggle-stats" class="btn-toggle active">Stats</button>
         </div>
 
         <div class="game-controls">
             <div class="controls-section" id="settings-area">
-                <div class="stats">Table:
-                    <select id="table-style-select">
-                        <option value="felt" selected>Green Felt</option>
-                        <option value="crimson">Crimson Velvet</option>
-                        <option value="lavender">Lavender Dusk</option>
-                        <option value="neon">Neon Nights</option>
-                        <option value="depths">Ocean Depths</option>
-                        <option value="waves">Rolling Waves</option>
-                        <option value="stone">Dark Stone</option>
-                    </select>
-                </div>
-                <div class="stats">Deck:
-                    <select id="deck-style-select">
-                        <option value="red" selected>Red Striped</option>
-                        <option value="blue">Blue Classic</option>
-                        <option value="green">Green Pattern</option>
-                        <option value="gold">Royal Gold</option>
-                        <option value="velvet">Regal Velvet</option>
-                        <option value="oceanic">Oceanic</option>
-                        <option value="whale">Cetaceous</option>
-                        <option value="mammoth">Woolly</option>
-                        <option value="dark">Midnight Luxe</option>
-                        <option value="cherry">Cherry Blossom</option>
-                        <option value="emerald">Emerald Luxe</option>
-                        <option value="ruby">Ruby Luxe</option>
-                        <option value="starlight">Starlight</option>
-                    </select>
-                </div>
                 <div class="stats">Draw:
                     <select id="draw-count-select">
                         <option value="1">Draw 1</option>
                         <option value="3" selected>Draw 3</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="controls-section" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="default-themes" checked>
+                        Default Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="basic-themes" checked>
+                        Basic Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-themes" checked>
+                        Premium Themes
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="premium-effects" checked>
+                        Premium Effects
+                    </label>
+                    <label class="addon-toggle">
+                        <input type="checkbox" data-addon-id="worn-cards" checked>
+                        Worn Cards
+                    </label>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                    <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
                 </div>
             </div>
 
@@ -121,6 +132,46 @@
         <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
     </div>
 
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "scripts": ["addons/default-themes-pack.js"],
+                "styles": ["addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Premium Effects",
+                "styles": ["addons/premium-effects.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "styles": ["addons/worn-cards.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+
+    <script src="assets.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
     <script src="solitaire-logic.js"></script>

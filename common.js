@@ -6,6 +6,111 @@ const CommonUtils = {
     audioAssets: {},
 
     /**
+     * Applies deterministic wear variables based on suit/value.
+     * @param {HTMLElement} cardEl
+     * @param {Object} card
+     */
+    applyDeterministicWear: function (cardEl, card) {
+        if (!cardEl || !card) return;
+        const identity = `${card.val}${card.suit}`;
+        let hash = 0;
+        for (let i = 0; i < identity.length; i++) {
+            hash = (hash * 31 + identity.charCodeAt(i)) >>> 0;
+        }
+        let state = hash || 1;
+        const rand = () => {
+            state = (1664525 * state + 1013904223) >>> 0;
+            return state / 4294967296;
+        };
+
+        const scuffX = Math.round(15 + rand() * 70);
+        const scuffY = Math.round(12 + rand() * 70);
+        const scuff2X = Math.round(10 + rand() * 75);
+        const scuff2Y = Math.round(15 + rand() * 70);
+        const scratchAngle = Math.round(-60 + rand() * 120);
+        const scratchAngle2 = Math.round(-60 + rand() * 120);
+        const scratchAlpha = (0.92 + rand() * 0.16).toFixed(3);
+        const foldAlpha = rand() > 0.6 ? (0.08 + rand() * 0.12).toFixed(3) : '0';
+        const foldAngle = Math.round(15 + rand() * 150);
+        const foldX = Math.round(15 + rand() * 70);
+        const foldY = Math.round(18 + rand() * 67);
+        const tearAlpha = rand() > 0.86 ? (0.45 + rand() * 0.25).toFixed(3) : '0';
+        const tearAngle = Math.round(-20 + rand() * 40);
+        const tearSize = Math.round(10 + rand() * 18);
+        const stainAlpha = rand() > 0.88 ? (0.12 + rand() * 0.18).toFixed(3) : '0';
+        const stainX = Math.round(20 + rand() * 60);
+        const stainY = Math.round(20 + rand() * 60);
+        const stainSize = Math.round(18 + rand() * 16);
+        const graphiteAlpha = rand() > 0.78 ? (0.1 + rand() * 0.18).toFixed(3) : '0';
+        const graphiteX = Math.round(10 + rand() * 75);
+        const graphiteY = Math.round(10 + rand() * 75);
+        const graphiteSize = Math.round(20 + rand() * 22);
+        const dustAlpha = rand() > 0.6 ? (0.04 + rand() * 0.08).toFixed(3) : '0';
+        const dustX = Math.round(5 + rand() * 80);
+        const dustY = Math.round(5 + rand() * 80);
+        const dustSize = Math.round(35 + rand() * 30);
+        const nicotineAlpha = rand() > 0.82 ? (0.08 + rand() * 0.12).toFixed(3) : '0';
+        const nicotineX = Math.round(15 + rand() * 70);
+        const nicotineY = Math.round(15 + rand() * 70);
+        const nicotineSize = Math.round(28 + rand() * 20);
+        const warpAlpha = rand() > 0.86 ? (0.08 + rand() * 0.12).toFixed(3) : '0';
+        const warpAngle = Math.round(-45 + rand() * 90);
+        const warpX = Math.round(10 + rand() * 70);
+        const warpY = Math.round(10 + rand() * 70);
+        const inkAlpha = rand() > 0.9 ? (0.16 + rand() * 0.2).toFixed(3) : '0';
+        const inkAngle = Math.round(-60 + rand() * 120);
+        const inkX = Math.round(10 + rand() * 75);
+        const inkY = Math.round(10 + rand() * 75);
+        const matteAlpha = rand() > 0.7 ? (0.05 + rand() * 0.12).toFixed(3) : '0';
+        const matteX = Math.round(15 + rand() * 70);
+        const matteY = Math.round(15 + rand() * 70);
+        const matteSize = Math.round(25 + rand() * 20);
+
+        cardEl.style.setProperty('--wear-scuff-x', `${scuffX}%`);
+        cardEl.style.setProperty('--wear-scuff-y', `${scuffY}%`);
+        cardEl.style.setProperty('--wear-scuff2-x', `${scuff2X}%`);
+        cardEl.style.setProperty('--wear-scuff2-y', `${scuff2Y}%`);
+        cardEl.style.setProperty('--wear-scratch-angle', `${scratchAngle}deg`);
+        cardEl.style.setProperty('--wear-scratch-angle-2', `${scratchAngle2}deg`);
+        cardEl.style.setProperty('--wear-scratch-alpha', scratchAlpha);
+        cardEl.style.setProperty('--wear-fold-alpha', foldAlpha);
+        cardEl.style.setProperty('--wear-fold-angle', `${foldAngle}deg`);
+        cardEl.style.setProperty('--wear-fold-x', `${foldX}%`);
+        cardEl.style.setProperty('--wear-fold-y', `${foldY}%`);
+        cardEl.style.setProperty('--wear-tear-alpha', tearAlpha);
+        cardEl.style.setProperty('--wear-tear-angle', `${tearAngle}deg`);
+        cardEl.style.setProperty('--wear-tear-size', `${tearSize}%`);
+        cardEl.style.setProperty('--wear-stain-alpha', stainAlpha);
+        cardEl.style.setProperty('--wear-stain-x', `${stainX}%`);
+        cardEl.style.setProperty('--wear-stain-y', `${stainY}%`);
+        cardEl.style.setProperty('--wear-stain-size', `${stainSize}%`);
+        cardEl.style.setProperty('--wear-graphite-alpha', graphiteAlpha);
+        cardEl.style.setProperty('--wear-graphite-x', `${graphiteX}%`);
+        cardEl.style.setProperty('--wear-graphite-y', `${graphiteY}%`);
+        cardEl.style.setProperty('--wear-graphite-size', `${graphiteSize}%`);
+        cardEl.style.setProperty('--wear-dust-alpha', dustAlpha);
+        cardEl.style.setProperty('--wear-dust-x', `${dustX}%`);
+        cardEl.style.setProperty('--wear-dust-y', `${dustY}%`);
+        cardEl.style.setProperty('--wear-dust-size', `${dustSize}%`);
+        cardEl.style.setProperty('--wear-nicotine-alpha', nicotineAlpha);
+        cardEl.style.setProperty('--wear-nicotine-x', `${nicotineX}%`);
+        cardEl.style.setProperty('--wear-nicotine-y', `${nicotineY}%`);
+        cardEl.style.setProperty('--wear-nicotine-size', `${nicotineSize}%`);
+        cardEl.style.setProperty('--wear-warp-alpha', warpAlpha);
+        cardEl.style.setProperty('--wear-warp-angle', `${warpAngle}deg`);
+        cardEl.style.setProperty('--wear-warp-x', `${warpX}%`);
+        cardEl.style.setProperty('--wear-warp-y', `${warpY}%`);
+        cardEl.style.setProperty('--wear-ink-alpha', inkAlpha);
+        cardEl.style.setProperty('--wear-ink-angle', `${inkAngle}deg`);
+        cardEl.style.setProperty('--wear-ink-x', `${inkX}%`);
+        cardEl.style.setProperty('--wear-ink-y', `${inkY}%`);
+        cardEl.style.setProperty('--wear-matte-alpha', matteAlpha);
+        cardEl.style.setProperty('--wear-matte-x', `${matteX}%`);
+        cardEl.style.setProperty('--wear-matte-y', `${matteY}%`);
+        cardEl.style.setProperty('--wear-matte-size', `${matteSize}%`);
+    },
+
+    /**
      * Preloads audio assets.
      * @param {Object} soundFiles - Mapping of sound types to arrays of filenames.
      */
@@ -77,10 +182,15 @@ const CommonUtils = {
     createCardEl: function (card) {
         const div = document.createElement('div');
         div.className = `card ${card.color}${card.hidden ? ' hidden' : ''}${card.isSplitCard ? ' split-card' : ''}`;
+        div.dataset.suit = card.suit;
+        div.dataset.val = card.val;
+        div.dataset.rank = card.rank;
+        div.dataset.color = card.color;
         // if we can give it a random rotation, let's do that
         if (card.rotation !== undefined) {
             div.style.transform = `rotate(${card.rotation}deg)`;
         }
+        this.applyDeterministicWear(div, card);
 
         const valTop = document.createElement('div');
         valTop.className = 'val-top';
