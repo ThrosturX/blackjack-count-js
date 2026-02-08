@@ -3,6 +3,49 @@
  * Manages game state, UI updates, and user interactions
  */
 
+const DEFAULT_VARIANT_ID = 'classic';
+const SOLITAIRE_VARIANT_ORDER = ['classic', 'vegas', 'open-towers'];
+const SOLITAIRE_VARIANTS = {
+    classic: {
+        id: 'classic',
+        label: 'Classic Klondike',
+        description: 'Standard Klondike with the draw-count toggle and classic scoring.',
+        drawCount: 3,
+        startScore: 0,
+        allowAnyCardOnEmpty: false,
+        lockDrawCount: false,
+        scoreOverrides: {}
+    },
+    vegas: {
+        id: 'vegas',
+        label: 'Vegas Klondike',
+        description: 'Draw 1, start at -52, -1 per draw but +5 per card scored to a foundation.',
+        drawCount: 1,
+        startScore: -52,
+        allowAnyCardOnEmpty: false,
+        lockDrawCount: true,
+        scoreOverrides: {
+            draw: -1,
+            'waste-to-foundation': 5,
+            'tableau-to-foundation': 5,
+            'flip-card': 0
+        }
+    },
+    'open-towers': {
+        id: 'open-towers',
+        label: 'Open Towers',
+        description: 'Any card can start an empty column and flips are worth extra reward.',
+        drawCount: 3,
+        startScore: 0,
+        allowAnyCardOnEmpty: true,
+        lockDrawCount: false,
+        scoreOverrides: {
+            'tableau-to-tableau': 5,
+            'flip-card': 10
+        }
+    }
+};
+
 // Game state
 const gameState = {
     tableau: [[], [], [], [], [], [], []],
@@ -15,7 +58,9 @@ const gameState = {
     timerInterval: null,
     moveHistory: [],
     drawCount: 3,
-    isGameWon: false
+    isGameWon: false,
+    variantId: DEFAULT_VARIANT_ID,
+    variantConfig: SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID]
 };
 
 // Drag state / UI tuning
@@ -76,6 +121,8 @@ function initGame() {
     }
     gameState.startTime = Date.now();
 
+    applyVariantConfig();
+
     // Deal a solvable hand (reshuffle up to N times if needed)
     dealSolvableGame();
 
@@ -127,6 +174,7 @@ function updateTableau() {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
             cardEl.style.top = `${index * 25}px`;
+            cardEl.style.left = `${index * 2.5}px`;
             cardEl.dataset.column = col;
             cardEl.dataset.index = index;
 
@@ -262,10 +310,11 @@ function drawFromStock() {
     }
 
     gameState.moves++;
+    const drawScore = applyVariantScore('draw');
     recordMove({
         type: 'draw',
         payload: { cards: drawnCards.slice() },
-        scoreDelta: 0,
+        scoreDelta: drawScore,
         movesDelta: 1
     });
     CommonUtils.playSound('card');
@@ -286,12 +335,12 @@ function recycleWaste() {
         gameState.stock.push(card);
     }
 
-    gameState.score += SolitaireLogic.scoreMove('recycle-waste');
+    const recycleScore = applyVariantScore('recycle-waste');
     gameState.moves++;
     recordMove({
         type: 'recycle',
         payload: { cards: recycledCards.slice() },
-        scoreDelta: SolitaireLogic.scoreMove('recycle-waste'),
+        scoreDelta: recycleScore,
         movesDelta: 1
     });
     CommonUtils.playSound('card');
@@ -459,12 +508,13 @@ function finishDrag(clientX, clientY) {
     cleanupDragVisuals();
 
     if (moveResult.success) {
-        gameState.score += SolitaireLogic.scoreMove(moveType);
+        applyVariantScore(moveType);
         gameState.moves++;
+        const scoreDelta = gameState.score - scoreBeforeDrag;
         recordMove({
             type: moveType,
             payload: movePayload,
-            scoreDelta: gameState.score - scoreBeforeDrag,
+            scoreDelta,
             movesDelta: gameState.moves - movesBeforeDrag
         });
         CommonUtils.playSound('card');
@@ -515,8 +565,8 @@ function attemptTableauMove(targetCol) {
     let isValid = false;
 
     if (targetPile.length === 0) {
-        // Empty column - only Kings allowed
-        isValid = SolitaireLogic.canMoveToEmptyTableau(movingCard);
+        // Empty column - use variant-aware rule
+        isValid = canMoveToEmptyTableauForVariant(movingCard);
     } else {
         // Check if can place on top card
         const topCard = targetPile[targetPile.length - 1];
@@ -540,7 +590,7 @@ function attemptTableauMove(targetCol) {
                 if (topCard.hidden) {
                     topCard.hidden = false;
                     flippedCard = topCard;
-                    gameState.score += SolitaireLogic.scoreMove('flip-card');
+                    applyVariantScore('flip-card');
                 }
             }
         }
@@ -590,7 +640,7 @@ function attemptFoundationMove(targetFoundation) {
                 if (topCard.hidden) {
                     topCard.hidden = false;
                     flippedCard = topCard;
-                    gameState.score += SolitaireLogic.scoreMove('flip-card');
+                    applyVariantScore('flip-card');
                 }
             }
         }
@@ -654,10 +704,10 @@ function handleCardClick(e) {
                 // Flip top card if hidden
                 if (gameState.tableau[sourceIndex].length > 0) {
                     const topCard = gameState.tableau[sourceIndex][gameState.tableau[sourceIndex].length - 1];
-                    if (topCard.hidden) {
-                        topCard.hidden = false;
-                        gameState.score += SolitaireLogic.scoreMove('flip-card');
-                    }
+                if (topCard.hidden) {
+                    topCard.hidden = false;
+                    applyVariantScore('flip-card');
+                }
                 }
             }
 
@@ -665,7 +715,7 @@ function handleCardClick(e) {
             gameState.foundations[i].push(card);
 
             const moveType = sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
-            gameState.score += SolitaireLogic.scoreMove(moveType);
+            applyVariantScore(moveType);
             gameState.moves++;
 
             CommonUtils.playSound('card');
@@ -724,20 +774,20 @@ function autoComplete() {
             const card = gameState.waste.pop();
             const foundationIndex = parseInt(move.toPile.split('-')[1]);
             gameState.foundations[foundationIndex].push(card);
-            gameState.score += SolitaireLogic.scoreMove('waste-to-foundation');
+            applyVariantScore('waste-to-foundation');
         } else if (move.fromPile.startsWith('tableau')) {
             const col = parseInt(move.fromPile.split('-')[1]);
             const card = gameState.tableau[col].pop();
             const foundationIndex = parseInt(move.toPile.split('-')[1]);
             gameState.foundations[foundationIndex].push(card);
-            gameState.score += SolitaireLogic.scoreMove('tableau-to-foundation');
+            applyVariantScore('tableau-to-foundation');
 
             // Flip top card if hidden
             if (gameState.tableau[col].length > 0) {
                 const topCard = gameState.tableau[col][gameState.tableau[col].length - 1];
                 if (topCard.hidden) {
                     topCard.hidden = false;
-                    gameState.score += SolitaireLogic.scoreMove('flip-card');
+                    applyVariantScore('flip-card');
                 }
             }
         }
@@ -769,7 +819,7 @@ function showHint() {
         if (tableau.length > 0) {
             const topCard = tableau[tableau.length - 1];
             if (!topCard.hidden) {
-                const validMoves = SolitaireLogic.getValidMoves(topCard, gameState);
+                const validMoves = SolitaireLogic.getValidMoves(topCard, gameState, getVariantOptions());
                 if (validMoves.length > 0) {
                     const move = validMoves[0];
                     alert(`Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`);
@@ -782,7 +832,7 @@ function showHint() {
     // Check waste
     if (gameState.waste.length > 0) {
         const wasteCard = gameState.waste[gameState.waste.length - 1];
-        const validMoves = SolitaireLogic.getValidMoves(wasteCard, gameState);
+        const validMoves = SolitaireLogic.getValidMoves(wasteCard, gameState, getVariantOptions());
         if (validMoves.length > 0) {
             const move = validMoves[0];
             alert(`Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`);
@@ -876,6 +926,8 @@ function setupEventListeners() {
         gameState.drawCount = parseInt(e.target.value);
     });
 
+    populateVariantSelect();
+
     document.getElementById('undo-btn').addEventListener('click', undoLastMove);
     attachTableauHoverHandlers();
 }
@@ -910,7 +962,7 @@ function canDropOnTableau(targetCol) {
     const targetPile = gameState.tableau[targetCol];
 
     if (targetPile.length === 0) {
-        return SolitaireLogic.canMoveToEmptyTableau(movingCard);
+        return canMoveToEmptyTableauForVariant(movingCard);
     }
 
     const topCard = targetPile[targetPile.length - 1];
@@ -928,16 +980,16 @@ function findTableauDropColumn(clientX, clientY) {
     let bestDistance = Infinity;
 
     document.querySelectorAll('.tableau-column').forEach(column => {
-        const rect = getTableauColumnBounds(column);
-        const paddedRect = getRectWithPadding(rect, TABLEAU_DROP_PADDING);
+        const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, STACK_OFFSET);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, TABLEAU_DROP_PADDING);
 
-        if (isPointInRect(clientX, clientY, paddedRect)) {
+        if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
             bestColumn = column;
             bestDistance = -1;
             return;
         }
 
-        const dist = distanceToRect(clientX, clientY, rect);
+        const dist = UIHelpers.distanceToRect(clientX, clientY, rect);
         if (dist < bestDistance) {
             bestDistance = dist;
             bestColumn = column;
@@ -957,15 +1009,15 @@ function findFoundationDropPile(clientX, clientY) {
 
     document.querySelectorAll('.foundation-pile').forEach(pile => {
         const rect = pile.getBoundingClientRect();
-        const paddedRect = getRectWithPadding(rect, FOUNDATION_DROP_PADDING);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, FOUNDATION_DROP_PADDING);
 
-        if (isPointInRect(clientX, clientY, paddedRect)) {
+        if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
             bestPile = pile;
             bestDistance = -1;
             return;
         }
 
-        const dist = distanceToRect(clientX, clientY, rect);
+        const dist = UIHelpers.distanceToRect(clientX, clientY, rect);
         if (dist < bestDistance) {
             bestDistance = dist;
             bestPile = pile;
@@ -985,39 +1037,6 @@ function clearDropIndicators() {
     });
 }
 
-function getRectWithPadding(rect, padding) {
-    return {
-        top: rect.top - padding,
-        right: rect.right + padding,
-        bottom: rect.bottom + padding,
-        left: rect.left - padding
-    };
-}
-
-function isPointInRect(x, y, rect) {
-    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-}
-
-function distanceToRect(x, y, rect) {
-    const dx = Math.max(rect.left - x, 0, x - rect.right);
-    const dy = Math.max(rect.top - y, 0, y - rect.bottom);
-    return Math.hypot(dx, dy);
-}
-
-function getTableauColumnBounds(columnEl) {
-    const rect = columnEl.getBoundingClientRect();
-    const cards = columnEl.querySelectorAll('.card');
-    let stackHeight = CARD_HEIGHT;
-    if (cards.length > 0) {
-        stackHeight = CARD_HEIGHT + Math.max(0, cards.length - 1) * STACK_OFFSET;
-    }
-    return {
-        top: rect.top,
-        bottom: rect.top + Math.max(rect.height, stackHeight),
-        left: rect.left,
-        right: rect.right
-    };
-}
 
 function attachTableauHoverHandlers() {
     document.querySelectorAll('.tableau-column').forEach(column => {
@@ -1279,4 +1298,96 @@ function simulateRecycleWaste(state) {
         card.hidden = true;
         state.stock.push(card);
     }
+}
+
+function getActiveVariantConfig() {
+    return SOLITAIRE_VARIANTS[gameState.variantId] || SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID];
+}
+
+function getVariantOptions() {
+    const variant = getActiveVariantConfig();
+    return {
+        allowAnyCardOnEmpty: !!variant.allowAnyCardOnEmpty
+    };
+}
+
+function applyVariantConfig() {
+    const variant = getActiveVariantConfig();
+    gameState.variantConfig = variant;
+
+    if (variant.lockDrawCount) {
+        gameState.drawCount = variant.drawCount;
+    } else if (!gameState.drawCount) {
+        gameState.drawCount = variant.drawCount;
+    }
+
+    const drawSelect = document.getElementById('draw-count-select');
+    if (drawSelect) {
+        drawSelect.value = gameState.drawCount.toString();
+        drawSelect.disabled = !!variant.lockDrawCount;
+    }
+
+    gameState.score = variant.startScore || 0;
+    updateVariantDescription(variant.description);
+}
+
+function updateVariantDescription(text) {
+    const descEl = document.getElementById('variant-description');
+    if (descEl) {
+        descEl.textContent = text || '';
+    }
+}
+
+function populateVariantSelect() {
+    const select = document.getElementById('variant-select');
+    if (!select) return;
+
+    select.innerHTML = '';
+    SOLITAIRE_VARIANT_ORDER.forEach(variantId => {
+        const variant = SOLITAIRE_VARIANTS[variantId];
+        if (!variant) return;
+        const option = document.createElement('option');
+        option.value = variant.id;
+        option.textContent = variant.label;
+        select.appendChild(option);
+    });
+
+    select.value = gameState.variantId;
+
+    select.addEventListener('change', (event) => {
+        handleVariantChange(event.target.value);
+    });
+}
+
+function handleVariantChange(variantId) {
+    if (!SOLITAIRE_VARIANTS[variantId]) return;
+    gameState.variantId = variantId;
+    const select = document.getElementById('variant-select');
+    if (select) {
+        select.value = variantId;
+    }
+    initGame();
+}
+
+function getVariantScore(moveType) {
+    const variant = getActiveVariantConfig();
+    const baseScore = SolitaireLogic.scoreMove(moveType);
+    if (variant.scoreOverrides && Object.prototype.hasOwnProperty.call(variant.scoreOverrides, moveType)) {
+        return variant.scoreOverrides[moveType];
+    }
+    return baseScore;
+}
+
+function applyVariantScore(moveType) {
+    const delta = getVariantScore(moveType);
+    gameState.score += delta;
+    return delta;
+}
+
+function canMoveToEmptyTableauForVariant(card) {
+    const variant = getActiveVariantConfig();
+    if (variant.allowAnyCardOnEmpty) {
+        return !!card;
+    }
+    return SolitaireLogic.canMoveToEmptyTableau(card);
 }

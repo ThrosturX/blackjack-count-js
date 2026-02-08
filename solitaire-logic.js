@@ -51,8 +51,9 @@ const SolitaireLogic = {
      * @param {Card} card - The card to check
      * @returns {boolean}
      */
-    canMoveToEmptyTableau: function (card) {
+    canMoveToEmptyTableau: function (card, options = {}) {
         if (!card) return false;
+        if (options.allowAnyCardOnEmpty) return true;
         return card.val === 'K';
     },
 
@@ -138,7 +139,7 @@ const SolitaireLogic = {
      * @param {Object} gameState - Current game state
      * @returns {Array} Array of valid destination piles
      */
-    getValidMoves: function (card, gameState) {
+    getValidMoves: function (card, gameState, options = {}) {
         const validMoves = [];
 
         // Check foundations
@@ -152,7 +153,7 @@ const SolitaireLogic = {
         for (let col = 0; col < 7; col++) {
             const tableau = gameState.tableau[col];
             if (tableau.length === 0) {
-                if (this.canMoveToEmptyTableau(card)) {
+                if (this.canMoveToEmptyTableau(card, options)) {
                     validMoves.push({ type: 'tableau', index: col });
                 }
             } else {

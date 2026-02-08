@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeCell</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
+</head>
+
+<body>
+    <header>
+        <h1>FreeCell</h1>
+        <div class="header-toggles">
+            <button id="freecell-new-game" class="game-btn">New Game</button>
+        </div>
+        <div class="controls-section" id="freecell-stats">
+            <div class="stats">Moves: <span id="freecell-moves">0</span></div>
+            <div class="stats">Time: <span id="freecell-time">0:00</span></div>
+            <div class="stats">Score: <span id="freecell-score">0</span></div>
+        </div>
+    </header>
+
+    <main id="freecell-layout">
+        <div id="freecell-top-row">
+            <div id="freecell-freecells" class="freecell-group"></div>
+            <div id="freecell-foundations" class="freecell-group"></div>
+        </div>
+        <div id="freecell-tableau"></div>
+    </main>
+
+    <script src="assets.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="solitaire-logic.js"></script>
+    <script src="shared/ui-helpers.js"></script>
+    <script src="freecell.js"></script>
+</body>
+
+</html>
