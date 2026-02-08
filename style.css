@@ -654,6 +654,16 @@ select {
     align-items: center;
 }
 
+.val-top .val-rank,
+.val-bot .val-rank {
+    display: block;
+}
+
+.val-top br,
+.val-bot br {
+    display: none;
+}
+
 .val-top small {
     font-size: 0.7rem;
 }

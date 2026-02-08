@@ -81,6 +81,16 @@
     line-height: 1;
 }
 
+.card.classic-faces-card .val-top .val-rank,
+.card.classic-faces-card .val-bot .val-rank {
+    display: block;
+}
+
+.card.classic-faces-card .val-top br,
+.card.classic-faces-card .val-bot br {
+    display: none;
+}
+
 .card.classic-faces-card .val-top {
     top: var(--classic-corner-inset-y);
     left: var(--classic-rank-inset-x);

@@ -65,6 +65,15 @@ const CommonUtils = {
         const matteX = Math.round(15 + rand() * 70);
         const matteY = Math.round(15 + rand() * 70);
         const matteSize = Math.round(25 + rand() * 20);
+        const inkFadeX = Math.round(10 + rand() * 80);
+        const inkFadeY = Math.round(10 + rand() * 80);
+        const inkFadeSize = Math.round(40 + rand() * 25);
+        const inkFadeAlpha = (0.75 + rand() * 0.2).toFixed(3);
+        const inkFade2X = Math.round(10 + rand() * 80);
+        const inkFade2Y = Math.round(10 + rand() * 80);
+        const inkFade2Size = Math.round(34 + rand() * 22);
+        const inkFade2Alpha = (0.7 + rand() * 0.2).toFixed(3);
+        const inkFadeAngle = Math.round(-45 + rand() * 90);
 
         cardEl.style.setProperty('--wear-scuff-x', `${scuffX}%`);
         cardEl.style.setProperty('--wear-scuff-y', `${scuffY}%`);
@@ -108,6 +117,15 @@ const CommonUtils = {
         cardEl.style.setProperty('--wear-matte-x', `${matteX}%`);
         cardEl.style.setProperty('--wear-matte-y', `${matteY}%`);
         cardEl.style.setProperty('--wear-matte-size', `${matteSize}%`);
+        cardEl.style.setProperty('--wear-ink-fade-x', `${inkFadeX}%`);
+        cardEl.style.setProperty('--wear-ink-fade-y', `${inkFadeY}%`);
+        cardEl.style.setProperty('--wear-ink-fade-size', `${inkFadeSize}%`);
+        cardEl.style.setProperty('--wear-ink-fade-alpha', inkFadeAlpha);
+        cardEl.style.setProperty('--wear-ink-fade2-x', `${inkFade2X}%`);
+        cardEl.style.setProperty('--wear-ink-fade2-y', `${inkFade2Y}%`);
+        cardEl.style.setProperty('--wear-ink-fade2-size', `${inkFade2Size}%`);
+        cardEl.style.setProperty('--wear-ink-fade2-alpha', inkFade2Alpha);
+        cardEl.style.setProperty('--wear-ink-fade-angle', `${inkFadeAngle}deg`);
     },
 
     /**
@@ -190,11 +208,9 @@ const CommonUtils = {
         if (card.rotation !== undefined) {
             div.style.transform = `rotate(${card.rotation}deg)`;
         }
-        this.applyDeterministicWear(div, card);
-
         const valTop = document.createElement('div');
         valTop.className = 'val-top';
-        valTop.innerHTML = `${card.val}<br><small>${card.suit}</small>`;
+        valTop.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
         div.appendChild(valTop);
 
         const suitCenter = document.createElement('div');
@@ -204,7 +220,7 @@ const CommonUtils = {
 
         const valBot = document.createElement('div');
         valBot.className = 'val-bot';
-        valBot.innerHTML = `${card.val}<br><small>${card.suit}</small>`;
+        valBot.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
         div.appendChild(valBot);
 
         return div;
