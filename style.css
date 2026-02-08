@@ -7,8 +7,11 @@
     --green: #4caf50;
     --blue: #2196f3;
     --orange: #f2994a;
-    --card-w: 70px;
-    --card-h: 100px;
+    --card-base-w: 70px;
+    --card-base-h: 100px;
+    --card-scale: 1;
+    --card-w: var(--card-base-w);
+    --card-h: var(--card-base-h);
     --card-back-color: #b71c1c;
     --card-back-pattern-color: #c62828;
     --card-border-color: #555;
@@ -622,6 +625,7 @@ select {
     margin-left: -45px;
     transition: transform 0.2s;
     position: relative;
+    transform: scale(var(--card-scale));
 }
 
 .card:first-child {
@@ -1694,14 +1698,35 @@ input:checked+.slider:before {
 
 #tabletop-top-row {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: flex-start;
     gap: 22px;
 }
 
+.tabletop-zone {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.tabletop-zone--decks {
+    justify-content: flex-start;
+}
+
+.tabletop-zone--piles {
+    justify-content: center;
+}
+
+.tabletop-zone--waste {
+    justify-content: flex-end;
+}
+
 .tabletop-pile {
-    width: var(--card-w);
-    height: var(--card-h);
+    width: calc(var(--card-w) * var(--card-scale));
+    height: calc(var(--card-h) * var(--card-scale));
     border-radius: 12px;
     border: 2px dashed rgba(255, 255, 255, 0.2);
     background: rgba(0, 0, 0, 0.18);
@@ -1732,8 +1757,8 @@ input:checked+.slider:before {
 }
 
 .tabletop-pile .pile-surface {
-    width: var(--card-w);
-    height: var(--card-h);
+    width: calc(var(--card-w) * var(--card-scale));
+    height: calc(var(--card-h) * var(--card-scale));
     position: relative;
 }
 
@@ -1776,6 +1801,49 @@ input:checked+.slider:before {
 #tabletop-tableau .card.tabletop-dragging {
     cursor: grabbing;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+}
+
+.tabletop-stack-menu {
+    position: fixed;
+    min-width: 160px;
+    background: rgba(10, 10, 10, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 2000;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+
+.tabletop-stack-menu button {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f2f2f2;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tabletop-stack-menu button:hover {
+    border-color: rgba(242, 201, 76, 0.6);
+    color: var(--gold);
+}
+
+.tabletop-stack-menu button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tabletop-stack-menu .menu-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 4px 2px;
 }
 
 /* Game controls bar */
@@ -1950,9 +2018,9 @@ input:checked+.slider:before {
 
     /* 1. Resize the Cards globally */
     :root {
-        --card-w: 45px;
+        --card-base-w: 45px;
         /* Smaller cards */
-        --card-h: 65px;
+        --card-base-h: 65px;
     }
 
     /* 2. Fix the Table Container */

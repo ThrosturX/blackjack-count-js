@@ -2,6 +2,19 @@
  * Shared utility functions for card games.
  */
 
+(() => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        const key = 'bj_table.card_scale';
+        const stored = parseFloat(localStorage.getItem(key));
+        if (Number.isFinite(stored)) {
+            document.documentElement.style.setProperty('--card-scale', stored);
+        }
+    } catch (err) {
+        // Ignore storage failures.
+    }
+})();
+
 const CommonUtils = {
     audioAssets: {},
 
@@ -206,7 +219,7 @@ const CommonUtils = {
         div.dataset.color = card.color;
         // if we can give it a random rotation, let's do that
         if (card.rotation !== undefined) {
-            div.style.transform = `rotate(${card.rotation}deg)`;
+            div.style.transform = `rotate(${card.rotation}deg) scale(var(--card-scale))`;
         }
         const valTop = document.createElement('div');
         valTop.className = 'val-top';
@@ -303,7 +316,7 @@ const CommonUtils = {
             const TOP_CARD_ROTATION_MAX = 2;
             const TOP_CARD_ROTATION_MIN = -3;
             let rot = Math.floor(Math.random() * (TOP_CARD_ROTATION_MAX - TOP_CARD_ROTATION_MIN + 1)) + TOP_CARD_ROTATION_MIN;
-            topCard.style.transform = `rotate(${rot}deg)`;
+            topCard.style.transform = `rotate(${rot}deg) scale(var(--card-scale))`;
             previewEl.appendChild(topCard);
         });
     },
@@ -341,7 +354,9 @@ const CommonUtils = {
         setTimeout(() => {
             flyingCard.style.left = `${destX}px`;
             flyingCard.style.top = `${destY}px`;
-            flyingCard.style.transform = `scale(0.8) rotate(${rot}deg)`;
+            const scale = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
+            const scaleValue = parseFloat(scale) || 1;
+            flyingCard.style.transform = `scale(${scaleValue * 0.8}) rotate(${rot}deg)`;
             flyingCard.style.opacity = '0.7';
 
             setTimeout(() => {

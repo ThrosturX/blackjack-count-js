@@ -144,7 +144,7 @@ function updateStock() {
             const cardEl = document.createElement('div');
             cardEl.className = 'card hidden';
             const rot = getStockStackRotation(i, rowsLeft);
-            cardEl.style.transform = `translate(${i * 5}px, ${-i * 4}px) rotate(${rot}deg)`;
+            cardEl.style.transform = `translate(${i * 5}px, ${-i * 4}px) rotate(${rot}deg) scale(var(--card-scale))`;
             stack.appendChild(cardEl);
         }
         stack.addEventListener('click', dealFromStock);
@@ -384,7 +384,7 @@ function createDragLayer(e) {
         el.style.left = '0';
         el.style.top = `${idx * SPIDER_STACK_OFFSET}px`;
         el.style.margin = '0';
-        el.style.transform = 'none';
+        el.style.transform = 'scale(var(--card-scale))';
         el.style.transition = 'none';
         layer.appendChild(el);
     });

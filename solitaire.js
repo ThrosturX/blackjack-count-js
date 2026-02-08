@@ -474,7 +474,7 @@ function createDragLayer(e) {
         el.style.left = '0';
         el.style.top = `${idx * STACK_OFFSET}px`;
         el.style.margin = '0';
-        el.style.transform = 'none';
+        el.style.transform = 'scale(var(--card-scale))';
         el.style.transition = 'none';
         layer.appendChild(el);
     });
