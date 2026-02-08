@@ -1,6 +1,9 @@
 /* --- CONSTANTS --- */
 const SUITS = ['♥', '♦', '♣', '♠'];
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const EXTENDED_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'C', 'Q', 'K', 'A'];
+const EXTENDED_FACE_VALUES = ['J', 'C', 'Q', 'K'];
+const EXTENDED_RANKS = { A: 1, J: 11, C: 12, Q: 13, K: 14 };
 
 function getRandomRotation() {
     let max = 3;
@@ -31,5 +34,5 @@ class Card {
 
 // Export for Node.js environments (for testing)
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Card, SUITS, VALUES };
+    module.exports = { Card, SUITS, VALUES, EXTENDED_VALUES, EXTENDED_FACE_VALUES, EXTENDED_RANKS };
 }

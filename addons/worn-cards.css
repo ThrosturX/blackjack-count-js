@@ -68,9 +68,9 @@ body[class*="deck-"]:not(.deck-red):not(.deck-blue):not(.deck-green):not(.deck-w
     inset: 0;
     pointer-events: none;
     background:
-        radial-gradient(circle at var(--wear-scuff-x, 24%) var(--wear-scuff-y, 24%), rgba(255, 255, 255, 0.12) 0%, transparent 44%),
-        radial-gradient(circle at var(--wear-scuff2-x, 70%) var(--wear-scuff2-y, 65%), rgba(30, 25, 20, 0.2) 0%, transparent 45%),
-        linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+        radial-gradient(circle at var(--wear-scuff-x, 24%) var(--wear-scuff-y, 24%), rgba(var(--wear-scuff-light-rgb, 255, 255, 255), 0.12) 0%, transparent 44%),
+        radial-gradient(circle at var(--wear-scuff2-x, 70%) var(--wear-scuff2-y, 65%), rgba(var(--wear-scuff-dark-rgb, 30, 25, 20), 0.2) 0%, transparent 45%),
+        linear-gradient(145deg, rgba(var(--wear-scuff-light-rgb, 255, 255, 255), 0.08) 0%, transparent 50%);
     mix-blend-mode: multiply;
     opacity: 0.45;
     z-index: 0;
@@ -93,18 +93,18 @@ body.deck-sun .card.hidden::after {
     background:
         radial-gradient(
             circle at var(--wear-ink-fade-x, 32%) var(--wear-ink-fade-y, 28%),
-            rgba(220, 198, 165, var(--wear-ink-fade-alpha, 0.45)) 0%,
-            rgba(220, 198, 165, 0) calc(var(--wear-ink-fade-size, 32%) * 1)
+            rgba(var(--wear-grime-rgb, 220, 198, 165), var(--wear-ink-fade-alpha, 0.45)) 0%,
+            rgba(var(--wear-grime-rgb, 220, 198, 165), 0) calc(var(--wear-ink-fade-size, 32%) * 1)
         ),
         radial-gradient(
             circle at var(--wear-ink-fade2-x, 70%) var(--wear-ink-fade2-y, 66%),
-            rgba(220, 198, 165, var(--wear-ink-fade2-alpha, 0.4)) 0%,
-            rgba(220, 198, 165, 0) calc(var(--wear-ink-fade2-size, 26%) * 1)
+            rgba(var(--wear-grime-rgb, 220, 198, 165), var(--wear-ink-fade2-alpha, 0.4)) 0%,
+            rgba(var(--wear-grime-rgb, 220, 198, 165), 0) calc(var(--wear-ink-fade2-size, 26%) * 1)
         ),
         linear-gradient(
             var(--wear-ink-fade-angle, 12deg),
-            rgba(212, 189, 155, 0.5) 0%,
-            rgba(212, 189, 155, 0) 55%
+            rgba(var(--wear-grime-rgb-2, 212, 189, 155), 0.5) 0%,
+            rgba(var(--wear-grime-rgb-2, 212, 189, 155), 0) 55%
         );
     mix-blend-mode: normal;
 }

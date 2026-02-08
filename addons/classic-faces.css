@@ -124,6 +124,11 @@
     position: absolute;
 }
 
+.card.classic-faces-card.classic-faces-art-card .val-top small,
+.card.classic-faces-card.classic-faces-art-card .val-bot small {
+    display: none;
+}
+
 .card.classic-faces-card .val-top small {
     left: 0;
     top: 0;

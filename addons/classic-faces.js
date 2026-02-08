@@ -118,6 +118,7 @@
         suitCenter.textContent = cardEl.dataset.suit || '';
         suitCenter.innerHTML = suitCenter.textContent;
         cardEl.classList.remove('classic-faces-card');
+        cardEl.classList.remove('classic-faces-art-card');
         cardEl.dataset.classicFaces = '';
     };
 
@@ -130,6 +131,7 @@
         const suitCenter = cardEl.querySelector('.suit-center');
         if (!suitCenter) return;
         cardEl.classList.add('classic-faces-card');
+        cardEl.classList.remove('classic-faces-art-card');
         suitCenter.innerHTML = '';
         if (cardEl.classList.contains('hidden')) {
             cardEl.dataset.classicFaces = '1';
@@ -146,6 +148,7 @@
             art.style.maskImage = `url("${faceUrl}")`;
             art.style.webkitMaskImage = `url("${faceUrl}")`;
             suitCenter.appendChild(art);
+            cardEl.classList.add('classic-faces-art-card');
             cardEl.dataset.classicFaces = '1';
             return;
         }
