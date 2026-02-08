@@ -93,18 +93,18 @@ body.deck-sun .card.hidden::after {
     background:
         radial-gradient(
             circle at var(--wear-ink-fade-x, 32%) var(--wear-ink-fade-y, 28%),
-            rgba(205, 180, 140, var(--wear-ink-fade-alpha, 0.45)) 0%,
-            rgba(205, 180, 140, 0) calc(var(--wear-ink-fade-size, 32%) * 1)
+            rgba(220, 198, 165, var(--wear-ink-fade-alpha, 0.45)) 0%,
+            rgba(220, 198, 165, 0) calc(var(--wear-ink-fade-size, 32%) * 1)
         ),
         radial-gradient(
             circle at var(--wear-ink-fade2-x, 70%) var(--wear-ink-fade2-y, 66%),
-            rgba(205, 180, 140, var(--wear-ink-fade2-alpha, 0.4)) 0%,
-            rgba(205, 180, 140, 0) calc(var(--wear-ink-fade2-size, 26%) * 1)
+            rgba(220, 198, 165, var(--wear-ink-fade2-alpha, 0.4)) 0%,
+            rgba(220, 198, 165, 0) calc(var(--wear-ink-fade2-size, 26%) * 1)
         ),
         linear-gradient(
             var(--wear-ink-fade-angle, 12deg),
-            rgba(195, 170, 130, 0.55) 0%,
-            rgba(195, 170, 130, 0) 55%
+            rgba(212, 189, 155, 0.5) 0%,
+            rgba(212, 189, 155, 0) 55%
         );
     mix-blend-mode: normal;
 }
