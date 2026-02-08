@@ -547,6 +547,15 @@ function setupFreeCellEventListeners() {
         }
     };
 
+    const syncThemeClasses = () => {
+        applyTableStyle();
+        applyDeckStyle();
+    };
+
+    const scheduleThemeSync = () => {
+        requestAnimationFrame(syncThemeClasses);
+    };
+
     const tableSelect = document.getElementById('table-style-select');
     if (tableSelect) {
         tableSelect.addEventListener('change', applyTableStyle);
@@ -558,4 +567,11 @@ function setupFreeCellEventListeners() {
         deckSelect.addEventListener('change', applyDeckStyle);
         applyDeckStyle();
     }
+
+    if (window.AddonLoader && window.AddonLoader.ready) {
+        window.AddonLoader.ready.then(scheduleThemeSync);
+    } else {
+        scheduleThemeSync();
+    }
+    window.addEventListener('addons:changed', scheduleThemeSync);
 }

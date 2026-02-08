@@ -478,6 +478,16 @@ function updateDragLayerPosition(clientX, clientY) {
     dragState.dragLayer.style.top = `${clientY - dragState.pointerOffsetY}px`;
 }
 
+function getDropPoint(clientX, clientY) {
+    if (!dragState.dragLayer) {
+        return { x: clientX, y: clientY };
+    }
+    const rect = dragState.dragLayer.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + Math.min(CARD_HEIGHT / 2, rect.height - 1);
+    return { x, y };
+}
+
 function finishDrag(clientX, clientY) {
     const scoreBeforeDrag = gameState.score;
     const movesBeforeDrag = gameState.moves;
@@ -485,7 +495,8 @@ function finishDrag(clientX, clientY) {
     let moveType = '';
     let moveResult = { success: false };
 
-    const targetColIndex = findTableauDropColumn(clientX, clientY);
+    const dropPoint = getDropPoint(clientX, clientY);
+    const targetColIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
     if (targetColIndex !== null) {
         moveResult = attemptTableauMove(targetColIndex);
         if (moveResult.success) {
@@ -495,7 +506,7 @@ function finishDrag(clientX, clientY) {
     }
 
     if (!moveResult.success) {
-        const foundationIndex = findFoundationDropPile(clientX, clientY);
+        const foundationIndex = findFoundationDropPile(dropPoint.x, dropPoint.y);
         if (foundationIndex !== null) {
             moveResult = attemptFoundationMove(foundationIndex);
             if (moveResult.success) {
@@ -977,30 +988,24 @@ function canDropOnFoundation(targetFoundation) {
 
 function findTableauDropColumn(clientX, clientY) {
     let bestColumn = null;
-    let bestDistance = Infinity;
+    let bestCenterDistance = Infinity;
 
     document.querySelectorAll('.tableau-column').forEach(column => {
         const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, STACK_OFFSET);
         const paddedRect = UIHelpers.getRectWithPadding(rect, TABLEAU_DROP_PADDING);
 
-        if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
-            bestColumn = column;
-            bestDistance = -1;
-            return;
-        }
+        if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;
 
-        const dist = UIHelpers.distanceToRect(clientX, clientY, rect);
-        if (dist < bestDistance) {
-            bestDistance = dist;
+        const centerX = (rect.left + rect.right) / 2;
+        const dist = Math.abs(centerX - clientX);
+        if (dist < bestCenterDistance) {
+            bestCenterDistance = dist;
             bestColumn = column;
         }
     });
 
     if (!bestColumn) return null;
-    if (bestDistance <= TABLEAU_DROP_PADDING) {
-        return parseInt(bestColumn.id.split('-')[1], 10);
-    }
-    return null;
+    return parseInt(bestColumn.id.split('-')[1], 10);
 }
 
 function findFoundationDropPile(clientX, clientY) {
