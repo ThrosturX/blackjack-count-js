@@ -29,8 +29,8 @@
     <path d="M128,280 C80,270 65,340 120,380 L125,330 Z" fill="#121212"/>
     <path d="M272,280 C320,270 335,340 280,380 L275,330 Z" fill="#121212"/>
 
-    <ellipse cx="168" cy="140" rx="7" ry="22" fill="white" transform="rotate(-20, 168, 140)" opacity="0.9"/>
-    <ellipse cx="232" cy="140" rx="7" ry="22" fill="white" transform="rotate(20, 232, 140)" opacity="0.9"/>
+    <ellipse cx="165" cy="150" rx="12" ry="24" fill="white" transform="rotate(18, 168, 140)" opacity="0.9"/>
+    <ellipse cx="235" cy="150" rx="12" ry="24" fill="white" transform="rotate(-18, 232, 140)" opacity="0.9"/>
 
     <path d="M175,380 Q200,340 225,380 Q200,410 175,380" fill="#444" opacity="0.4"/>
 
@@ -45,3 +45,4 @@
     </g>
   </g>
 </svg>
+
