@@ -359,6 +359,43 @@ select {
     transition: background 0.5s, border-color 0.5s;
 }
 
+.table-toast {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.95);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 50;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.table-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.table-toast--warn {
+    border-color: rgba(242, 201, 76, 0.8);
+    color: var(--gold);
+    background: rgba(50, 40, 10, 0.75);
+}
+
+.table-toast--win {
+    border-color: rgba(76, 175, 80, 0.8);
+    color: var(--green);
+    background: rgba(15, 45, 20, 0.78);
+}
+
 /* --- Center Overlay --- */
 #center-overlay {
     position: absolute;

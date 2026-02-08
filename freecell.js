@@ -15,11 +15,13 @@ const freecellState = {
     moves: 0,
     startTime: null,
     timerInterval: null,
-    isGameWon: false
+    isGameWon: false,
+    moveHistory: []
 };
 
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
+const MAX_HISTORY = 200;
 
 const freecellDragState = {
     draggedCards: [],
@@ -46,6 +48,7 @@ function initFreeCellGame() {
     freecellState.score = 0;
     freecellState.moves = 0;
     freecellState.isGameWon = false;
+    freecellState.moveHistory = [];
 
     if (freecellState.timerInterval) {
         clearInterval(freecellState.timerInterval);
@@ -55,6 +58,7 @@ function initFreeCellGame() {
     dealFreeCellLayout();
     startTimer();
     updateUI();
+    updateUndoButtonState();
     CommonUtils.playSound('shuffle');
 }
 
@@ -166,6 +170,98 @@ function updateFoundations() {
 function updateStats() {
     document.getElementById('freecell-moves').textContent = freecellState.moves;
     document.getElementById('freecell-score').textContent = freecellState.score;
+}
+
+function recordMove(moveEntry) {
+    freecellState.moveHistory.push(moveEntry);
+    if (freecellState.moveHistory.length > MAX_HISTORY) {
+        freecellState.moveHistory.shift();
+    }
+    updateUndoButtonState();
+}
+
+function updateUndoButtonState() {
+    const btn = document.getElementById('freecell-undo');
+    if (!btn) return;
+    btn.disabled = freecellState.moveHistory.length === 0;
+}
+
+function undoLastMove() {
+    if (freecellState.moveHistory.length === 0) return;
+    const lastMove = freecellState.moveHistory.pop();
+
+    switch (lastMove.type) {
+        case 'tableau-to-tableau':
+            undoTableauToTableauMove(lastMove.payload);
+            break;
+        case 'tableau-to-freecell':
+            undoTableauToFreecellMove(lastMove.payload);
+            break;
+        case 'freecell-to-tableau':
+            undoFreecellToTableauMove(lastMove.payload);
+            break;
+        case 'freecell-to-freecell':
+            undoFreecellToFreecellMove(lastMove.payload);
+            break;
+        case 'tableau-to-foundation':
+            undoTableauToFoundationMove(lastMove.payload);
+            break;
+        case 'freecell-to-foundation':
+            undoFreecellToFoundationMove(lastMove.payload);
+            break;
+        default:
+            console.warn('Unexpected undo move type:', lastMove.type);
+    }
+
+    freecellState.score -= lastMove.scoreDelta;
+    freecellState.moves = Math.max(0, freecellState.moves - lastMove.movesDelta);
+    freecellState.isGameWon = false;
+    updateUI();
+    updateUndoButtonState();
+}
+
+function undoTableauToTableauMove(payload) {
+    const target = freecellState.tableau[payload.to.index];
+    const moved = target.splice(target.length - payload.count);
+    freecellState.tableau[payload.from.index].push(...moved);
+}
+
+function undoTableauToFreecellMove(payload) {
+    const card = freecellState.freeCells[payload.to.index];
+    freecellState.freeCells[payload.to.index] = null;
+    if (card) {
+        freecellState.tableau[payload.from.index].push(card);
+    }
+}
+
+function undoFreecellToTableauMove(payload) {
+    const target = freecellState.tableau[payload.to.index];
+    const card = target.pop();
+    if (card) {
+        freecellState.freeCells[payload.from.index] = card;
+    }
+}
+
+function undoFreecellToFreecellMove(payload) {
+    const card = freecellState.freeCells[payload.to.index];
+    freecellState.freeCells[payload.to.index] = null;
+    if (card) {
+        freecellState.freeCells[payload.from.index] = card;
+    }
+}
+
+function undoTableauToFoundationMove(payload) {
+    const card = freecellState.foundations[payload.to.index].pop();
+    if (card) {
+        freecellState.tableau[payload.from.index].push(card);
+    }
+}
+
+function undoFreecellToFoundationMove(payload) {
+    const card = freecellState.foundations[payload.to.index].pop();
+    if (card) {
+        freecellState.freeCells[payload.from.index] = card;
+    }
 }
 
 function handlePointerDown(e) {
@@ -311,13 +407,19 @@ function finishDrag(clientX, clientY) {
     const targetFoundation = findFoundationDropPile(clientX, clientY);
     const targetColumn = findTableauDropColumn(clientX, clientY);
     let handled = false;
+    let moveResult = null;
+    const scoreBefore = freecellState.score;
+    const movesBefore = freecellState.moves;
 
     if (targetFreeCell !== null) {
-        handled = attemptMoveToFreeCell(targetFreeCell).success;
+        moveResult = attemptMoveToFreeCell(targetFreeCell);
+        handled = moveResult.success;
     } else if (targetFoundation !== null) {
-        handled = attemptFoundationMove(targetFoundation).success;
+        moveResult = attemptFoundationMove(targetFoundation);
+        handled = moveResult.success;
     } else if (targetColumn !== null) {
-        handled = attemptTableauMove(targetColumn).success;
+        moveResult = attemptTableauMove(targetColumn);
+        handled = moveResult.success;
     }
 
     cleanupDragVisuals();
@@ -325,12 +427,28 @@ function finishDrag(clientX, clientY) {
     if (handled) {
         CommonUtils.playSound('card');
         freecellState.moves++;
+        const scoreDelta = freecellState.score - scoreBefore;
+        const movesDelta = freecellState.moves - movesBefore;
+        if (moveResult && moveResult.moveType) {
+            recordMove({
+                type: moveResult.moveType,
+                payload: moveResult.payload,
+                scoreDelta,
+                movesDelta
+            });
+        }
         updateStats();
         checkFreeCellWin();
         updateTableau();
         updateFreeCells();
         updateFoundations();
     } else {
+        if (moveResult && moveResult.reason === 'limit') {
+            CommonUtils.showTableToast(
+                `Need more free cells to move ${freecellDragState.draggedCards.length} cards.`,
+                { variant: 'warn' }
+            );
+        }
         updateTableau();
         updateFreeCells();
         updateFoundations();
@@ -362,6 +480,25 @@ function resetDragState() {
     freecellDragState.draggedElements = [];
 }
 
+function getMaxMovableCards(targetCol, movingCount) {
+    const emptyFreeCells = freecellState.freeCells.filter(card => !card).length;
+    let emptyColumns = freecellState.tableau.filter(column => column.length === 0).length;
+
+    if (freecellState.tableau[targetCol].length === 0) {
+        emptyColumns -= 1;
+    }
+
+    if (freecellDragState.source && freecellDragState.source.type === 'tableau') {
+        const sourceColumn = freecellState.tableau[freecellDragState.source.index];
+        if (sourceColumn && sourceColumn.length === movingCount) {
+            emptyColumns += 1;
+        }
+    }
+
+    emptyColumns = Math.max(0, emptyColumns);
+    return (emptyFreeCells + 1) * Math.pow(2, emptyColumns);
+}
+
 function attemptTableauMove(targetCol) {
     if (freecellDragState.draggedCards.length === 0) return { success: false };
 
@@ -379,9 +516,25 @@ function attemptTableauMove(targetCol) {
 
     if (!isValid) return { success: false };
 
+    const maxMovable = getMaxMovableCards(targetCol, movingCards.length);
+    if (movingCards.length > maxMovable) {
+        return { success: false, reason: 'limit', max: maxMovable };
+    }
+
     removeDraggedCardsFromSource();
     freecellState.tableau[targetCol].push(...movingCards);
-    return { success: true };
+    const moveType = freecellDragState.source.type === 'freecell'
+        ? 'freecell-to-tableau'
+        : 'tableau-to-tableau';
+    return {
+        success: true,
+        moveType,
+        payload: {
+            from: { ...freecellDragState.source },
+            to: { type: 'tableau', index: targetCol },
+            count: movingCards.length
+        }
+    };
 }
 
 function attemptMoveToFreeCell(targetIndex) {
@@ -391,7 +544,18 @@ function attemptMoveToFreeCell(targetIndex) {
     const card = freecellDragState.draggedCards[0];
     removeDraggedCardsFromSource();
     freecellState.freeCells[targetIndex] = card;
-    return { success: true };
+    const moveType = freecellDragState.source.type === 'freecell'
+        ? 'freecell-to-freecell'
+        : 'tableau-to-freecell';
+    return {
+        success: true,
+        moveType,
+        payload: {
+            from: { ...freecellDragState.source },
+            to: { type: 'freecell', index: targetIndex },
+            count: 1
+        }
+    };
 }
 
 function attemptFoundationMove(targetIndex) {
@@ -404,7 +568,18 @@ function attemptFoundationMove(targetIndex) {
     removeDraggedCardsFromSource();
     foundation.push(card);
     freecellState.score += 1;
-    return { success: true };
+    const moveType = freecellDragState.source.type === 'freecell'
+        ? 'freecell-to-foundation'
+        : 'tableau-to-foundation';
+    return {
+        success: true,
+        moveType,
+        payload: {
+            from: { ...freecellDragState.source },
+            to: { type: 'foundation', index: targetIndex },
+            count: 1
+        }
+    };
 }
 
 function removeDraggedCardsFromSource() {
@@ -487,12 +662,16 @@ function checkFreeCellWin() {
         freecellState.isGameWon = true;
         clearInterval(freecellState.timerInterval);
         CommonUtils.playSound('win');
-        alert('🎉 You solved FreeCell! 🎉');
+        CommonUtils.showTableToast('You solved FreeCell!', { variant: 'win', duration: 2500 });
     }
 }
 
 function setupFreeCellEventListeners() {
     document.getElementById('freecell-new-game').addEventListener('click', initFreeCellGame);
+    const undoBtn = document.getElementById('freecell-undo');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', undoLastMove);
+    }
 
     document.getElementById('toggle-settings').addEventListener('click', () => {
         const settingsArea = document.getElementById('settings-area');

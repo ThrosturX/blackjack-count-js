@@ -70,7 +70,7 @@ const STACK_OFFSET = 25;
 const TABLEAU_DROP_PADDING = 40;
 const FOUNDATION_DROP_PADDING = 30;
 const MAX_HISTORY = 200;
-const MAX_SOLVABLE_DEAL_ATTEMPTS = 25;
+const MAX_SOLVABLE_DEAL_ATTEMPTS = 12;
 const MAX_SIMULATION_ITERATIONS = 1200;
 
 const dragState = {
@@ -854,7 +854,10 @@ function showHint() {
     const autoMoves = SolitaireLogic.getAutoMoves(gameState);
 
     if (autoMoves.length > 0) {
-        alert(`Hint: Move ${autoMoves[0].card.val}${autoMoves[0].card.suit} to foundation!`);
+        CommonUtils.showTableToast(
+            `Hint: Move ${autoMoves[0].card.val}${autoMoves[0].card.suit} to foundation!`,
+            { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+        );
         return;
     }
 
@@ -867,7 +870,10 @@ function showHint() {
                 const validMoves = SolitaireLogic.getValidMoves(topCard, gameState, getVariantOptions());
                 if (validMoves.length > 0) {
                     const move = validMoves[0];
-                    alert(`Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`);
+                    CommonUtils.showTableToast(
+                        `Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`,
+                        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+                    );
                     return;
                 }
             }
@@ -880,12 +886,18 @@ function showHint() {
         const validMoves = SolitaireLogic.getValidMoves(wasteCard, gameState, getVariantOptions());
         if (validMoves.length > 0) {
             const move = validMoves[0];
-            alert(`Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`);
+            CommonUtils.showTableToast(
+                `Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`,
+                { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+            );
             return;
         }
     }
 
-    alert('Hint: Try drawing from the stock or recycling the waste pile!');
+    CommonUtils.showTableToast(
+        'Hint: Try drawing from the stock or recycling the waste pile!',
+        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+    );
 }
 
 /**

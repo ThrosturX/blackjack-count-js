@@ -338,6 +338,43 @@ const CommonUtils = {
     },
 
     /**
+     * Shows a lightweight toast inside the game table.
+     * @param {string} message - Toast text.
+     * @param {Object} options - Options for toast rendering.
+     */
+    showTableToast: function (message, options = {}) {
+        if (!message) return;
+        const container = options.container
+            || (options.containerId ? document.getElementById(options.containerId) : null)
+            || document.getElementById('table')
+            || document.getElementById('solitaire-table');
+        if (!container) return;
+
+        const existing = container.querySelector('.table-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'table-toast';
+        if (options.variant) {
+            toast.classList.add(`table-toast--${options.variant}`);
+        }
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        const duration = typeof options.duration === 'number' ? options.duration : 1800;
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, { once: true });
+        }, duration);
+    },
+
+    /**
      * Returns a score display string or "BUST".
      * @param {number} score - The score.
      * @returns {string}

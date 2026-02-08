@@ -16,13 +16,15 @@ const spiderState = {
     startTime: null,
     timerInterval: null,
     isGameWon: false,
-    isDealing: false
+    isDealing: false,
+    moveHistory: []
 };
 
 const SPIDER_CARD_HEIGHT = 100;
 const SPIDER_STACK_OFFSET = 24;
 const SPIDER_DROP_PADDING = 40;
 const SPIDER_COMPLETE_BONUS = 100;
+const SPIDER_MAX_HISTORY = 200;
 
 const spiderDragState = {
     draggedCards: [],
@@ -49,6 +51,7 @@ function initSpiderGame() {
     spiderState.score = 0;
     spiderState.moves = 0;
     spiderState.isGameWon = false;
+    spiderState.moveHistory = [];
 
     if (spiderState.timerInterval) {
         clearInterval(spiderState.timerInterval);
@@ -58,6 +61,7 @@ function initSpiderGame() {
     dealSpiderLayout();
     startTimer();
     updateUI();
+    updateUndoButtonState();
     CommonUtils.playSound('shuffle');
 }
 
@@ -183,6 +187,79 @@ function updateStats() {
     const scoreEl = document.getElementById('spider-score');
     if (movesEl) movesEl.textContent = spiderState.moves;
     if (scoreEl) scoreEl.textContent = spiderState.score;
+}
+
+function recordMove(moveEntry) {
+    spiderState.moveHistory.push(moveEntry);
+    if (spiderState.moveHistory.length > SPIDER_MAX_HISTORY) {
+        spiderState.moveHistory.shift();
+    }
+    updateUndoButtonState();
+}
+
+function updateUndoButtonState() {
+    const btn = document.getElementById('spider-undo');
+    if (!btn) return;
+    btn.disabled = spiderState.moveHistory.length === 0 || spiderState.isDealing;
+}
+
+function undoLastMove() {
+    if (spiderState.moveHistory.length === 0 || spiderState.isDealing) return;
+    const lastMove = spiderState.moveHistory.pop();
+
+    switch (lastMove.type) {
+        case 'tableau-to-tableau':
+            undoTableauToTableauMove(lastMove.payload);
+            break;
+        case 'deal-row':
+            undoDealRow(lastMove.payload);
+            break;
+        default:
+            console.warn('Unexpected undo move type:', lastMove.type);
+    }
+
+    spiderState.score -= lastMove.scoreDelta;
+    spiderState.moves = Math.max(0, spiderState.moves - lastMove.movesDelta);
+    spiderState.isGameWon = false;
+    updateUI();
+    updateUndoButtonState();
+}
+
+function undoTableauToTableauMove(payload) {
+    if (payload.completed && payload.completed.cards) {
+        spiderState.foundations.pop();
+        const restoreColumn = spiderState.tableau[payload.completed.columnIndex];
+        restoreColumn.push(...payload.completed.cards);
+    }
+
+    const target = spiderState.tableau[payload.toCol];
+    const moved = target.splice(target.length - payload.count);
+    spiderState.tableau[payload.fromCol].push(...moved);
+
+    if (payload.flippedCard) {
+        payload.flippedCard.hidden = true;
+    }
+}
+
+function undoDealRow(payload) {
+    const completed = payload.completed || [];
+    for (let i = completed.length - 1; i >= 0; i--) {
+        const entry = completed[i];
+        spiderState.foundations.pop();
+        const column = spiderState.tableau[entry.columnIndex];
+        column.push(...entry.cards);
+    }
+
+    const dealt = payload.dealt || [];
+    for (let i = dealt.length - 1; i >= 0; i--) {
+        const entry = dealt[i];
+        const column = spiderState.tableau[entry.col];
+        const card = column.pop();
+        if (card) {
+            card.hidden = true;
+            spiderState.stock.push(card);
+        }
+    }
 }
 
 function getStockStackRotation(index, rowsLeft) {
@@ -337,18 +414,26 @@ function getDropPoint(clientX, clientY) {
 function finishDrag(clientX, clientY) {
     const dropPoint = getDropPoint(clientX, clientY);
     const targetColIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
-    let moved = false;
+    let moveResult = null;
+    const scoreBefore = spiderState.score;
+    const movesBefore = spiderState.moves;
 
     if (targetColIndex !== null) {
-        moved = attemptTableauMove(targetColIndex);
+        moveResult = attemptTableauMove(targetColIndex);
     }
 
     cleanupDragVisuals();
 
-    if (moved) {
+    if (moveResult && moveResult.success) {
         spiderState.moves++;
         spiderState.score += 1;
         CommonUtils.playSound('card');
+        recordMove({
+            type: 'tableau-to-tableau',
+            payload: moveResult.payload,
+            scoreDelta: (spiderState.score - scoreBefore),
+            movesDelta: (spiderState.moves - movesBefore)
+        });
     }
 
     updateUI();
@@ -381,13 +466,13 @@ function resetDragState() {
 }
 
 function attemptTableauMove(targetCol) {
-    if (spiderDragState.draggedCards.length === 0) return false;
+    if (spiderDragState.draggedCards.length === 0) return { success: false };
     const movingCard = spiderDragState.draggedCards[0];
     const targetPile = spiderState.tableau[targetCol];
     const sourceCol = parseInt(spiderDragState.draggedElements[0]?.dataset.column, 10);
 
-    if (Number.isNaN(sourceCol)) return false;
-    if (sourceCol === targetCol) return false;
+    if (Number.isNaN(sourceCol)) return { success: false };
+    if (sourceCol === targetCol) return { success: false };
 
     let isValid = false;
     if (targetPile.length === 0) {
@@ -397,20 +482,31 @@ function attemptTableauMove(targetCol) {
         isValid = !topCard.hidden && topCard.rank === movingCard.rank + 1;
     }
 
-    if (!isValid) return false;
+    if (!isValid) return { success: false };
 
     const sourcePile = spiderState.tableau[sourceCol];
     const movedCards = spiderDragState.draggedCards.slice();
     spiderState.tableau[sourceCol] = sourcePile.slice(0, -movedCards.length);
     spiderState.tableau[targetCol].push(...movedCards);
 
+    let flippedCard = null;
     const sourceTop = spiderState.tableau[sourceCol][spiderState.tableau[sourceCol].length - 1];
     if (sourceTop && sourceTop.hidden) {
         sourceTop.hidden = false;
+        flippedCard = sourceTop;
     }
 
-    checkForCompletedSequence(targetCol);
-    return true;
+    const completed = checkForCompletedSequence(targetCol);
+    return {
+        success: true,
+        payload: {
+            fromCol: sourceCol,
+            toCol: targetCol,
+            count: movedCards.length,
+            flippedCard,
+            completed
+        }
+    };
 }
 
 function checkForCompletedSequence(columnIndex) {
@@ -425,9 +521,9 @@ function checkForCompletedSequence(columnIndex) {
     for (let i = 0; i < sequence.length - 1; i++) {
         const current = sequence[i];
         const next = sequence[i + 1];
-        if (current.hidden || next.hidden) return;
-        if (current.suit !== next.suit) return;
-        if (current.rank !== next.rank + 1) return;
+    if (current.hidden || next.hidden) return;
+    if (current.suit !== next.suit) return;
+    if (current.rank !== next.rank + 1) return;
     }
 
     const removed = column.splice(startIndex, 13);
@@ -437,6 +533,7 @@ function checkForCompletedSequence(columnIndex) {
     if (newTop && newTop.hidden) {
         newTop.hidden = false;
     }
+    return { columnIndex, cards: removed, suit: removed[0].suit };
 }
 
 function dealFromStock() {
@@ -444,7 +541,7 @@ function dealFromStock() {
     if (spiderState.isDealing) return;
     const hasEmptyColumn = spiderState.tableau.some(column => column.length === 0);
     if (hasEmptyColumn) {
-        alert('Fill empty columns before dealing a new row.');
+        CommonUtils.showTableToast('Fill empty columns before dealing a new row.', { variant: 'warn' });
         return;
     }
 
@@ -452,12 +549,18 @@ function dealFromStock() {
     const dealBtn = document.getElementById('spider-deal');
     spiderState.isDealing = true;
     if (dealBtn) dealBtn.disabled = true;
+    updateUndoButtonState();
+    const scoreBefore = spiderState.score;
+    const movesBefore = spiderState.moves;
+    const dealtCards = [];
+    const completed = [];
 
     const performDeal = async () => {
         for (let col = 0; col < 10; col++) {
             const card = spiderState.stock.pop();
             card.hidden = false;
             spiderState.tableau[col].push(card);
+            dealtCards.push({ col, card });
 
             if (stockEl) {
                 const columnEl = document.getElementById(`spider-column-${col}`);
@@ -470,7 +573,10 @@ function dealFromStock() {
                 }
             }
 
-            checkForCompletedSequence(col);
+            const completion = checkForCompletedSequence(col);
+            if (completion) {
+                completed.push(completion);
+            }
             updateTableau();
             updateFoundations();
             CommonUtils.playSound('card');
@@ -479,10 +585,17 @@ function dealFromStock() {
 
     performDeal().then(() => {
         spiderState.moves++;
+        recordMove({
+            type: 'deal-row',
+            payload: { dealt: dealtCards, completed },
+            scoreDelta: (spiderState.score - scoreBefore),
+            movesDelta: (spiderState.moves - movesBefore)
+        });
         updateUI();
         checkWinCondition();
         spiderState.isDealing = false;
         if (dealBtn) dealBtn.disabled = false;
+        updateUndoButtonState();
     });
 }
 
@@ -491,7 +604,7 @@ function checkWinCondition() {
         spiderState.isGameWon = true;
         clearInterval(spiderState.timerInterval);
         CommonUtils.playSound('win');
-        alert('You solved Spider Solitaire!');
+        CommonUtils.showTableToast('You solved Spider Solitaire!', { variant: 'win', duration: 2500 });
     }
 }
 
@@ -562,6 +675,10 @@ function setupSpiderEventListeners() {
     const dealBtn = document.getElementById('spider-deal');
     if (dealBtn) {
         dealBtn.addEventListener('click', dealFromStock);
+    }
+    const undoBtn = document.getElementById('spider-undo');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', undoLastMove);
     }
 
     document.getElementById('toggle-settings').addEventListener('click', () => {
