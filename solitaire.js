@@ -70,8 +70,8 @@ const STACK_OFFSET = 25;
 const TABLEAU_DROP_PADDING = 40;
 const FOUNDATION_DROP_PADDING = 30;
 const MAX_HISTORY = 200;
-const MAX_SOLVABLE_DEAL_ATTEMPTS = 5;
-const MAX_SIMULATION_ITERATIONS = 600;
+const MAX_SOLVABLE_DEAL_ATTEMPTS = 25;
+const MAX_SIMULATION_ITERATIONS = 1200;
 
 const dragState = {
     draggedCards: [],
@@ -203,6 +203,8 @@ function updateFoundations() {
             const topCard = cards[cards.length - 1];
             const cardEl = CommonUtils.createCardEl(topCard);
             cardEl.dataset.foundation = i;
+            cardEl.addEventListener('pointerdown', handlePointerDown);
+            cardEl.style.cursor = 'pointer';
             foundationEl.appendChild(cardEl);
         } else {
             // Show placeholder
@@ -410,6 +412,13 @@ function startPointerDrag(e) {
         dragState.draggedCards = [card];
         dragState.sourcePile = 'waste';
         dragState.sourceIndex = gameState.waste.length - 1;
+    } else if (cardEl.dataset.foundation !== undefined) {
+        const foundationIndex = parseInt(cardEl.dataset.foundation, 10);
+        const foundationPile = gameState.foundations[foundationIndex];
+        const card = foundationPile[foundationPile.length - 1];
+        dragState.draggedCards = card ? [card] : [];
+        dragState.sourcePile = 'foundation';
+        dragState.sourceIndex = foundationIndex;
     } else {
         const col = parseInt(cardEl.dataset.column, 10);
         const index = parseInt(cardEl.dataset.index, 10);
@@ -428,6 +437,9 @@ function startPointerDrag(e) {
 
 function collectDraggedElements(cardEl) {
     if (cardEl.dataset.waste) {
+        return [cardEl];
+    }
+    if (cardEl.dataset.foundation !== undefined) {
         return [cardEl];
     }
 
@@ -500,7 +512,13 @@ function finishDrag(clientX, clientY) {
     if (targetColIndex !== null) {
         moveResult = attemptTableauMove(targetColIndex);
         if (moveResult.success) {
-            moveType = dragState.sourcePile === 'waste' ? 'waste-to-tableau' : 'tableau-to-tableau';
+            if (dragState.sourcePile === 'waste') {
+                moveType = 'waste-to-tableau';
+            } else if (dragState.sourcePile === 'foundation') {
+                moveType = 'foundation-to-tableau';
+            } else {
+                moveType = 'tableau-to-tableau';
+            }
             movePayload = moveResult.payload;
         }
     }
@@ -510,7 +528,13 @@ function finishDrag(clientX, clientY) {
         if (foundationIndex !== null) {
             moveResult = attemptFoundationMove(foundationIndex);
             if (moveResult.success) {
-                moveType = dragState.sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+                if (dragState.sourcePile === 'waste') {
+                    moveType = 'waste-to-foundation';
+                } else if (dragState.sourcePile === 'foundation') {
+                    moveType = 'foundation-to-foundation';
+                } else {
+                    moveType = 'tableau-to-foundation';
+                }
                 movePayload = moveResult.payload;
             }
         }
@@ -591,6 +615,10 @@ function attemptTableauMove(targetCol) {
         // Remove cards from source
         if (dragState.sourcePile === 'waste') {
             gameState.waste.pop();
+        } else if (dragState.sourcePile === 'foundation') {
+            if (cardsMoved.length !== 1) return { success: false };
+            const sourceFoundation = dragState.sourceIndex;
+            gameState.foundations[sourceFoundation].pop();
         } else if (dragState.sourcePile === 'tableau') {
             const sourceCol = dragState.sourceIndex;
             gameState.tableau[sourceCol] = gameState.tableau[sourceCol].slice(0, -dragState.draggedCards.length);
@@ -614,6 +642,7 @@ function attemptTableauMove(targetCol) {
             payload: {
                 fromPile: dragState.sourcePile,
                 fromColumn: dragState.sourcePile === 'tableau' ? dragState.sourceIndex : null,
+                fromFoundation: dragState.sourcePile === 'foundation' ? dragState.sourceIndex : null,
                 toColumn: targetCol,
                 cards: cardsMoved,
                 flippedCard
@@ -641,6 +670,10 @@ function attemptFoundationMove(targetFoundation) {
         // Remove card from source
         if (dragState.sourcePile === 'waste') {
             gameState.waste.pop();
+        } else if (dragState.sourcePile === 'foundation') {
+            const sourceFoundation = dragState.sourceIndex;
+            if (sourceFoundation === targetFoundation) return { success: false };
+            gameState.foundations[sourceFoundation].pop();
         } else if (dragState.sourcePile === 'tableau') {
             const sourceCol = dragState.sourceIndex;
             gameState.tableau[sourceCol].pop();
@@ -663,6 +696,7 @@ function attemptFoundationMove(targetFoundation) {
             payload: {
                 fromPile: dragState.sourcePile,
                 fromColumn: dragState.sourcePile === 'tableau' ? dragState.sourceIndex : null,
+                fromFoundation: dragState.sourcePile === 'foundation' ? dragState.sourceIndex : null,
                 foundationIndex: targetFoundation,
                 cards: [movingCard],
                 flippedCard
@@ -949,7 +983,8 @@ function updateDragIndicators(clientX, clientY) {
     clearDropIndicators();
     if (!dragState.isDragging) return;
 
-    const columnIndex = findTableauDropColumn(clientX, clientY);
+    const dropPoint = getDropPoint(clientX, clientY);
+    const columnIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
     if (columnIndex !== null) {
         const columnEl = document.getElementById(`tableau-${columnIndex}`);
         if (columnEl) {
@@ -958,7 +993,7 @@ function updateDragIndicators(clientX, clientY) {
         return;
     }
 
-    const foundationIndex = findFoundationDropPile(clientX, clientY);
+    const foundationIndex = findFoundationDropPile(dropPoint.x, dropPoint.y);
     if (foundationIndex !== null) {
         const foundationEl = document.getElementById(`foundation-${foundationIndex}`);
         if (foundationEl) {
@@ -1113,6 +1148,12 @@ function undoLastMove() {
         case 'waste-to-foundation':
             undoWasteToFoundationMove(lastMove.payload);
             break;
+        case 'foundation-to-tableau':
+            undoFoundationToTableauMove(lastMove.payload);
+            break;
+        case 'foundation-to-foundation':
+            undoFoundationToFoundationMove(lastMove.payload);
+            break;
         default:
             console.warn('Unexpected undo move type:', lastMove.type);
     }
@@ -1173,6 +1214,24 @@ function undoWasteToFoundationMove(payload) {
     gameState.waste.push(movedCard);
 }
 
+function undoFoundationToTableauMove(payload) {
+    const targetPile = gameState.tableau[payload.toColumn];
+    const movedCard = targetPile.pop();
+    if (!movedCard) return;
+    const foundationIndex = payload.fromFoundation;
+    if (foundationIndex === null || foundationIndex === undefined) return;
+    gameState.foundations[foundationIndex].push(movedCard);
+}
+
+function undoFoundationToFoundationMove(payload) {
+    const targetPile = gameState.foundations[payload.foundationIndex];
+    const movedCard = targetPile.pop();
+    if (!movedCard) return;
+    const sourceFoundation = payload.fromFoundation;
+    if (sourceFoundation === null || sourceFoundation === undefined) return;
+    gameState.foundations[sourceFoundation].push(movedCard);
+}
+
 function dealSolvableGame() {
     for (let attempt = 1; attempt <= MAX_SOLVABLE_DEAL_ATTEMPTS; attempt++) {
         const deck = CommonUtils.createShoe(1, SUITS, VALUES);
@@ -1231,6 +1290,9 @@ function cloneCardForSimulation(card) {
 
 function simulateSolvability(state, drawCount) {
     let iterations = 0;
+    const initialHidden = countHiddenCards(state.tableau);
+    const initialFoundationCount = countFoundationCards(state.foundations);
+    const variantOptions = getVariantOptions();
 
     while (iterations < MAX_SIMULATION_ITERATIONS) {
         iterations++;
@@ -1238,6 +1300,14 @@ function simulateSolvability(state, drawCount) {
         const moved = applySimulationAutoMoves(state);
         if (SolitaireLogic.isGameWon(state.foundations)) return true;
         if (moved) continue;
+
+        if (applySimulationTableauMove(state, variantOptions)) {
+            continue;
+        }
+
+        if (applySimulationWasteToTableauMove(state, variantOptions)) {
+            continue;
+        }
 
         if (state.stock.length > 0) {
             simulateDrawFromStock(state, drawCount);
@@ -1252,7 +1322,10 @@ function simulateSolvability(state, drawCount) {
         break;
     }
 
-    return SolitaireLogic.isGameWon(state.foundations);
+    if (SolitaireLogic.isGameWon(state.foundations)) return true;
+    const hiddenRevealed = initialHidden - countHiddenCards(state.tableau);
+    const foundationProgress = countFoundationCards(state.foundations) - initialFoundationCount;
+    return hiddenRevealed >= 6 || foundationProgress >= 4 || (hiddenRevealed + foundationProgress) >= 8;
 }
 
 function applySimulationAutoMoves(state) {
@@ -1303,6 +1376,78 @@ function simulateRecycleWaste(state) {
         card.hidden = true;
         state.stock.push(card);
     }
+}
+
+function countHiddenCards(tableau) {
+    return tableau.reduce((sum, column) => {
+        return sum + column.reduce((colSum, card) => colSum + (card.hidden ? 1 : 0), 0);
+    }, 0);
+}
+
+function countFoundationCards(foundations) {
+    return foundations.reduce((sum, pile) => sum + pile.length, 0);
+}
+
+function applySimulationTableauMove(state, options) {
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const sourcePile = state.tableau[sourceCol];
+        if (sourcePile.length === 0) continue;
+        const movingCard = sourcePile[sourcePile.length - 1];
+        if (movingCard.hidden) continue;
+
+        const wouldRevealHidden = sourcePile.length > 1 && sourcePile[sourcePile.length - 2].hidden;
+
+        for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+            if (targetCol === sourceCol) continue;
+            const targetPile = state.tableau[targetCol];
+            let isValid = false;
+            if (targetPile.length === 0) {
+                isValid = SolitaireLogic.canMoveToEmptyTableau(movingCard, options);
+            } else {
+                const topCard = targetPile[targetPile.length - 1];
+                if (!topCard.hidden) {
+                    isValid = SolitaireLogic.canPlaceOnTableau(movingCard, topCard);
+                }
+            }
+            if (!isValid) continue;
+
+            if (!wouldRevealHidden) {
+                continue;
+            }
+
+            sourcePile.pop();
+            targetPile.push(movingCard);
+            const newTop = sourcePile[sourcePile.length - 1];
+            if (newTop && newTop.hidden) {
+                newTop.hidden = false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+function applySimulationWasteToTableauMove(state, options) {
+    if (state.waste.length === 0) return false;
+    const movingCard = state.waste[state.waste.length - 1];
+    for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+        const targetPile = state.tableau[targetCol];
+        let isValid = false;
+        if (targetPile.length === 0) {
+            isValid = SolitaireLogic.canMoveToEmptyTableau(movingCard, options);
+        } else {
+            const topCard = targetPile[targetPile.length - 1];
+            if (!topCard.hidden) {
+                isValid = SolitaireLogic.canPlaceOnTableau(movingCard, topCard);
+            }
+        }
+        if (isValid) {
+            state.waste.pop();
+            targetPile.push(movingCard);
+            return true;
+        }
+    }
+    return false;
 }
 
 function getActiveVariantConfig() {

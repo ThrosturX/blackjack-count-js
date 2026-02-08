@@ -299,8 +299,9 @@ const CommonUtils = {
      * @param {number} destY - Target Y coordinate.
      * @param {Function} onComplete - Callback when animation finishes.
      */
-    animateCardDraw: function (shoeBody, destX, destY, onComplete) {
+    animateCardDraw: function (shoeBody, destX, destY, onComplete, options = {}) {
         if (!shoeBody) return;
+        const duration = typeof options.duration === 'number' ? options.duration : 400;
 
         const flyingCard = document.createElement('div');
         flyingCard.className = 'card hidden';
@@ -308,7 +309,7 @@ const CommonUtils = {
         flyingCard.style.width = '70px';
         flyingCard.style.height = '95px';
         flyingCard.style.zIndex = '1000';
-        flyingCard.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        flyingCard.style.transition = `all ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
         flyingCard.style.pointerEvents = 'none';
         flyingCard.style.opacity = '0.95';
         flyingCard.style.borderRadius = '6px';
@@ -332,7 +333,7 @@ const CommonUtils = {
                     flyingCard.parentNode.removeChild(flyingCard);
                 }
                 if (onComplete) onComplete();
-            }, 400);
+            }, duration);
         }, 10);
     },
 
