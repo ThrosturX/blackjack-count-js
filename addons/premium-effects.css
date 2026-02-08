@@ -145,6 +145,7 @@ body.table-ocean #solitaire-table::before {
     opacity: 0.6;
     animation: ocean-surface 12s linear infinite;
     pointer-events: none;
+    z-index: 0;
 }
 
 body.table-ocean #table::after,
@@ -158,6 +159,13 @@ body.table-ocean #solitaire-table::after {
     opacity: 0.45;
     animation: ocean-surface 18s linear reverse infinite;
     pointer-events: none;
+    z-index: 0;
+}
+
+body.table-ocean #table > :not(.ocean-creature):not(.ocean-orca),
+body.table-ocean #solitaire-table > :not(.ocean-creature):not(.ocean-orca) {
+    position: relative;
+    z-index: 2;
 }
 
 body.table-ocean .ocean-creature {
@@ -167,8 +175,9 @@ body.table-ocean .ocean-creature {
     width: 70px;
     height: 26px;
     opacity: 0;
-    filter: drop-shadow(0 0 6px rgba(0, 200, 255, 0.45));
+    filter: drop-shadow(0 0 6px rgba(0, 200, 200, 0.5));
     pointer-events: none;
+    z-index: 1;
 }
 
 body.table-ocean .ocean-creature::before {
@@ -185,6 +194,51 @@ body.table-ocean .ocean-creature::before {
 body.table-ocean .ocean-creature-swim {
     opacity: 0.85;
     animation-name: ocean-creature-swim;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+}
+
+body.table-ocean .ocean-orca {
+    position: absolute;
+    top: var(--orca-top, 40%);
+    left: var(--orca-start, 6%);
+    width: var(--orca-width, 260px);
+    height: var(--orca-height, 130px);
+    opacity: 0;
+    filter:
+        drop-shadow(0 0 6px rgba(0, 120, 115, 0.35))
+        drop-shadow(0 0 12px rgba(0, 70, 65, 0.3));
+    pointer-events: none;
+    will-change: left, opacity, transform;
+    z-index: 1;
+}
+
+body.table-ocean .ocean-orca::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 55, 55, 0.65);
+    -webkit-mask: url("data:image/svg+xml;utf8,%3Csvg%20viewBox%3D%220%200%20400%20800%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cstyle%3E%0A%20%20%20%20/%2A%20The%20Math%20of%20the%20Movement%20%2A/%0A%20%20%20%20%40keyframes%20tailSwing%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20rotate%28-3deg%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20rotate%283deg%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%40keyframes%20bodySway%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20translateX%280px%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20.tail-section%20%7B%0A%20%20%20%20%20%20animation%3A%20tailSwing%203s%20ease-in-out%20infinite%3B%0A%20%20%20%20%20%20transform-origin%3A%20200px%20500px%3B%0A%20%20%20%20%7D%0A%20%20%20%20.whole-orca%20%7B%0A%20%20%20%20%20%20animation%3A%20bodySway%206s%20ease-in-out%20infinite%3B%0A%20%20%20%20%7D%0A%20%20%3C/style%3E%0A%0A%20%20%3Cg%20class%3D%22whole-orca%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M200%2C40%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C40%20125%2C180%20125%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C125%2C450%20185%2C580%20192%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20L208%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C215%2C580%20275%2C450%20275%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C275%2C180%20250%2C40%20200%2C40%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M128%2C280%20C80%2C270%2065%2C340%20120%2C380%20L125%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M272%2C280%20C320%2C270%20335%2C340%20280%2C380%20L275%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cellipse%20cx%3D%22168%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%28-20%2C%20168%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22232%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%2820%2C%20232%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M175%2C380%20Q200%2C340%20225%2C380%20Q200%2C410%20175%2C380%22%20fill%3D%22%23444%22%20opacity%3D%220.4%22/%3E%0A%0A%20%20%20%20%3Cg%20class%3D%22tail-section%22%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M200%2C675%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C675%2090%2C720%2090%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C90%2C765%20140%2C755%20198%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L200%2C735%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L202%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C260%2C755%20310%2C765%20310%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C310%2C720%20250%2C675%20200%2C675%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A") center/contain no-repeat;
+    mask: url("data:image/svg+xml;utf8,%3Csvg%20viewBox%3D%220%200%20400%20800%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cstyle%3E%0A%20%20%20%20/%2A%20The%20Math%20of%20the%20Movement%20%2A/%0A%20%20%20%20%40keyframes%20tailSwing%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20rotate%28-3deg%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20rotate%283deg%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%40keyframes%20bodySway%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20translateX%280px%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20.tail-section%20%7B%0A%20%20%20%20%20%20animation%3A%20tailSwing%203s%20ease-in-out%20infinite%3B%0A%20%20%20%20%20%20transform-origin%3A%20200px%20500px%3B%0A%20%20%20%20%7D%0A%20%20%20%20.whole-orca%20%7B%0A%20%20%20%20%20%20animation%3A%20bodySway%206s%20ease-in-out%20infinite%3B%0A%20%20%20%20%7D%0A%20%20%3C/style%3E%0A%0A%20%20%3Cg%20class%3D%22whole-orca%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M200%2C40%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C40%20125%2C180%20125%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C125%2C450%20185%2C580%20192%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20L208%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C215%2C580%20275%2C450%20275%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C275%2C180%20250%2C40%20200%2C40%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M128%2C280%20C80%2C270%2065%2C340%20120%2C380%20L125%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M272%2C280%20C320%2C270%20335%2C340%20280%2C380%20L275%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cellipse%20cx%3D%22168%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%28-20%2C%20168%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22232%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%2820%2C%20232%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M175%2C380%20Q200%2C340%20225%2C380%20Q200%2C410%20175%2C380%22%20fill%3D%22%23444%22%20opacity%3D%220.4%22/%3E%0A%0A%20%20%20%20%3Cg%20class%3D%22tail-section%22%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M200%2C675%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C675%2090%2C720%2090%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C90%2C765%20140%2C755%20198%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L200%2C735%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L202%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C260%2C755%20310%2C765%20310%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C310%2C720%20250%2C675%20200%2C675%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A") center/contain no-repeat;
+    transform: rotate(-90deg) scaleX(var(--orca-dir, 1));
+    transform-origin: center;
+}
+
+body.table-ocean .ocean-orca::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(60, 130, 125, 0.22);
+    -webkit-mask: url("data:image/svg+xml;utf8,%3Csvg%20viewBox%3D%220%200%20400%20800%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cstyle%3E%0A%20%20%20%20/%2A%20The%20Math%20of%20the%20Movement%20%2A/%0A%20%20%20%20%40keyframes%20tailSwing%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20rotate%28-3deg%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20rotate%283deg%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%40keyframes%20bodySway%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20translateX%280px%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20.tail-section%20%7B%0A%20%20%20%20%20%20animation%3A%20tailSwing%203s%20ease-in-out%20infinite%3B%0A%20%20%20%20%20%20transform-origin%3A%20200px%20500px%3B%0A%20%20%20%20%7D%0A%20%20%20%20.whole-orca%20%7B%0A%20%20%20%20%20%20animation%3A%20bodySway%206s%20ease-in-out%20infinite%3B%0A%20%20%20%20%7D%0A%20%20%3C/style%3E%0A%0A%20%20%3Cg%20class%3D%22whole-orca%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M200%2C40%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C40%20125%2C180%20125%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C125%2C450%20185%2C580%20192%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20L208%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C215%2C580%20275%2C450%20275%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C275%2C180%20250%2C40%20200%2C40%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M128%2C280%20C80%2C270%2065%2C340%20120%2C380%20L125%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M272%2C280%20C320%2C270%20335%2C340%20280%2C380%20L275%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cellipse%20cx%3D%22168%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%28-20%2C%20168%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22232%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%2820%2C%20232%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M175%2C380%20Q200%2C340%20225%2C380%20Q200%2C410%20175%2C380%22%20fill%3D%22%23444%22%20opacity%3D%220.4%22/%3E%0A%0A%20%20%20%20%3Cg%20class%3D%22tail-section%22%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M200%2C675%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C675%2090%2C720%2090%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C90%2C765%20140%2C755%20198%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L200%2C735%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L202%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C260%2C755%20310%2C765%20310%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C310%2C720%20250%2C675%20200%2C675%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A") center/contain no-repeat;
+    mask: url("data:image/svg+xml;utf8,%3Csvg%20viewBox%3D%220%200%20400%20800%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cstyle%3E%0A%20%20%20%20/%2A%20The%20Math%20of%20the%20Movement%20%2A/%0A%20%20%20%20%40keyframes%20tailSwing%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20rotate%28-3deg%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20rotate%283deg%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%40keyframes%20bodySway%20%7B%0A%20%20%20%20%20%200%25%2C%20100%25%20%7B%20transform%3A%20translateX%280px%29%3B%20%7D%0A%20%20%20%20%20%2050%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20.tail-section%20%7B%0A%20%20%20%20%20%20animation%3A%20tailSwing%203s%20ease-in-out%20infinite%3B%0A%20%20%20%20%20%20transform-origin%3A%20200px%20500px%3B%0A%20%20%20%20%7D%0A%20%20%20%20.whole-orca%20%7B%0A%20%20%20%20%20%20animation%3A%20bodySway%206s%20ease-in-out%20infinite%3B%0A%20%20%20%20%7D%0A%20%20%3C/style%3E%0A%0A%20%20%3Cg%20class%3D%22whole-orca%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M200%2C40%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C40%20125%2C180%20125%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C125%2C450%20185%2C580%20192%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20L208%2C680%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C215%2C580%20275%2C450%20275%2C300%0A%20%20%20%20%20%20%20%20%20%20%20%20%20C275%2C180%20250%2C40%20200%2C40%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M128%2C280%20C80%2C270%2065%2C340%20120%2C380%20L125%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M272%2C280%20C320%2C270%20335%2C340%20280%2C380%20L275%2C330%20Z%22%20fill%3D%22%23121212%22/%3E%0A%0A%20%20%20%20%3Cellipse%20cx%3D%22168%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%28-20%2C%20168%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%20%20%20%20%3Cellipse%20cx%3D%22232%22%20cy%3D%22140%22%20rx%3D%227%22%20ry%3D%2222%22%20fill%3D%22white%22%20transform%3D%22rotate%2820%2C%20232%2C%20140%29%22%20opacity%3D%220.9%22/%3E%0A%0A%20%20%20%20%3Cpath%20d%3D%22M175%2C380%20Q200%2C340%20225%2C380%20Q200%2C410%20175%2C380%22%20fill%3D%22%23444%22%20opacity%3D%220.4%22/%3E%0A%0A%20%20%20%20%3Cg%20class%3D%22tail-section%22%3E%0A%20%20%20%20%20%20%3Cpath%20d%3D%22M200%2C675%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C150%2C675%2090%2C720%2090%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C90%2C765%20140%2C755%20198%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L200%2C735%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20L202%2C730%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C260%2C755%20310%2C765%20310%2C750%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20C310%2C720%20250%2C675%20200%2C675%20Z%22%20fill%3D%22%23121212%22/%3E%0A%20%20%20%20%3C/g%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A") center/contain no-repeat;
+    transform: rotate(-90deg) scaleX(var(--orca-dir, 1)) scale(1.04);
+    transform-origin: center;
+    opacity: 0.6;
+}
+
+body.table-ocean .ocean-orca-swim {
+    opacity: 1;
+    animation-name: ocean-orca-swim;
     animation-timing-function: linear;
     animation-fill-mode: both;
 }
@@ -547,4 +601,13 @@ body.deck-crimson-veil .card.hidden:hover {
     50% { opacity: 0.95; }
     90% { opacity: 0.6; }
     100% { transform: translate3d(140%, -10%, 0) scaleX(var(--swim-dir, 1)); opacity: 0; }
+}
+
+@keyframes ocean-orca-swim {
+    0% { left: var(--orca-start, 8%); opacity: 0; transform: translateY(16px) scale(0.62); filter: drop-shadow(0 0 4px rgba(0, 120, 115, 0.2)) drop-shadow(0 0 6px rgba(0, 70, 65, 0.2)); }
+    18% { opacity: 0.5; transform: translateY(6px) scale(0.82); filter: drop-shadow(0 0 10px rgba(0, 120, 115, 0.45)) drop-shadow(0 0 18px rgba(0, 70, 65, 0.35)); }
+    50% { opacity: 0.95; transform: translateY(-14px) scale(1.35); filter: drop-shadow(0 0 18px rgba(0, 120, 115, 0.6)) drop-shadow(0 0 30px rgba(0, 70, 65, 0.45)); }
+    78% { opacity: 0.55; transform: translateY(4px) scale(0.95); filter: drop-shadow(0 0 8px rgba(0, 120, 115, 0.3)) drop-shadow(0 0 14px rgba(0, 70, 65, 0.28)); }
+    92% { opacity: 0.25; transform: translateY(12px) scale(0.72); }
+    100% { left: var(--orca-end, calc(100% - 8% - var(--orca-width, 260px))); opacity: 0; transform: translateY(18px) scale(0.62); filter: drop-shadow(0 0 4px rgba(0, 120, 115, 0.2)) drop-shadow(0 0 6px rgba(0, 70, 65, 0.2)); }
 }
