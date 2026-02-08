@@ -183,6 +183,34 @@
         });
     };
 
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const parsePercent = (value, fallback) => {
+        if (!value) return fallback;
+        const parsed = parseFloat(value);
+        return Number.isNaN(parsed) ? fallback : parsed;
+    };
+
+    const getWearBaseAlpha = (cardEl, key, fallback) => {
+        const stored = cardEl.dataset[key];
+        if (stored) {
+            const parsed = parseFloat(stored);
+            if (!Number.isNaN(parsed)) return parsed;
+        }
+        const inline = cardEl.style.getPropertyValue(fallback).trim();
+        const parsed = parseFloat(inline);
+        if (!Number.isNaN(parsed)) return parsed;
+        return null;
+    };
+
+    const setWearAlpha = (cardEl, key, value) => {
+        if (value === null) {
+            cardEl.style.removeProperty(key);
+        } else {
+            cardEl.style.setProperty(key, value.toFixed(3));
+        }
+    };
+
     const applyGrimePalette = (cardEl) => {
         const styles = getComputedStyle(cardEl);
         let base = null;
@@ -203,28 +231,45 @@
                 '--wear-grime-rgb': null,
                 '--wear-grime-rgb-2': null,
                 '--wear-scuff-light-rgb': null,
-                '--wear-scuff-dark-rgb': null
+                '--wear-scuff-dark-rgb': null,
+                '--wear-tear-paper-rgb': null,
+                '--wear-tear-edge-rgb': null
             });
             return;
         }
 
         if (document.body.classList.contains('deck-neon-vibe')) {
+            const baseAlpha = getWearBaseAlpha(cardEl, 'wearInkFadeAlphaBase', '--wear-ink-fade-alpha');
+            const baseAlpha2 = getWearBaseAlpha(cardEl, 'wearInkFadeAlpha2Base', '--wear-ink-fade2-alpha');
+            const maxNeonAlpha = 0.37;
+            const scuffX = parsePercent(styles.getPropertyValue('--wear-scuff-x'), 50);
+            const scuffY = parsePercent(styles.getPropertyValue('--wear-scuff-y'), 50);
+            const fadeOpacity = 0.2 + (((scuffX * 3 + scuffY * 7) % 100) / 100) * 0.6;
+            cardEl.style.setProperty('--wear-fade-opacity', fadeOpacity.toFixed(3));
             if (cardEl.classList.contains('black')) {
                 setWearColorVars(cardEl, {
-                    '--wear-grime-rgb': '0, 210, 120',
-                    '--wear-grime-rgb-2': '0, 185, 105',
-                    '--wear-scuff-light-rgb': '30, 235, 155',
-                    '--wear-scuff-dark-rgb': '0, 105, 65'
+                    '--wear-grime-rgb': '140, 255, 60',
+                    '--wear-grime-rgb-2': '0, 200, 170',
+                    '--wear-scuff-light-rgb': '190, 255, 120',
+                    '--wear-scuff-dark-rgb': '0, 120, 110',
+                    '--wear-tear-paper-rgb': null,
+                    '--wear-tear-edge-rgb': null
                 });
+                if (baseAlpha !== null) setWearAlpha(cardEl, '--wear-ink-fade-alpha', clamp(baseAlpha + 0.1, 0, maxNeonAlpha));
+                if (baseAlpha2 !== null) setWearAlpha(cardEl, '--wear-ink-fade2-alpha', clamp(baseAlpha2 + 0.1, 0, maxNeonAlpha));
                 return;
             }
             if (cardEl.classList.contains('red')) {
                 setWearColorVars(cardEl, {
-                    '--wear-grime-rgb': '235, 0, 170',
-                    '--wear-grime-rgb-2': '210, 0, 150',
-                    '--wear-scuff-light-rgb': '245, 80, 200',
-                    '--wear-scuff-dark-rgb': '135, 0, 85'
+                    '--wear-grime-rgb': '205, 80, 255',
+                    '--wear-grime-rgb-2': '255, 170, 210',
+                    '--wear-scuff-light-rgb': '225, 130, 255',
+                    '--wear-scuff-dark-rgb': '140, 60, 190',
+                    '--wear-tear-paper-rgb': null,
+                    '--wear-tear-edge-rgb': null
                 });
+                if (baseAlpha !== null) setWearAlpha(cardEl, '--wear-ink-fade-alpha', clamp(baseAlpha + 0.1, 0, maxNeonAlpha));
+                if (baseAlpha2 !== null) setWearAlpha(cardEl, '--wear-ink-fade2-alpha', clamp(baseAlpha2 + 0.1, 0, maxNeonAlpha));
                 return;
             }
         }
@@ -239,8 +284,15 @@
                 '--wear-grime-rgb': null,
                 '--wear-grime-rgb-2': null,
                 '--wear-scuff-light-rgb': null,
-                '--wear-scuff-dark-rgb': null
+                '--wear-scuff-dark-rgb': null,
+                '--wear-tear-paper-rgb': null,
+                '--wear-tear-edge-rgb': null
             });
+            cardEl.style.removeProperty('--wear-fade-opacity');
+            const baseAlpha = getWearBaseAlpha(cardEl, 'wearInkFadeAlphaBase', '--wear-ink-fade-alpha');
+            const baseAlpha2 = getWearBaseAlpha(cardEl, 'wearInkFadeAlpha2Base', '--wear-ink-fade2-alpha');
+            if (baseAlpha !== null) setWearAlpha(cardEl, '--wear-ink-fade-alpha', baseAlpha);
+            if (baseAlpha2 !== null) setWearAlpha(cardEl, '--wear-ink-fade2-alpha', baseAlpha2);
             return;
         }
         const darkMode = lum < 0.4;
@@ -248,12 +300,21 @@
         const grime2 = hslToRgb(h, s * 0.16, Math.max(0.08, l * (darkMode ? 0.78 : 0.86)));
         const scuffLight = hslToRgb(h, s * 0.14, Math.max(0.1, l * (darkMode ? 0.88 : 0.94)));
         const scuffDark = hslToRgb(h, s * 0.22, Math.max(0.06, l * (darkMode ? 0.6 : 0.68)));
+        const tearPaper = hslToRgb(h, s * 0.1, Math.min(0.92, l * 1.08 + 0.08));
+        const tearEdge = hslToRgb(h, s * 0.12, Math.max(0.12, l * 0.72));
         setWearColorVars(cardEl, {
             '--wear-grime-rgb': `${grime[0]}, ${grime[1]}, ${grime[2]}`,
             '--wear-grime-rgb-2': `${grime2[0]}, ${grime2[1]}, ${grime2[2]}`,
             '--wear-scuff-light-rgb': `${scuffLight[0]}, ${scuffLight[1]}, ${scuffLight[2]}`,
-            '--wear-scuff-dark-rgb': `${scuffDark[0]}, ${scuffDark[1]}, ${scuffDark[2]}`
+            '--wear-scuff-dark-rgb': `${scuffDark[0]}, ${scuffDark[1]}, ${scuffDark[2]}`,
+            '--wear-tear-paper-rgb': `${tearPaper[0]}, ${tearPaper[1]}, ${tearPaper[2]}`,
+            '--wear-tear-edge-rgb': `${tearEdge[0]}, ${tearEdge[1]}, ${tearEdge[2]}`
         });
+        cardEl.style.removeProperty('--wear-fade-opacity');
+        const baseAlpha = getWearBaseAlpha(cardEl, 'wearInkFadeAlphaBase', '--wear-ink-fade-alpha');
+        const baseAlpha2 = getWearBaseAlpha(cardEl, 'wearInkFadeAlpha2Base', '--wear-ink-fade2-alpha');
+        if (baseAlpha !== null) setWearAlpha(cardEl, '--wear-ink-fade-alpha', baseAlpha);
+        if (baseAlpha2 !== null) setWearAlpha(cardEl, '--wear-ink-fade2-alpha', baseAlpha2);
     };
 
     const clearWearFromCardEl = (cardEl) => {
@@ -263,6 +324,13 @@
         cardEl.style.removeProperty('--wear-grime-rgb-2');
         cardEl.style.removeProperty('--wear-scuff-light-rgb');
         cardEl.style.removeProperty('--wear-scuff-dark-rgb');
+        cardEl.style.removeProperty('--wear-tear-paper-rgb');
+        cardEl.style.removeProperty('--wear-tear-edge-rgb');
+        cardEl.style.removeProperty('--wear-fade-opacity');
+        cardEl.style.removeProperty('--wear-ink-fade-alpha');
+        cardEl.style.removeProperty('--wear-ink-fade2-alpha');
+        delete cardEl.dataset.wearInkFadeAlphaBase;
+        delete cardEl.dataset.wearInkFadeAlpha2Base;
         delete cardEl.dataset.wearApplied;
         const fadeLayer = cardEl.querySelector('.ink-fade-layer');
         if (fadeLayer) fadeLayer.remove();
@@ -285,6 +353,14 @@
         const suit = cardEl.dataset.suit;
         if (!val || !suit) return;
         common.applyDeterministicWear(cardEl, { val, suit });
+        if (!cardEl.dataset.wearInkFadeAlphaBase) {
+            const base = cardEl.style.getPropertyValue('--wear-ink-fade-alpha').trim();
+            if (base) cardEl.dataset.wearInkFadeAlphaBase = base;
+        }
+        if (!cardEl.dataset.wearInkFadeAlpha2Base) {
+            const base = cardEl.style.getPropertyValue('--wear-ink-fade2-alpha').trim();
+            if (base) cardEl.dataset.wearInkFadeAlpha2Base = base;
+        }
         applyGrimePalette(cardEl);
         ensureInkFadeLayer(cardEl);
         cardEl.dataset.wearApplied = '1';

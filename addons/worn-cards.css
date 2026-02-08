@@ -54,7 +54,7 @@ body[class*="deck-"] .card.hidden::after {
         linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, transparent 42%),
         linear-gradient(215deg, rgba(40, 30, 20, 0.12) 0%, transparent 57%);
     mix-blend-mode: multiply;
-    opacity: 0.65;
+    opacity: calc(var(--wear-layer-opacity, 1) * 0.65);
 }
 
 body[class*="deck-"]:not(.deck-red):not(.deck-blue):not(.deck-green):not(.deck-water):not(.deck-sun) .card:not(.hidden) {
@@ -72,7 +72,7 @@ body[class*="deck-"]:not(.deck-red):not(.deck-blue):not(.deck-green):not(.deck-w
         radial-gradient(circle at var(--wear-scuff2-x, 70%) var(--wear-scuff2-y, 65%), rgba(var(--wear-scuff-dark-rgb, 30, 25, 20), 0.2) 0%, transparent 45%),
         linear-gradient(145deg, rgba(var(--wear-scuff-light-rgb, 255, 255, 255), 0.08) 0%, transparent 50%);
     mix-blend-mode: multiply;
-    opacity: 0.45;
+    opacity: calc(var(--wear-layer-opacity, 1) * 0.45);
     z-index: 0;
 }
 
@@ -90,6 +90,7 @@ body.deck-sun .card.hidden::after {
     inset: 0;
     pointer-events: none;
     z-index: 3;
+    opacity: calc(var(--wear-layer-opacity, 1) * var(--wear-fade-opacity, 1));
     background:
         radial-gradient(
             circle at var(--wear-ink-fade-x, 32%) var(--wear-ink-fade-y, 28%),
@@ -108,6 +109,11 @@ body.deck-sun .card.hidden::after {
         );
     mix-blend-mode: normal;
 }
+
+body.deck-ghost .card:not(.hidden) {
+    --wear-layer-opacity: 0.5;
+}
+
 
 /*
  * Face-card wear: only apply to compatible decks so we don't stomp
@@ -152,6 +158,7 @@ body.deck-sun .card:not(.hidden)::after {
     content: "";
     position: absolute;
     inset: 6px;
+    opacity: var(--wear-layer-opacity, 1);
     border: 1px dashed rgba(90, 70, 45, 0.25);
     background:
         linear-gradient(var(--wear-fold-angle, 35deg),
@@ -171,6 +178,7 @@ body.deck-sun .card:not(.hidden)::before {
     content: "";
     position: absolute;
     inset: 0;
+    opacity: var(--wear-layer-opacity, 1);
     background:
         radial-gradient(circle at var(--wear-stain-x, 60%) var(--wear-stain-y, 40%), rgba(120, 90, 60, calc(var(--wear-stain-alpha, 0) * 0.6)) 0%, transparent calc(var(--wear-stain-size, 24%) * 0.9)),
         radial-gradient(circle at var(--wear-stain-x, 60%) var(--wear-stain-y, 40%), rgba(70, 50, 35, calc(var(--wear-stain-alpha, 0) * 0.45)) 12%, transparent calc(var(--wear-stain-size, 24%) * 1.25)),
