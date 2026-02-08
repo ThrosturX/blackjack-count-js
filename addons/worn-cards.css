@@ -150,16 +150,48 @@ body.deck-sun .card.black {
     color: rgba(60, 50, 40, 0.85);
 }
 
+body .card {
+    filter: saturate(0.82);
+}
+
+body.deck-sun .card {
+    filter: saturate(0.68) brightness(0.96);
+}
+
+/* Water deck: mild water damage (warping + tide staining). */
+body.deck-water .card {
+    filter: saturate(0.88);
+}
+
+body.deck-water .card:not(.hidden)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 1px dashed rgba(60, 71, 100, 0.12);
+    background:
+        radial-gradient(circle at var(--wear-warp-x, 40%) var(--wear-warp-y, 60%),
+            rgba(230, 245, 245, calc(var(--wear-warp-alpha, 0) * 0.55)) 0%,
+            rgba(230, 245, 245, 0) 45%),
+        linear-gradient(var(--wear-warp-angle, 25deg),
+            rgba(180, 215, 220, calc(var(--wear-warp-alpha, 0) * 0.55)) 0%,
+            rgba(180, 215, 220, 0) 32%),
+        radial-gradient(circle at var(--wear-stain-x, 65%) var(--wear-stain-y, 35%),
+            rgba(160, 195, 200, calc(var(--wear-stain-alpha, 0) * 0.7)) 0%,
+            rgba(160, 195, 200, 0) 45%) !important;
+    mix-blend-mode: multiply;
+    opacity: calc(var(--wear-layer-opacity, 1) * 0.6);
+}
+
 body.deck-red .card:not(.hidden)::after,
 body.deck-blue .card:not(.hidden)::after,
 body.deck-green .card:not(.hidden)::after,
-body.deck-water .card:not(.hidden)::after,
 body.deck-sun .card:not(.hidden)::after {
     content: "";
     position: absolute;
     inset: 6px;
     opacity: var(--wear-layer-opacity, 1);
-    border: 1px dashed rgba(90, 70, 45, 0.25);
+    border: 1px dotted rgba(90, 70, 45, 0.12);
     background:
         linear-gradient(var(--wear-fold-angle, 35deg),
             rgba(255, 255, 255, var(--wear-fold-alpha, 0)) 0%,
