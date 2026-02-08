@@ -1487,19 +1487,18 @@ input:checked+.slider:before {
 }
 
 #freecell-top-row {
-    display: grid;
-    grid-template-columns: repeat(8, var(--card-w));
-    gap: 12px;
+    display: flex;
     justify-content: center;
     align-items: start;
+    gap: clamp(12px, calc(100% - (8 * var(--card-w)) - 72px), calc(1.44 * var(--card-w)));
 }
 
 #freecell-freecells {
-    grid-column: 1 / span 4;
+    flex: 0 0 auto;
 }
 
 #freecell-foundations {
-    grid-column: 5 / span 4;
+    flex: 0 0 auto;
 }
 
 .freecell-group {
