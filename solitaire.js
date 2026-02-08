@@ -18,10 +18,15 @@ const gameState = {
     isGameWon: false
 };
 
-// Drag state
+// Drag state / UI tuning
 const DRAG_MOVE_THRESHOLD = 6;
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
+const TABLEAU_DROP_PADDING = 40;
+const FOUNDATION_DROP_PADDING = 30;
+const MAX_HISTORY = 200;
+const MAX_SOLVABLE_DEAL_ATTEMPTS = 5;
+const MAX_SIMULATION_ITERATIONS = 600;
 
 const dragState = {
     draggedCards: [],
@@ -33,7 +38,8 @@ const dragState = {
     pointerOffsetY: 0,
     isDragging: false,
     pendingDrag: null,
-    activePointerId: null
+    activePointerId: null,
+    hoveredCard: null
 };
 
 // Sound files
@@ -70,24 +76,8 @@ function initGame() {
     }
     gameState.startTime = Date.now();
 
-    // Create and shuffle deck
-    const deck = CommonUtils.createShoe(1, SUITS, VALUES);
-
-    // Deal tableau (1 card to first column, 2 to second, etc.)
-    for (let col = 0; col < 7; col++) {
-        for (let row = 0; row <= col; row++) {
-            const card = deck.pop();
-            if (row === col) {
-                card.hidden = false; // Top card is face up
-            } else {
-                card.hidden = true; // Other cards are face down
-            }
-            gameState.tableau[col].push(card);
-        }
-    }
-
-    // Remaining cards go to stock
-    gameState.stock = deck;
+    // Deal a solvable hand (reshuffle up to N times if needed)
+    dealSolvableGame();
 
     // Start timer
     startTimer();
@@ -95,6 +85,7 @@ function initGame() {
     // Update UI
     updateUI();
     hideWinOverlay();
+    updateUndoButtonState();
 
     CommonUtils.playSound('shuffle');
 }
@@ -261,14 +252,22 @@ function drawFromStock() {
 
     const drawCount = gameState.drawCount;
     const cardsToDraw = Math.min(drawCount, gameState.stock.length);
+    const drawnCards = [];
 
     for (let i = 0; i < cardsToDraw; i++) {
         const card = gameState.stock.pop();
         card.hidden = false;
         gameState.waste.push(card);
+        drawnCards.push(card);
     }
 
     gameState.moves++;
+    recordMove({
+        type: 'draw',
+        payload: { cards: drawnCards.slice() },
+        scoreDelta: 0,
+        movesDelta: 1
+    });
     CommonUtils.playSound('card');
     updateUI();
 }
@@ -280,6 +279,7 @@ function recycleWaste() {
     if (gameState.waste.length === 0) return;
 
     // Move all waste cards back to stock (reversed)
+    const recycledCards = gameState.waste.slice();
     while (gameState.waste.length > 0) {
         const card = gameState.waste.pop();
         card.hidden = true;
@@ -288,6 +288,12 @@ function recycleWaste() {
 
     gameState.score += SolitaireLogic.scoreMove('recycle-waste');
     gameState.moves++;
+    recordMove({
+        type: 'recycle',
+        payload: { cards: recycledCards.slice() },
+        scoreDelta: SolitaireLogic.scoreMove('recycle-waste'),
+        movesDelta: 1
+    });
     CommonUtils.playSound('card');
     updateUI();
 }
@@ -327,6 +333,7 @@ function handlePointerMove(e) {
 
     if (dragState.isDragging) {
         updateDragLayerPosition(e.clientX, e.clientY);
+        updateDragIndicators(e.clientX, e.clientY);
     }
 }
 
@@ -345,6 +352,8 @@ function handlePointerUp(e) {
 function startPointerDrag(e) {
     const { cardEl } = dragState.pendingDrag;
     if (!cardEl) return;
+
+    clearHoveredCard();
 
     // Determine source pile and cards
     if (cardEl.dataset.waste) {
@@ -421,31 +430,43 @@ function updateDragLayerPosition(clientX, clientY) {
 }
 
 function finishDrag(clientX, clientY) {
-    let isValid = false;
+    const scoreBeforeDrag = gameState.score;
+    const movesBeforeDrag = gameState.moves;
+    let movePayload = null;
     let moveType = '';
-    const dropTarget = document.elementFromPoint(clientX, clientY);
+    let moveResult = { success: false };
 
-    if (dropTarget) {
-        const tableauCol = dropTarget.closest('.tableau-column');
-        if (tableauCol) {
-            const targetCol = parseInt(tableauCol.id.split('-')[1], 10);
-            isValid = attemptTableauMove(targetCol);
+    const targetColIndex = findTableauDropColumn(clientX, clientY);
+    if (targetColIndex !== null) {
+        moveResult = attemptTableauMove(targetColIndex);
+        if (moveResult.success) {
             moveType = dragState.sourcePile === 'waste' ? 'waste-to-tableau' : 'tableau-to-tableau';
-        } else {
-            const foundationPile = dropTarget.closest('.foundation-pile');
-            if (foundationPile) {
-                const targetFoundation = parseInt(foundationPile.id.split('-')[1], 10);
-                isValid = attemptFoundationMove(targetFoundation);
+            movePayload = moveResult.payload;
+        }
+    }
+
+    if (!moveResult.success) {
+        const foundationIndex = findFoundationDropPile(clientX, clientY);
+        if (foundationIndex !== null) {
+            moveResult = attemptFoundationMove(foundationIndex);
+            if (moveResult.success) {
                 moveType = dragState.sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+                movePayload = moveResult.payload;
             }
         }
     }
 
     cleanupDragVisuals();
 
-    if (isValid) {
+    if (moveResult.success) {
         gameState.score += SolitaireLogic.scoreMove(moveType);
         gameState.moves++;
+        recordMove({
+            type: moveType,
+            payload: movePayload,
+            scoreDelta: gameState.score - scoreBeforeDrag,
+            movesDelta: gameState.moves - movesBeforeDrag
+        });
         CommonUtils.playSound('card');
         updateUI();
         checkWinCondition();
@@ -462,11 +483,13 @@ function cleanupDragVisuals() {
         dragState.dragLayer = null;
     }
     dragState.draggedElements = [];
+    clearDropIndicators();
 }
 
 function cleanupPointerHandlers() {
     document.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
+    clearHoveredCard();
     dragState.activePointerId = null;
 }
 
@@ -484,7 +507,7 @@ function resetDragState() {
  * Attempt to move cards to tableau
  */
 function attemptTableauMove(targetCol) {
-    if (dragState.draggedCards.length === 0) return false;
+    if (dragState.draggedCards.length === 0) return { success: false };
 
     const movingCard = dragState.draggedCards[0];
     const targetPile = gameState.tableau[targetCol];
@@ -501,6 +524,9 @@ function attemptTableauMove(targetCol) {
     }
 
     if (isValid) {
+        const cardsMoved = dragState.draggedCards.slice();
+        let flippedCard = null;
+
         // Remove cards from source
         if (dragState.sourcePile === 'waste') {
             gameState.waste.pop();
@@ -513,24 +539,35 @@ function attemptTableauMove(targetCol) {
                 const topCard = gameState.tableau[sourceCol][gameState.tableau[sourceCol].length - 1];
                 if (topCard.hidden) {
                     topCard.hidden = false;
+                    flippedCard = topCard;
                     gameState.score += SolitaireLogic.scoreMove('flip-card');
                 }
             }
         }
 
         // Add cards to target
-        gameState.tableau[targetCol].push(...dragState.draggedCards);
-        return true;
+        gameState.tableau[targetCol].push(...cardsMoved);
+
+        return {
+            success: true,
+            payload: {
+                fromPile: dragState.sourcePile,
+                fromColumn: dragState.sourcePile === 'tableau' ? dragState.sourceIndex : null,
+                toColumn: targetCol,
+                cards: cardsMoved,
+                flippedCard
+            }
+        };
     }
 
-    return false;
+    return { success: false };
 }
 
 /**
  * Attempt to move card to foundation
  */
 function attemptFoundationMove(targetFoundation) {
-    if (dragState.draggedCards.length !== 1) return false; // Only single cards to foundation
+    if (dragState.draggedCards.length !== 1) return { success: false };
 
     const movingCard = dragState.draggedCards[0];
     const foundationPile = gameState.foundations[targetFoundation];
@@ -538,6 +575,8 @@ function attemptFoundationMove(targetFoundation) {
     const isValid = SolitaireLogic.canPlaceOnFoundation(movingCard, foundationPile);
 
     if (isValid) {
+        let flippedCard = null;
+
         // Remove card from source
         if (dragState.sourcePile === 'waste') {
             gameState.waste.pop();
@@ -550,6 +589,7 @@ function attemptFoundationMove(targetFoundation) {
                 const topCard = gameState.tableau[sourceCol][gameState.tableau[sourceCol].length - 1];
                 if (topCard.hidden) {
                     topCard.hidden = false;
+                    flippedCard = topCard;
                     gameState.score += SolitaireLogic.scoreMove('flip-card');
                 }
             }
@@ -557,10 +597,19 @@ function attemptFoundationMove(targetFoundation) {
 
         // Add card to foundation
         gameState.foundations[targetFoundation].push(movingCard);
-        return true;
+        return {
+            success: true,
+            payload: {
+                fromPile: dragState.sourcePile,
+                fromColumn: dragState.sourcePile === 'tableau' ? dragState.sourceIndex : null,
+                foundationIndex: targetFoundation,
+                cards: [movingCard],
+                flippedCard
+            }
+        };
     }
 
-    return false;
+    return { success: false };
 }
 
 /**
@@ -826,4 +875,408 @@ function setupEventListeners() {
     document.getElementById('draw-count-select').addEventListener('change', (e) => {
         gameState.drawCount = parseInt(e.target.value);
     });
+
+    document.getElementById('undo-btn').addEventListener('click', undoLastMove);
+    attachTableauHoverHandlers();
+}
+
+/* --- Drag, hover & undo helpers --- */
+
+function updateDragIndicators(clientX, clientY) {
+    clearDropIndicators();
+    if (!dragState.isDragging) return;
+
+    const columnIndex = findTableauDropColumn(clientX, clientY);
+    if (columnIndex !== null) {
+        const columnEl = document.getElementById(`tableau-${columnIndex}`);
+        if (columnEl) {
+            columnEl.classList.add(canDropOnTableau(columnIndex) ? 'drag-over-valid' : 'drag-over-invalid');
+        }
+        return;
+    }
+
+    const foundationIndex = findFoundationDropPile(clientX, clientY);
+    if (foundationIndex !== null) {
+        const foundationEl = document.getElementById(`foundation-${foundationIndex}`);
+        if (foundationEl) {
+            foundationEl.classList.add(canDropOnFoundation(foundationIndex) ? 'drag-over-valid' : 'drag-over-invalid');
+        }
+    }
+}
+
+function canDropOnTableau(targetCol) {
+    if (dragState.draggedCards.length === 0) return false;
+    const movingCard = dragState.draggedCards[0];
+    const targetPile = gameState.tableau[targetCol];
+
+    if (targetPile.length === 0) {
+        return SolitaireLogic.canMoveToEmptyTableau(movingCard);
+    }
+
+    const topCard = targetPile[targetPile.length - 1];
+    return !topCard.hidden && SolitaireLogic.canPlaceOnTableau(movingCard, topCard);
+}
+
+function canDropOnFoundation(targetFoundation) {
+    if (dragState.draggedCards.length !== 1) return false;
+    const movingCard = dragState.draggedCards[0];
+    return SolitaireLogic.canPlaceOnFoundation(movingCard, gameState.foundations[targetFoundation]);
+}
+
+function findTableauDropColumn(clientX, clientY) {
+    let bestColumn = null;
+    let bestDistance = Infinity;
+
+    document.querySelectorAll('.tableau-column').forEach(column => {
+        const rect = getTableauColumnBounds(column);
+        const paddedRect = getRectWithPadding(rect, TABLEAU_DROP_PADDING);
+
+        if (isPointInRect(clientX, clientY, paddedRect)) {
+            bestColumn = column;
+            bestDistance = -1;
+            return;
+        }
+
+        const dist = distanceToRect(clientX, clientY, rect);
+        if (dist < bestDistance) {
+            bestDistance = dist;
+            bestColumn = column;
+        }
+    });
+
+    if (!bestColumn) return null;
+    if (bestDistance <= TABLEAU_DROP_PADDING) {
+        return parseInt(bestColumn.id.split('-')[1], 10);
+    }
+    return null;
+}
+
+function findFoundationDropPile(clientX, clientY) {
+    let bestPile = null;
+    let bestDistance = Infinity;
+
+    document.querySelectorAll('.foundation-pile').forEach(pile => {
+        const rect = pile.getBoundingClientRect();
+        const paddedRect = getRectWithPadding(rect, FOUNDATION_DROP_PADDING);
+
+        if (isPointInRect(clientX, clientY, paddedRect)) {
+            bestPile = pile;
+            bestDistance = -1;
+            return;
+        }
+
+        const dist = distanceToRect(clientX, clientY, rect);
+        if (dist < bestDistance) {
+            bestDistance = dist;
+            bestPile = pile;
+        }
+    });
+
+    if (!bestPile) return null;
+    if (bestDistance <= FOUNDATION_DROP_PADDING) {
+        return parseInt(bestPile.id.split('-')[1], 10);
+    }
+    return null;
+}
+
+function clearDropIndicators() {
+    document.querySelectorAll('.tableau-column, .foundation-pile').forEach(el => {
+        el.classList.remove('drag-over-valid', 'drag-over-invalid');
+    });
+}
+
+function getRectWithPadding(rect, padding) {
+    return {
+        top: rect.top - padding,
+        right: rect.right + padding,
+        bottom: rect.bottom + padding,
+        left: rect.left - padding
+    };
+}
+
+function isPointInRect(x, y, rect) {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function distanceToRect(x, y, rect) {
+    const dx = Math.max(rect.left - x, 0, x - rect.right);
+    const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+    return Math.hypot(dx, dy);
+}
+
+function getTableauColumnBounds(columnEl) {
+    const rect = columnEl.getBoundingClientRect();
+    const cards = columnEl.querySelectorAll('.card');
+    let stackHeight = CARD_HEIGHT;
+    if (cards.length > 0) {
+        stackHeight = CARD_HEIGHT + Math.max(0, cards.length - 1) * STACK_OFFSET;
+    }
+    return {
+        top: rect.top,
+        bottom: rect.top + Math.max(rect.height, stackHeight),
+        left: rect.left,
+        right: rect.right
+    };
+}
+
+function attachTableauHoverHandlers() {
+    document.querySelectorAll('.tableau-column').forEach(column => {
+        if (column.dataset.hoverAttached === 'true') return;
+        column.dataset.hoverAttached = 'true';
+        column.addEventListener('pointermove', () => handleTableauColumnHover(column));
+        column.addEventListener('pointerleave', () => clearHoveredCard());
+    });
+}
+
+function handleTableauColumnHover(columnEl) {
+    const visibleCards = columnEl.querySelectorAll('.card:not(.hidden)');
+    if (visibleCards.length === 0) {
+        clearHoveredCard();
+        return;
+    }
+    const topCard = visibleCards[visibleCards.length - 1];
+    setHoveredCard(topCard);
+}
+
+function setHoveredCard(cardEl) {
+    if (dragState.hoveredCard === cardEl) return;
+    clearHoveredCard();
+    dragState.hoveredCard = cardEl;
+    cardEl.classList.add('card-hovered');
+}
+
+function clearHoveredCard() {
+    if (!dragState.hoveredCard) return;
+    dragState.hoveredCard.classList.remove('card-hovered');
+    dragState.hoveredCard = null;
+}
+
+function recordMove(moveEntry) {
+    gameState.moveHistory.push(moveEntry);
+    if (gameState.moveHistory.length > MAX_HISTORY) {
+        gameState.moveHistory.shift();
+    }
+    updateUndoButtonState();
+}
+
+function updateUndoButtonState() {
+    const btn = document.getElementById('undo-btn');
+    if (!btn) return;
+    btn.disabled = gameState.moveHistory.length === 0;
+}
+
+function undoLastMove() {
+    if (gameState.moveHistory.length === 0) return;
+
+    const lastMove = gameState.moveHistory.pop();
+
+    switch (lastMove.type) {
+        case 'draw':
+            undoDrawMove(lastMove.payload);
+            break;
+        case 'recycle':
+            undoRecycleMove(lastMove.payload);
+            break;
+        case 'tableau-to-tableau':
+            undoTableauToTableauMove(lastMove.payload);
+            break;
+        case 'waste-to-tableau':
+            undoWasteToTableauMove(lastMove.payload);
+            break;
+        case 'tableau-to-foundation':
+            undoTableauToFoundationMove(lastMove.payload);
+            break;
+        case 'waste-to-foundation':
+            undoWasteToFoundationMove(lastMove.payload);
+            break;
+        default:
+            console.warn('Unexpected undo move type:', lastMove.type);
+    }
+
+    gameState.score -= lastMove.scoreDelta;
+    gameState.moves = Math.max(0, gameState.moves - lastMove.movesDelta);
+    gameState.isGameWon = false;
+    hideWinOverlay();
+    updateUI();
+    updateUndoButtonState();
+}
+
+function undoDrawMove(payload) {
+    for (let i = 0; i < payload.cards.length && gameState.waste.length > 0; i++) {
+        const card = gameState.waste.pop();
+        card.hidden = true;
+        gameState.stock.push(card);
+    }
+}
+
+function undoRecycleMove(payload) {
+    for (let i = 0; i < payload.cards.length && gameState.stock.length > 0; i++) {
+        const card = gameState.stock.pop();
+        card.hidden = false;
+        gameState.waste.push(card);
+    }
+}
+
+function undoTableauToTableauMove(payload) {
+    const targetPile = gameState.tableau[payload.toColumn];
+    const movedCards = targetPile.splice(targetPile.length - payload.cards.length);
+    gameState.tableau[payload.fromColumn].push(...movedCards);
+    if (payload.flippedCard) {
+        payload.flippedCard.hidden = true;
+    }
+}
+
+function undoWasteToTableauMove(payload) {
+    const targetPile = gameState.tableau[payload.toColumn];
+    const movedCard = targetPile.pop();
+    movedCard.hidden = false;
+    gameState.waste.push(movedCard);
+}
+
+function undoTableauToFoundationMove(payload) {
+    const foundationPile = gameState.foundations[payload.foundationIndex];
+    const movedCard = foundationPile.pop();
+    gameState.tableau[payload.fromColumn].push(movedCard);
+    if (payload.flippedCard) {
+        payload.flippedCard.hidden = true;
+    }
+}
+
+function undoWasteToFoundationMove(payload) {
+    const foundationPile = gameState.foundations[payload.foundationIndex];
+    const movedCard = foundationPile.pop();
+    movedCard.hidden = false;
+    gameState.waste.push(movedCard);
+}
+
+function dealSolvableGame() {
+    for (let attempt = 1; attempt <= MAX_SOLVABLE_DEAL_ATTEMPTS; attempt++) {
+        const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+        dealDeck(deck);
+        if (isDealLikelySolvable(gameState)) {
+            if (attempt > 1) {
+                console.debug(`Solitaire: solvable deal found after ${attempt} attempts.`);
+            }
+            return;
+        }
+    }
+    console.warn(`Solitaire: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
+}
+
+function dealDeck(deck) {
+    gameState.tableau = [[], [], [], [], [], [], []];
+    gameState.foundations = [[], [], [], []];
+    gameState.waste = [];
+
+    for (let col = 0; col < 7; col++) {
+        for (let row = 0; row <= col; row++) {
+            const card = deck.pop();
+            if (row === col) {
+                card.hidden = false;
+            } else {
+                card.hidden = true;
+            }
+            gameState.tableau[col].push(card);
+        }
+    }
+
+    gameState.stock = deck;
+}
+
+function isDealLikelySolvable(state) {
+    const clone = cloneGameStateForSimulation(state);
+    return simulateSolvability(clone, state.drawCount);
+}
+
+function cloneGameStateForSimulation(state) {
+    return {
+        tableau: state.tableau.map(column => column.map(cloneCardForSimulation)),
+        foundations: state.foundations.map(pile => pile.map(cloneCardForSimulation)),
+        stock: state.stock.map(cloneCardForSimulation),
+        waste: state.waste.map(cloneCardForSimulation)
+    };
+}
+
+function cloneCardForSimulation(card) {
+    const cloned = new Card(card.suit, card.val);
+    cloned.hidden = card.hidden;
+    cloned.rotation = card.rotation;
+    cloned.isSplitCard = card.isSplitCard;
+    return cloned;
+}
+
+function simulateSolvability(state, drawCount) {
+    let iterations = 0;
+
+    while (iterations < MAX_SIMULATION_ITERATIONS) {
+        iterations++;
+
+        const moved = applySimulationAutoMoves(state);
+        if (SolitaireLogic.isGameWon(state.foundations)) return true;
+        if (moved) continue;
+
+        if (state.stock.length > 0) {
+            simulateDrawFromStock(state, drawCount);
+            continue;
+        }
+
+        if (state.waste.length > 0) {
+            simulateRecycleWaste(state);
+            continue;
+        }
+
+        break;
+    }
+
+    return SolitaireLogic.isGameWon(state.foundations);
+}
+
+function applySimulationAutoMoves(state) {
+    let moved = false;
+
+    while (true) {
+        const autoMoves = SolitaireLogic.getAutoMoves(state);
+        if (autoMoves.length === 0) break;
+        applySimulationAutoMove(state, autoMoves[0]);
+        moved = true;
+    }
+
+    return moved;
+}
+
+function applySimulationAutoMove(state, move) {
+    const foundationIndex = parseInt(move.toPile.split('-')[1], 10);
+    let card = null;
+
+    if (move.fromPile === 'waste') {
+        card = state.waste.pop();
+    } else if (move.fromPile.startsWith('tableau')) {
+        const sourceCol = parseInt(move.fromPile.split('-')[1], 10);
+        card = state.tableau[sourceCol].pop();
+        if (state.tableau[sourceCol].length > 0) {
+            const topCard = state.tableau[sourceCol][state.tableau[sourceCol].length - 1];
+            if (topCard.hidden) topCard.hidden = false;
+        }
+    }
+
+    if (card) {
+        state.foundations[foundationIndex].push(card);
+    }
+}
+
+function simulateDrawFromStock(state, drawCount) {
+    const cardsToDraw = Math.min(drawCount, state.stock.length);
+    for (let i = 0; i < cardsToDraw; i++) {
+        const card = state.stock.pop();
+        card.hidden = false;
+        state.waste.push(card);
+    }
+}
+
+function simulateRecycleWaste(state) {
+    while (state.waste.length > 0) {
+        const card = state.waste.pop();
+        card.hidden = true;
+        state.stock.push(card);
+    }
 }

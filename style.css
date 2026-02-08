@@ -1343,10 +1343,10 @@ input:checked+.slider:before {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.tableau-column .card:hover {
+.tableau-column .card.card-hovered {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    z-index: 100;
+    z-index: 150;
 }
 
 /* Drag feedback */
