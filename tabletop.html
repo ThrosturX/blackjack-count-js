@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Top</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="themes.css">
+</head>
+
+<body>
+    <header>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <h1>Table Top</h1>
+        <div class="header-toggles">
+            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
+            <button id="toggle-themes" class="btn-toggle active">Themes</button>
+            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="settings-area">
+                <button id="tabletop-new-game" class="game-btn">New Setup</button>
+                <button id="tabletop-shuffle" class="game-btn">Shuffle Deck</button>
+                <label class="stats">Decks:
+                    <select id="tabletop-deck-count">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                    <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                </div>
+            </div>
+
+            <div class="controls-section" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section" id="stats-area">
+                <div class="stats">Deck: <span id="tabletop-deck-remaining">0</span></div>
+                <div class="stats">Discard: <span id="tabletop-discard-count">0</span></div>
+                <div class="stats">In Play: <span id="tabletop-tableau-count">0</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main id="table" class="tabletop-layout">
+        <div id="tabletop-top-row">
+            <div id="tabletop-deck" class="tabletop-pile pile" aria-label="Deck">
+                <span class="pile-label">Deck</span>
+                <span class="pile-count" id="tabletop-deck-remaining-inline">0</span>
+                <div class="pile-surface" id="tabletop-deck-surface"></div>
+            </div>
+            <div id="tabletop-discard" class="tabletop-pile pile" aria-label="Discard">
+                <span class="pile-label">Discard</span>
+                <span class="pile-count" id="tabletop-discard-count-inline">0</span>
+                <div class="pile-surface" id="tabletop-discard-surface"></div>
+            </div>
+        </div>
+        <div id="tabletop-tableau" aria-label="Tableau"></div>
+    </main>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["addons/default-themes-pack.js"],
+                "styles": ["addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "cyberpunk-themes",
+                "label": "Cyberpunk Themes",
+                "description": "Adds cyberpunk table and deck styles.",
+                "scripts": ["addons/cyberpunk-pack.js"],
+                "styles": ["addons/cyberpunk-pack.css"]
+            },
+            {
+                "id": "dark-elegance-themes",
+                "label": "Dark Elegance",
+                "description": "Adds dark elegance table and deck styles.",
+                "scripts": ["addons/dark-elegance-pack.js"],
+                "styles": ["addons/dark-elegance-pack.css"]
+            },
+            {
+                "id": "luxe-collection",
+                "label": "Luxe Collection",
+                "description": "Adds luxe table and deck styles.",
+                "scripts": ["addons/luxe-pack.js"],
+                "styles": ["addons/luxe-pack.css"]
+            },
+            {
+                "id": "wildlife-themes",
+                "label": "Wildlife",
+                "description": "Adds wildlife-inspired table and deck styles.",
+                "scripts": ["addons/wildlife-pack.js"],
+                "styles": ["addons/wildlife-pack.css"]
+            },
+            {
+                "id": "ghostly-themes",
+                "label": "Ghostly",
+                "description": "Adds ghostly table and deck styles.",
+                "scripts": ["addons/ghostly-pack.js"],
+                "styles": ["addons/ghostly-pack.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "description": "Adds premium table and deck styles.",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Special Effects",
+                "description": "Adds visual effects and polish.",
+                "styles": ["addons/premium-effects.css"]
+            },
+            {
+                "id": "classic-faces",
+                "label": "Classic Faces",
+                "description": "Displays classic pip layouts on numbered cards and custom icons for face cards.",
+                "scripts": ["addons/classic-face-art.js", "addons/classic-faces.js"],
+                "styles": ["addons/classic-faces.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "description": "Adds worn card edges, faded inks, and scuffed textures.",
+                "scripts": ["addons/worn-cards.js"],
+                "styles": ["addons/worn-cards.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+
+    <script src="assets.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="shared/ui-helpers.js"></script>
+    <script src="tabletop.js"></script>
+</body>
+
+</html>
