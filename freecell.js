@@ -493,4 +493,69 @@ function checkFreeCellWin() {
 
 function setupFreeCellEventListeners() {
     document.getElementById('freecell-new-game').addEventListener('click', initFreeCellGame);
+
+    document.getElementById('toggle-settings').addEventListener('click', () => {
+        const settingsArea = document.getElementById('settings-area');
+        const btn = document.getElementById('toggle-settings');
+        settingsArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
+    const addonsArea = document.getElementById('addons-area');
+    const addonsBtn = document.getElementById('toggle-addons');
+    addonsBtn.addEventListener('click', () => {
+        addonsArea.classList.toggle('collapsed');
+        addonsBtn.classList.toggle('active');
+    });
+    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
+
+    document.getElementById('toggle-themes').addEventListener('click', () => {
+        const themeArea = document.getElementById('theme-area');
+        const btn = document.getElementById('toggle-themes');
+        themeArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
+    document.getElementById('toggle-stats').addEventListener('click', () => {
+        const statsArea = document.getElementById('stats-area');
+        const btn = document.getElementById('toggle-stats');
+        statsArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
+    const applyTableStyle = () => {
+        const select = document.getElementById('table-style-select');
+        if (!select) return;
+        const style = select.value;
+        Array.from(document.body.classList).forEach(cls => {
+            if (cls.startsWith('table-')) document.body.classList.remove(cls);
+        });
+        if (style) {
+            document.body.classList.add(`table-${style}`);
+        }
+    };
+
+    const applyDeckStyle = () => {
+        const select = document.getElementById('deck-style-select');
+        if (!select) return;
+        const style = select.value;
+        Array.from(document.body.classList).forEach(cls => {
+            if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+        });
+        if (style) {
+            document.body.classList.add(`deck-${style}`);
+        }
+    };
+
+    const tableSelect = document.getElementById('table-style-select');
+    if (tableSelect) {
+        tableSelect.addEventListener('change', applyTableStyle);
+        applyTableStyle();
+    }
+
+    const deckSelect = document.getElementById('deck-style-select');
+    if (deckSelect) {
+        deckSelect.addEventListener('change', applyDeckStyle);
+        applyDeckStyle();
+    }
 }

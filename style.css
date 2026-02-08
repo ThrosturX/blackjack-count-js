@@ -51,6 +51,63 @@ header {
     position: relative;
 }
 
+.back-link {
+    position: absolute;
+    top: 12px;
+    left: 20px;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.back-link:hover {
+    color: #fff;
+}
+
+.back-arrow {
+    position: relative;
+    display: inline-block;
+    width: 18px;
+    height: 12px;
+}
+
+.back-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 14px;
+    height: 4px;
+    background: currentColor;
+    transform: translateY(-50%);
+    border-radius: 2px;
+}
+
+.back-arrow::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 8px;
+    height: 8px;
+    border-left: 4px solid currentColor;
+    border-bottom: 4px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.header-main {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
 .header-toggles {
     position: absolute;
     top: 10px;
@@ -116,6 +173,11 @@ h1 {
     transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
     opacity: 1;
     white-space: nowrap;
+}
+
+.freecell-header-controls {
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 #addons-area {
