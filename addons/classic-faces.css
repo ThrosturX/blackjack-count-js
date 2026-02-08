@@ -30,9 +30,25 @@
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
-.card.classic-faces-card .classic-face-icon {
-    font-size: clamp(1.5rem, 3.5vw, 3.5rem);
+.card.classic-faces-card .classic-face-art {
+    width: 80%;
+    height: 82%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.35));
+    color: currentColor;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center 52%;
+    mask-position: center 52%;
+    -webkit-mask-size: 160% auto;
+    mask-size: 160% auto;
 }
+
 
 .card.classic-faces-card .classic-pips {
     position: absolute;
@@ -123,6 +139,6 @@
 
 .card.classic-faces-card.hidden .suit-center,
 .card.classic-faces-card.hidden .classic-pips,
-.card.classic-faces-card.hidden .classic-face-icon {
+.card.classic-faces-card.hidden .classic-face-art {
     opacity: 0;
 }

@@ -72,10 +72,18 @@
         ]
     };
 
-    const faceIcons = {
-        J: '🤵',
-        Q: '👸',
-        K: '🤴'
+    const suitNames = {
+        '♥': 'HEARTS',
+        '♦': 'DIAMONDS',
+        '♣': 'CLUBS',
+        '♠': 'SPADES'
+    };
+
+    const faceArt = {
+        J: 'JACK',
+        C: 'KNIGHT',
+        Q: 'QUEEN',
+        K: 'KING'
     };
 
     const createPipElement = (suit, coords, isAce) => {
@@ -127,11 +135,17 @@
             cardEl.dataset.classicFaces = '1';
             return;
         }
-        if (faceIcons[val]) {
-            const icon = document.createElement('span');
-            icon.className = 'classic-face-icon';
-            icon.textContent = faceIcons[val];
-            suitCenter.appendChild(icon);
+        if (faceArt[val]) {
+            const suitName = suitNames[suit];
+            if (!suitName) return;
+            const art = document.createElement('span');
+            art.className = 'classic-face-art';
+            const faceKey = `${faceArt[val]}_${suitName}`;
+            const faceData = window.ClassicFaceArt ? window.ClassicFaceArt[faceKey] : null;
+            const faceUrl = faceData || `images/PLAYING_CARD_${faceArt[val]}_OF_${suitName}.svg`;
+            art.style.maskImage = `url("${faceUrl}")`;
+            art.style.webkitMaskImage = `url("${faceUrl}")`;
+            suitCenter.appendChild(art);
             cardEl.dataset.classicFaces = '1';
             return;
         }
