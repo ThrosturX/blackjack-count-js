@@ -9,7 +9,6 @@
             ['Emerald Luxe', 'emerald'],
             ['Ruby Luxe', 'ruby'],
             ['Midnight Luxe', 'dark'],
-            ['Midnight Onyx', 'luxury-dark']
         ]
     });
 })();

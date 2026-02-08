@@ -8,6 +8,6 @@
             ['Obsidian Floor', 'obsidian'],
             ['The Abyss', 'abyss']
         ],
-        deck: []
+        deck: ['Midnight Onyx', 'luxury-dark']
     });
 })();
