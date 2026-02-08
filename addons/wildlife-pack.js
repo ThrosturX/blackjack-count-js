@@ -89,7 +89,7 @@
             if (!el) return;
             el.classList.remove('ocean-orca-swim');
             const top = 12 + Math.random() * 55;
-            const duration = 20 + Math.random() * 10;
+            const duration = 18 + Math.random() * 10;
             const startX = 8 + Math.random() * 70;
             const endX = 8 + Math.random() * 70;
             const startY = top;
