@@ -1,0 +1,118 @@
+/* Classic card faces add-on */
+
+.card.classic-faces-card {
+    --classic-pip-size: clamp(0.95rem, 2.05vw, 1.6rem);
+    --classic-ace-size: clamp(1.8rem, 3vw, 2.5rem);
+    --classic-rank-size: clamp(0.75rem, 1.5vw, 0.95rem);
+    --classic-corner-inset-y: 1px;
+    --classic-rank-inset-x: 5px;
+    --classic-suit-inset-x: 6px;
+    --classic-suit-inset-y: 16px;
+    --classic-suit-offset-x: calc(var(--classic-suit-inset-x) - var(--classic-rank-inset-x));
+    --classic-suit-offset-y: calc(var(--classic-suit-inset-y) - var(--classic-corner-inset-y));
+}
+
+.card.classic-faces-card .suit-center {
+    font-family: 'Times New Roman', 'Georgia', serif;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    inset: 8% 10%;
+    height: auto;
+    width: auto;
+    transform: none;
+    font-size: clamp(1.95rem, 3vw, 3rem);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+.card.classic-faces-card .classic-face-icon {
+    font-size: clamp(1.5rem, 3.5vw, 3.5rem);
+}
+
+.card.classic-faces-card .classic-pips {
+    position: absolute;
+    inset: 0;
+    padding: 10% 12%;
+    box-sizing: border-box;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+}
+
+.card.classic-faces-card .classic-pip {
+    position: absolute;
+    font-size: var(--classic-pip-size);
+    width: 1.1em;
+    height: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transform-origin: 50% 50%;
+    transition: opacity 0.4s ease;
+}
+
+.card.classic-faces-card .classic-pip__symbol {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transform-origin: 50% 50%;
+}
+
+.card.classic-faces-card .classic-pip--inverted .classic-pip__symbol {
+    transform: rotate(180deg);
+}
+
+.card.classic-faces-card .classic-pip--ace {
+    font-size: var(--classic-ace-size);
+}
+
+.card.classic-faces-card .val-top,
+.card.classic-faces-card .val-bot {
+    font-size: var(--classic-rank-size);
+    line-height: 1;
+}
+
+.card.classic-faces-card .val-top {
+    top: var(--classic-corner-inset-y);
+    left: var(--classic-rank-inset-x);
+}
+
+.card.classic-faces-card .val-bot {
+    bottom: var(--classic-corner-inset-y);
+    right: var(--classic-rank-inset-x);
+    transform: rotate(180deg);
+}
+
+.card.classic-faces-card .val-top small,
+.card.classic-faces-card .val-bot small {
+    font-size: 0.55em;
+    position: absolute;
+}
+
+.card.classic-faces-card .val-top small {
+    left: 0;
+    top: 0;
+    transform: translate(var(--classic-suit-offset-x), var(--classic-suit-offset-y));
+}
+
+.card.classic-faces-card .val-bot small {
+    left: 0;
+    top: 0;
+    transform: translate(var(--classic-suit-offset-x), var(--classic-suit-offset-y));
+}
+
+
+.card.classic-faces-card.hidden .suit-center,
+.card.classic-faces-card.hidden .classic-pips,
+.card.classic-faces-card.hidden .classic-face-icon {
+    opacity: 0;
+}
