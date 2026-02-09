@@ -51,6 +51,19 @@ const CommonUtils = {
      */
     applyCardScale: function (value, outputEl, inputEl) {
         const scale = this.clampNumber(value, 0.6, 3, 1);
+        let prev = null;
+        try {
+            prev = localStorage.getItem(`bj_table.${cardScaleGameId}`);
+        } catch (err) {
+            // Ignore storage failures.
+        }
+        if (prev !== scale || !prev && scale !== 1) {
+            try {
+                localStorage.setItem(`bj_table.${cardScaleGameId}`, scale);
+            } catch (err) {
+                // Ignore storage failures.
+            }
+        }
         document.documentElement.style.setProperty('--card-scale', scale);
         if (outputEl) outputEl.textContent = `${Math.round(scale * 100)}%`;
         if (inputEl && String(inputEl.value) !== String(scale)) inputEl.value = scale;
