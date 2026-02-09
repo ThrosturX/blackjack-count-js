@@ -98,6 +98,7 @@ const soundFiles = {
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(soundFiles);
     setupEventListeners();
+    CommonUtils.initCardScaleControls('solitaire-card-scale', 'solitaire-card-scale-value');
     initGame();
 });
 

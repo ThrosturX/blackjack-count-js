@@ -38,6 +38,7 @@ const freecellDragState = {
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(freecellSoundFiles);
     setupFreeCellEventListeners();
+    CommonUtils.initCardScaleControls('freecell-card-scale', 'freecell-card-scale-value');
     initFreeCellGame();
 });
 

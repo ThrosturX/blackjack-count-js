@@ -17,6 +17,54 @@
 
 const CommonUtils = {
     audioAssets: {},
+    cardScaleGameId: null, // save card scaling on a per-game basis transparently
+
+    /**
+     * Initializes a shared card scale slider.
+     * @param {string} inputId
+     * @param {string} outputId
+     */
+    initCardScaleControls: function (inputId, outputId) {
+        cardScaleGameId = inputId;
+        const input = document.getElementById(inputId);
+        const output = document.getElementById(outputId);
+        if (!input) return;
+        let stored = NaN;
+        try {
+            stored = parseFloat(localStorage.getItem(`bj_table.${inputId}`));
+        } catch (err) {
+            stored = NaN;
+        }
+        const initial = Number.isFinite(stored) ? stored : parseFloat(input.value);
+        this.applyCardScale(initial, output, input);
+        input.addEventListener('input', () => {
+            const value = parseFloat(input.value);
+            this.applyCardScale(value, output, input);
+        });
+    },
+
+    /**
+     * Applies the shared card scale.
+     * @param {number} value
+     * @param {HTMLElement} outputEl
+     * @param {HTMLInputElement} inputEl
+     */
+    applyCardScale: function (value, outputEl, inputEl) {
+        const scale = this.clampNumber(value, 0.6, 3, 1);
+        document.documentElement.style.setProperty('--card-scale', scale);
+        if (outputEl) outputEl.textContent = `${Math.round(scale * 100)}%`;
+        if (inputEl && String(inputEl.value) !== String(scale)) inputEl.value = scale;
+        try {
+            localStorage.setItem(`bj_table.${cardScaleGameId}`, String(scale));
+        } catch (err) {
+            // Ignore storage failures.
+        }
+    },
+
+    clampNumber: function (value, min, max, fallback) {
+        if (!Number.isFinite(value)) return fallback;
+        return Math.min(max, Math.max(min, value));
+    },
 
     /**
      * Applies deterministic wear variables based on suit/value.

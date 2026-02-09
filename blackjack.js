@@ -77,12 +77,15 @@ function preloadAudio() {
     CommonUtils.preloadAudio(soundFiles);
 }
 
-// Initialize audio at startup
-preloadAudio();
 
 function playSound(type) {
     CommonUtils.playSound(type);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    preloadAudio();
+    CommonUtils.initCardScaleControls('blackjack-card-scale', 'blackjack-card-scale-value');
+});
 
 /* --- INITIALIZATION --- */
 function init() {

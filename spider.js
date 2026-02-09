@@ -41,6 +41,7 @@ const spiderDragState = {
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(spiderSoundFiles);
     setupSpiderEventListeners();
+    CommonUtils.initCardScaleControls('spider-card-scale', 'spider-card-scale-value');
     initSpiderGame();
 });
 
