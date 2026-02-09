@@ -1,0 +1,214 @@
+/* ========================================
+   TABLETOP STYLES
+   Sandbox mode for manual card play and custom layouts
+   ======================================== */
+
+#table.tabletop-layout {
+    width: 95vw;
+    max-width: 1600px;
+    min-height: 90vh;
+    padding: 20px;
+    border-radius: 20px;
+    overflow: visible;
+}
+
+/* --- Tabletop Card Area --- */
+.tabletop-play-area {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    min-height: 600px;
+}
+
+/* --- Draggable Cards --- */
+.tabletop-card {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    z-index: 1;
+}
+
+.tabletop-card.dragging {
+    opacity: 0.7;
+    z-index: 1000;
+    transform: rotate(3deg);
+}
+
+.tabletop-card:hover {
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Card Pile/Stack --- */
+.tabletop-pile {
+    position: absolute;
+    min-width: 80px;
+    min-height: 110px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tabletop-pile.drop-target {
+    border-color: var(--green);
+    background: rgba(76, 175, 80, 0.15);
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+}
+
+.tabletop-pile-label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    font-size: 0.8rem;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- Tabletop Tools --- */
+.tabletop-tools {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+}
+
+.tool-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #000;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Context Menu --- */
+.card-context-menu {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 5px;
+    z-index: 2000;
+    min-width: 120px;
+}
+
+.context-menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: white;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    border-radius: 4px;
+}
+
+.context-menu-item:hover {
+    background: rgba(242, 201, 76, 0.2);
+}
+
+/* --- Grid Overlay (optional helper) --- */
+.tabletop-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tabletop-grid.show {
+    opacity: 1;
+}
+
+/* --- Selection Box --- */
+.selection-box {
+    position: absolute;
+    border: 2px dashed var(--gold);
+    background: rgba(242, 201, 76, 0.1);
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* --- Multi-select Indicator --- */
+.tabletop-card.selected {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+}
+
+/* --- Card Stack Counter --- */
+.stack-counter {
+    position: absolute;
+    bottom: -25px;
+    right: -10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--gold);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 1px solid var(--gold);
+}
+
+/* --- Snap-to-Grid Indicator --- */
+.snap-indicator {
+    position: absolute;
+    width: 80px;
+    height: 110px;
+    border: 2px solid var(--blue);
+    border-radius: 8px;
+    background: rgba(33, 150, 243, 0.1);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.snap-indicator.show {
+    opacity: 1;
+}
+
+/* --- Rotation Indicator --- */
+.rotation-handle {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background: var(--blue);
+    border-radius: 50%;
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tabletop-card:hover .rotation-handle {
+    opacity: 1;
+}
+
+.rotation-handle:active {
+    cursor: grabbing;
+}

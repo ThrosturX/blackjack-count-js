@@ -1,0 +1,366 @@
+/* ========================================
+   LAYOUT STYLES - Page structure and navigation
+   Header, controls, responsive layouts
+   ======================================== */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #111;
+    color: white;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+    padding-bottom: 90px;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+header {
+    width: 100%;
+    background: #000;
+    padding: 10px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+    box-sizing: border-box;
+    z-index: 10;
+    gap: 10px;
+    position: relative;
+}
+
+.back-link {
+    position: absolute;
+    top: 12px;
+    left: 20px;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.back-link:hover {
+    color: #fff;
+}
+
+.back-arrow {
+    position: relative;
+    display: inline-block;
+    width: 18px;
+    height: 12px;
+}
+
+.back-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 14px;
+    height: 4px;
+    background: currentColor;
+    transform: translateY(-50%);
+    border-radius: 2px;
+}
+
+.back-arrow::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 8px;
+    height: 8px;
+    border-left: 4px solid currentColor;
+    border-bottom: 4px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.header-main {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-toggles {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+}
+
+.btn-toggle {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 3px 10px;
+    font-size: 0.65rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    opacity: 0.8;
+}
+
+.btn-toggle:hover {
+    background: rgba(242, 201, 76, 0.1);
+    opacity: 1;
+}
+
+.btn-toggle.active {
+    background: var(--gold);
+    color: #000;
+}
+
+.btn-toggle.btn-mini {
+    padding: 2px 8px;
+    font-size: 0.6rem;
+}
+
+h1 {
+    margin: 0;
+    color: var(--gold);
+    font-size: 1.4rem;
+    width: 100%;
+    text-align: center;
+}
+
+/* --- Game Controls --- */
+.game-controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+    transition: all 0.3s ease-in-out;
+}
+
+.controls-section {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-height: 1000px;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 1;
+    white-space: nowrap;
+}
+
+#game-area {
+    justify-content: flex-start;
+}
+
+.freecell-header-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#addons-area {
+    white-space: normal;
+}
+
+.controls-section.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    display: none;
+}
+
+/* --- Addon System --- */
+.addon-toggle-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: stretch;
+    justify-content: center;
+    max-height: calc(45vh + 120px);
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 209, 91, 0.5) rgba(0, 0, 0, 0.2);
+}
+
+.addon-toggle-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 999px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 209, 91, 0.45);
+    border-radius: 999px;
+}
+
+.addon-toggle-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 209, 91, 0.7);
+}
+
+.addon-toggle-list.addon-toggle-empty {
+    min-height: 60px;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.addon-toggle-card {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    height: 120px;
+    flex: 0 0 280px;
+    max-width: 280px;
+}
+
+.addon-toggle-card--active {
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(255, 209, 91, 0.25);
+}
+
+.addon-toggle-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.addon-toggle-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.addon-toggle-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #fff;
+    white-space: normal;
+}
+
+.addon-toggle-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 999px;
+    align-self: flex-start;
+    background: rgba(74, 106, 255, 0.15);
+    color: #6ab0ff;
+}
+
+.addon-toggle-description {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.2;
+    white-space: normal;
+}
+
+.addon-toggle-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 102px;
+}
+
+.addon-toggle-control input {
+    accent-color: var(--gold);
+    width: 18px;
+    height: 18px;
+}
+
+.addon-toggle-indicator {
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+/* --- Common Table Container --- */
+#table {
+    position: relative;
+    width: 95vw;
+    max-width: 1400px;
+    min-height: 400px;
+    max-height: 70vh;
+    margin-top: 20px;
+    background: var(--table-bg);
+    border-radius: 100px;
+    border: 12px solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px;
+}
+
+/* --- Responsive Header --- */
+@media screen and (max-width: 900px) {
+    header {
+        padding: 5px;
+        justify-content: center;
+    }
+
+    h1 {
+        font-size: 1rem;
+    }
+
+    button {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+
+    .btn-clear,
+    .btn-bet {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+}
+
+/* --- Scrolling & Layout Fixes --- */
+body {
+    overflow: auto !important;
+    height: auto !important;
+    min-height: 100vh;
+}
+
+body[class*="-game-page"] {
+    display: block !important;
+    overflow: auto !important;
+    padding: 20px;
+}
+
+html {
+    overflow-x: auto !important;
+}

@@ -1,0 +1,235 @@
+/* ========================================
+   POKER / TEXAS HOLD'EM STYLES
+   Community cards, betting rounds, pot display
+   ======================================== */
+
+/* Note: If poker shares the same table/seat system as blackjack,
+   most styles will come from blackjack.css and core.css.
+   This file contains poker-specific UI elements. */
+
+/* --- Poker Table Modifications --- */
+#table.poker-table {
+    border-radius: 200px / 100px;
+    /* More oval for poker */
+}
+
+/* --- Community Cards Area --- */
+.community-cards-area {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.community-cards-area .card {
+    animation: slideInFromTop 0.4s ease-out;
+}
+
+/* --- Pot Display --- */
+.pot-display {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 2px solid var(--gold);
+    text-align: center;
+}
+
+.pot-label {
+    font-size: 0.8rem;
+    color: #ccc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pot-amount {
+    font-size: 1.5rem;
+    color: var(--gold);
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* --- Poker Player Spots --- */
+.poker-player-spot {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Positioning for different seats (example for 6-player table) */
+.poker-player-spot.seat-1 {
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.poker-player-spot.seat-2 {
+    bottom: 25%;
+    left: 15%;
+}
+
+.poker-player-spot.seat-3 {
+    top: 30%;
+    left: 10%;
+}
+
+.poker-player-spot.seat-4 {
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.poker-player-spot.seat-5 {
+    top: 30%;
+    right: 10%;
+}
+
+.poker-player-spot.seat-6 {
+    bottom: 25%;
+    right: 15%;
+}
+
+/* --- Poker Hand Rankings Display --- */
+.hand-ranking-display {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    max-width: 200px;
+}
+
+.hand-ranking-display h3 {
+    margin: 0 0 10px 0;
+    color: var(--gold);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.hand-ranking-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.75rem;
+    color: #ccc;
+}
+
+.hand-ranking-list li {
+    padding: 3px 0;
+}
+
+/* --- Betting Controls --- */
+.poker-bet-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.bet-slider {
+    width: 200px;
+    accent-color: var(--gold);
+}
+
+.bet-amount-display {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 5px 15px;
+    border-radius: 15px;
+    color: var(--gold);
+    font-weight: bold;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* --- Dealer Button --- */
+.dealer-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #ddd 100%);
+    border: 3px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* --- Action Indicator --- */
+.action-indicator {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gold);
+    color: #000;
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    animation: pulse 1.5s infinite;
+}
+
+/* --- Fold State --- */
+.poker-player-spot.folded {
+    opacity: 0.4;
+}
+
+.poker-player-spot.folded .card {
+    filter: grayscale(100%);
+}
+
+/* --- All-in Indicator --- */
+.all-in-badge {
+    background: var(--red);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- Side Pot Display --- */
+.side-pots {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.side-pot {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #ccc;
+    border: 1px solid #555;
+}
+
+.side-pot-main {
+    border-color: var(--gold);
+    color: var(--gold);
+}

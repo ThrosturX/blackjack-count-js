@@ -1,0 +1,359 @@
+/* ========================================
+   BLACKJACK STYLES
+   Dealer area, seats, betting, chip system, shoe
+   ======================================== */
+
+/* --- Dealer Area --- */
+#dealer-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#dealer-cards {
+    display: flex;
+    gap: -20px;
+    min-height: 120px;
+    align-items: center;
+}
+
+#dealer-cards .card {
+    margin-left: -20px;
+}
+
+#dealer-cards .card:first-child {
+    margin-left: 0;
+}
+
+#dealer-score {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--gold);
+}
+
+/* --- Seats/Players --- */
+#seats {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.seat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 15px;
+    min-width: 150px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.seat.active {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(242, 201, 76, 0.4);
+}
+
+.seat-label {
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 5px;
+}
+
+.seat-cards {
+    display: flex;
+    gap: -20px;
+    min-height: 120px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+.seat-cards .card {
+    margin-left: -20px;
+}
+
+.seat-cards .card:first-child {
+    margin-left: 0;
+}
+
+.seat-score {
+    font-size: 1rem;
+    color: var(--gold);
+    margin-top: 5px;
+}
+
+.seat-bet {
+    font-size: 0.9rem;
+    color: #fff;
+    margin-top: 5px;
+}
+
+/* --- Betting & Chips --- */
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.chip-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.chip {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.chip::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+}
+
+.chip:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+.chip.selected {
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+.chip.white {
+    background: radial-gradient(circle, #fff 0%, #ddd 100%);
+    color: #000;
+}
+
+.chip.red {
+    background: radial-gradient(circle, #ff4444 0%, #cc0000 100%);
+    color: #fff;
+}
+
+.chip.blue {
+    background: radial-gradient(circle, #4444ff 0%, #0000cc 100%);
+    color: #fff;
+}
+
+.chip.green {
+    background: radial-gradient(circle, #44ff44 0%, #00cc00 100%);
+    color: #000;
+}
+
+.chip.black {
+    background: radial-gradient(circle, #444 0%, #000 100%);
+    color: #fff;
+}
+
+.chip.purple {
+    background: radial-gradient(circle, #ff44ff 0%, #cc00cc 100%);
+    color: #fff;
+}
+
+.chip.orange {
+    background: radial-gradient(circle, #ff8844 0%, #cc5500 100%);
+    color: #fff;
+}
+
+.chip.gold {
+    background: radial-gradient(circle, var(--gold) 0%, #d4a024 100%);
+    color: #000;
+}
+
+/* --- 3D Shoe --- */
+.shoe-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    perspective: 1000px;
+}
+
+.shoe {
+    width: 120px;
+    height: 80px;
+    background: linear-gradient(135deg, #2c1810 0%, #1a0f08 100%);
+    border: 2px solid #8B4513;
+    border-radius: 8px;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(5deg) rotateY(-5deg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7),
+        inset 0 2px 5px rgba(255, 255, 255, 0.1);
+}
+
+.shoe::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.3) 0%, transparent 100%);
+    border-radius: 4px;
+}
+
+.shoe-label {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: #ccc;
+    white-space: nowrap;
+}
+
+/* --- Count Display --- */
+.count-display {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    min-width: 150px;
+}
+
+.count-display h3 {
+    margin: 0 0 10px 0;
+    color: var(--gold);
+    font-size: 1rem;
+}
+
+.count-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    font-size: 0.9rem;
+}
+
+.count-label {
+    color: #ccc;
+}
+
+.count-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+/* --- Strategy Bar --- */
+#strategy-bar {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 15px 25px;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    z-index: 1000;
+    display: none;
+}
+
+#strategy-bar.show {
+    display: block;
+    animation: slideInFromBottom 0.3s ease-out;
+}
+
+.hint-text {
+    font-size: 1.2rem;
+    color: var(--gold);
+    font-weight: bold;
+    margin: 0;
+}
+
+/* --- Mobile Responsive --- */
+@media screen and (max-width: 900px) {
+    #table {
+        width: 100vw;
+        height: 100vh;
+        max-width: 100%;
+        border-width: 0;
+        border-radius: 0;
+        margin-top: 0;
+        box-shadow: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 10px;
+    }
+
+    .shoe-container {
+        display: none;
+    }
+
+    #dealer-area {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        transform: scale(0.9);
+    }
+
+    #seats {
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 140px;
+        gap: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .seat {
+        min-width: 110px;
+        width: 110px;
+        height: auto;
+        min-height: 180px;
+        flex-shrink: 0;
+    }
+
+    .controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 15px 10px;
+        z-index: 1000;
+        border-top: 2px solid var(--gold);
+        justify-content: space-around;
+        gap: 10px;
+    }
+
+    #strategy-bar {
+        bottom: 80px;
+        padding: 5px;
+        background: rgba(0, 0, 0, 0.8);
+        border: none;
+    }
+
+    .hint-text {
+        font-size: 1rem;
+    }
+}
