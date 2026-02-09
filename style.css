@@ -1762,6 +1762,10 @@ input:checked+.slider:before {
     position: relative;
 }
 
+.tabletop-pile--discard {
+    margin-left: 18px;
+}
+
 .tabletop-pile .card {
     position: absolute;
     top: 0;
@@ -2181,8 +2185,12 @@ input:checked+.slider:before {
 
 .top-card-preview-card {
     position: absolute;
+    /*
     width: 49px;
     height: 69px;
+    */
+    transform: scale(0.8) !important;
+    top: -14px;
     left: -11px;
 }
 
