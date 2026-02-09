@@ -13,6 +13,8 @@ const TABLETOP_MAX_FOUNDATIONS = 6;
 const TABLETOP_DRAG_THRESHOLD = 5;
 const TABLETOP_SNAP_RADIUS = 120;
 const CARD_SCALE_STORAGE_KEY = 'bj_table.card_scale';
+const DISCARD_RENDER_LIMIT = 12;
+const DECK_DOUBLE_CLICK_MS = 280;
 
 const tabletopState = {
     deckGroups: [],
@@ -67,6 +69,10 @@ const tabletopSoundFiles = {
 
 let nextTabletopCardId = 1;
 let stackMenuEl = null;
+let lastDeckClick = { time: 0, index: null };
+let deckClickTimer = null;
+let currentScale = 1;
+let pendingConfig = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(tabletopSoundFiles);
@@ -91,10 +97,13 @@ function setupTabletopEventListeners() {
     const pileSelect = document.getElementById('tabletop-pile-count');
     const foundationSelect = document.getElementById('tabletop-foundation-count');
     const onConfigChange = () => {
-        if (hasCardsInPlay()) {
-            CommonUtils.showTableToast('New setup created for updated configuration.', { variant: 'warn' });
-        }
-        initTabletop();
+        pendingConfig = {
+            deckCount: deckSelect ? parseInt(deckSelect.value, 10) : tabletopState.deckCount,
+            deckGroupsCount: groupSelect ? parseInt(groupSelect.value, 10) : tabletopState.deckGroupsCount,
+            pileCount: pileSelect ? parseInt(pileSelect.value, 10) : tabletopState.pileCount,
+            foundationCount: foundationSelect ? parseInt(foundationSelect.value, 10) : tabletopState.foundationCount
+        };
+        CommonUtils.showTableToast('Config updated. Press "New Deal" to apply.', { variant: 'info' });
     };
     if (deckSelect) deckSelect.addEventListener('change', onConfigChange);
     if (groupSelect) groupSelect.addEventListener('change', onConfigChange);
@@ -194,19 +203,24 @@ function initCardScale() {
         stored = NaN;
     }
     const initial = Number.isFinite(stored) ? stored : parseFloat(input.value);
-    applyCardScale(initial, output, input);
+    applyCardScale(initial, output, input, { adjustTableau: false });
 
     input.addEventListener('input', () => {
         const value = parseFloat(input.value);
-        applyCardScale(value, output, input);
+        applyCardScale(value, output, input, { adjustTableau: true });
     });
 }
 
-function applyCardScale(value, outputEl, inputEl) {
+function applyCardScale(value, outputEl, inputEl, { adjustTableau = true } = {}) {
     const scale = clampNumber(value, 0.6, 3, 1);
+    const prevScale = currentScale || scale;
+    currentScale = scale;
     document.documentElement.style.setProperty('--card-scale', scale);
     if (outputEl) outputEl.textContent = `${Math.round(scale * 100)}%`;
     if (inputEl && String(inputEl.value) !== String(scale)) inputEl.value = scale;
+    if (adjustTableau && prevScale !== scale) {
+        adjustTableauPositionsForScale(prevScale, scale);
+    }
     try {
         localStorage.setItem(CARD_SCALE_STORAGE_KEY, String(scale));
     } catch (err) {
@@ -236,34 +250,12 @@ function clampFoundationCount(value) {
 }
 
 function initTabletop() {
-    const deckSelect = document.getElementById('tabletop-deck-count');
-    const groupSelect = document.getElementById('tabletop-deck-groups');
-    const pileSelect = document.getElementById('tabletop-pile-count');
-    const foundationSelect = document.getElementById('tabletop-foundation-count');
-
-    tabletopState.deckCount = clampDeckCount(deckSelect ? parseInt(deckSelect.value, 10) : TABLETOP_DEFAULT_DECKS);
-    tabletopState.deckGroupsCount = clampGroupCount(groupSelect ? parseInt(groupSelect.value, 10) : TABLETOP_DEFAULT_GROUPS);
-    tabletopState.pileCount = clampPileCount(pileSelect ? parseInt(pileSelect.value, 10) : TABLETOP_DEFAULT_PILES);
-    tabletopState.foundationCount = clampFoundationCount(foundationSelect ? parseInt(foundationSelect.value, 10) : TABLETOP_DEFAULT_FOUNDATIONS);
-
-    tabletopState.deckGroups = buildDeckGroups(tabletopState.deckCount, tabletopState.deckGroupsCount);
-    tabletopState.piles = Array.from({ length: tabletopState.pileCount }, () => []);
-    tabletopState.foundations = Array.from({ length: tabletopState.foundationCount }, () => []);
-    tabletopState.discard = [];
-    tabletopState.tableau = [];
-    tabletopState.nextZ = 1;
-
+    applyConfigurationChange({ force: true });
     updateTabletopUI();
     CommonUtils.playSound('shuffle');
 }
 
-function buildDeckGroups(deckCount, groupCount) {
-    const deck = CommonUtils.createShoe(deckCount, SUITS, VALUES);
-    deck.forEach(card => {
-        card.id = `tt-${nextTabletopCardId++}`;
-        card.hidden = true;
-    });
-
+function buildDeckGroups(deck, groupCount) {
     const groups = Array.from({ length: groupCount }, () => []);
     const baseSize = Math.floor(deck.length / groupCount);
     const remainder = deck.length % groupCount;
@@ -277,30 +269,38 @@ function buildDeckGroups(deckCount, groupCount) {
 }
 
 function shuffleAllDeckGroups() {
-    let shuffled = false;
-    tabletopState.deckGroups.forEach(stack => {
-        if (stack.length > 1) {
-            shuffleStack(stack);
-            shuffled = true;
-        }
+    if (tabletopState.discard.length === 0 || tabletopState.deckGroupsCount === 0) return;
+    shuffleStack(tabletopState.discard, { allowRotationFlip: true });
+    const decks = tabletopState.deckGroups;
+    const totalGroups = decks.length;
+    if (totalGroups === 0) return;
+    tabletopState.discard.forEach((card, idx) => {
+        resetCardForDeck(card);
+        decks[idx % totalGroups].unshift(card); // place under current deck
     });
-    if (shuffled) {
-        updateTabletopUI();
-        CommonUtils.playSound('shuffle');
-    }
+    tabletopState.discard = [];
+    updateTabletopUI();
+    CommonUtils.playSound('shuffle');
 }
 
-function shuffleStack(stack) {
-    tidyStack(stack);
+function shuffleStack(stack, { allowRotationFlip = true } = {}) {
+    tidyStack(stack, { keepHidden: true });
     for (let i = stack.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [stack[i], stack[j]] = [stack[j], stack[i]];
     }
+    if (allowRotationFlip) {
+        stack.forEach(card => {
+            if (Math.random() < 0.42) {
+                card.rotation = ((card.rotation || 0) + 180) % 360;
+            }
+        });
+    }
 }
 
-function tidyStack(stack) {
+function tidyStack(stack, { keepHidden = false } = {}) {
     stack.forEach(card => {
-        card.hidden = true;
+        if (!keepHidden) card.hidden = true;
         card.rotation = getTidyRotation();
     });
 }
@@ -377,6 +377,7 @@ function renderStackArea(containerId, items) {
         const { stack, type, index, showAll, showLabel } = item;
         const pile = document.createElement('div');
         pile.className = 'tabletop-pile pile';
+        if (type === 'discard') pile.classList.add('tabletop-pile--discard');
         pile.dataset.stackType = type;
         pile.dataset.stackIndex = index;
 
@@ -409,10 +410,13 @@ function renderStackArea(containerId, items) {
         }
 
         if (stack.length > 0) {
-            const cardsToRender = showAll ? stack : [stack[stack.length - 1]];
+            const cardsToRender = showAll
+                ? (type === 'discard' ? stack.slice(Math.max(0, stack.length - DISCARD_RENDER_LIMIT)) : stack)
+                : [stack[stack.length - 1]];
             const { w, h } = getCardDimensions();
             const offsetStepX = Math.max(2, Math.round(w * 0.04));
             const offsetStepY = Math.max(2, Math.round(h * 0.04));
+            const { dx: adjustX, dy: adjustY } = getScaleTranslationAdjust();
             cardsToRender.forEach((card, cardIndex) => {
                 const cardEl = CommonUtils.createCardEl(card);
                 cardEl.classList.add('tabletop-card');
@@ -421,19 +425,14 @@ function renderStackArea(containerId, items) {
                 const offsetIndex = showAll ? cardIndex : 0;
                 const offsetX = Math.min(18, offsetIndex * offsetStepX);
                 const offsetY = Math.min(18, offsetIndex * offsetStepY);
-                cardEl.style.left = `${offsetX}px`;
-                cardEl.style.top = `${offsetY}px`;
+                cardEl.style.left = `${offsetX + adjustX}px`;
+                cardEl.style.top = `${offsetY + adjustY}px`;
                 cardEl.style.zIndex = cardIndex + 1;
                 if (cardIndex === cardsToRender.length - 1) {
                     cardEl.addEventListener('pointerdown', handleStackCardPointerDown);
                 }
                 surface.appendChild(cardEl);
             });
-        } else {
-            const placeholder = document.createElement('div');
-            placeholder.className = 'pile-placeholder';
-            placeholder.textContent = 'Empty';
-            surface.appendChild(placeholder);
         }
 
         pile.append(count, surface);
@@ -669,7 +668,9 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
     tabletopDrag.sourceIndex = sourceIndex;
     tabletopDrag.card = card;
     tabletopDrag.entry = entry;
-    tabletopDrag.groupEntries = Array.isArray(groupEntries) && groupEntries.length > 1 ? groupEntries : null;
+    tabletopDrag.groupEntries = Array.isArray(groupEntries) && groupEntries.length > 1
+        ? [...groupEntries].sort((a, b) => a.z - b.z)
+        : null;
     tabletopDrag.dragEls = [];
     tabletopDrag.groupOffsets = [];
     tabletopDrag.startFromStackCard = startFromStackCard;
@@ -685,7 +686,7 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
     }
 
     if (tabletopDrag.groupEntries) {
-        const baseEntry = entry;
+        const baseEntry = tabletopDrag.groupEntries[0]; // bottom-most anchor
         const baseX = baseEntry.x;
         const baseY = baseEntry.y;
         const baseZ = ++tabletopState.nextZ;
@@ -693,9 +694,9 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
         tabletopDrag.groupEntries.forEach((groupEntry, idx) => {
             const el = groupEntry.card.id === entry.card.id
                 ? dragEl
-                : tableauEl.querySelector(`.tabletop-card[data-card-id=\"${groupEntry.card.id}\"]`);
+                : tableauEl.querySelector(`.tabletop-card[data-card-id="${groupEntry.card.id}\"]`);
             if (!el) return;
-            groupEntry.z = baseZ + (total - idx);
+            groupEntry.z = baseZ + idx;
             el.style.zIndex = groupEntry.z;
             el.classList.add('tabletop-dragging');
             tabletopDrag.dragEls.push(el);
@@ -783,11 +784,7 @@ function handleDragEnd(event) {
         }
     } else if (tabletopDrag.sourceType === 'deck') {
         if (!wasMoved) {
-            if (tabletopDrag.startFromStackCard) {
-                toggleTopCard('deck', tabletopDrag.sourceIndex);
-            } else {
-                dealDeckGroupToCenter(tabletopDrag.sourceIndex);
-            }
+            queueDeckClick(tabletopDrag.sourceIndex);
         } else if (stackTarget) {
             if (stackTarget.type !== 'deck' || stackTarget.index !== tabletopDrag.sourceIndex) {
                 moveCardBetweenStacks({
@@ -954,10 +951,20 @@ function applyGroupDropPosition(basePos, baseEntry) {
             entry.x = basePos.x + dx;
             entry.y = basePos.y + dy;
         });
+        normalizeGroupZOrder(tabletopDrag.groupEntries);
     } else {
         baseEntry.x = basePos.x;
         baseEntry.y = basePos.y;
     }
+}
+
+function normalizeGroupZOrder(entries) {
+    if (!entries || entries.length === 0) return;
+    const base = tabletopState.nextZ + 1;
+    entries.forEach((entry, idx) => {
+        entry.z = base + idx;
+    });
+    tabletopState.nextZ = base + entries.length;
 }
 
 function drawDeckGroupToTableau(groupIndex, position) {
@@ -973,6 +980,29 @@ function dealDeckGroupToCenter(groupIndex) {
     card.hidden = true;
     const position = getCenterDealPosition();
     addCardToTableau(card, position);
+}
+
+function queueDeckClick(index) {
+    const now = Date.now();
+    if (deckClickTimer && deckClickTimer.index === index && (now - deckClickTimer.time) < DECK_DOUBLE_CLICK_MS) {
+        clearTimeout(deckClickTimer.handle);
+        deckClickTimer = null;
+        toggleTopCard('deck', index);
+        updateTabletopUI();
+        return;
+    }
+    if (deckClickTimer) {
+        clearTimeout(deckClickTimer.handle);
+    }
+    deckClickTimer = {
+        index,
+        time: now,
+        handle: setTimeout(() => {
+            deckClickTimer = null;
+            dealDeckGroupToCenter(index);
+            updateTabletopUI();
+        }, DECK_DOUBLE_CLICK_MS + 20)
+    };
 }
 
 function getCenterDealPosition() {
@@ -1100,6 +1130,29 @@ function getCardDimensions() {
     return { w: w * scale, h: h * scale };
 }
 
+function getScaleTranslationAdjust() {
+    const styles = getComputedStyle(document.documentElement);
+    const w = parseFloat(styles.getPropertyValue('--card-w')) || 70;
+    const h = parseFloat(styles.getPropertyValue('--card-h')) || 100;
+    const scale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
+    const dx = -((scale - 1) * w) / 2;
+    const dy = -((scale - 1) * h) / 2;
+    return { dx, dy };
+}
+
+function adjustTableauPositionsForScale(prevScale, nextScale) {
+    const styles = getComputedStyle(document.documentElement);
+    const w = parseFloat(styles.getPropertyValue('--card-w')) || 70;
+    const h = parseFloat(styles.getPropertyValue('--card-h')) || 100;
+    const deltaScale = nextScale - prevScale;
+    const dx = (deltaScale * w) / 2;
+    const dy = (deltaScale * h) / 2;
+    tabletopState.tableau.forEach(entry => {
+        entry.x -= dx;
+        entry.y -= dy;
+    });
+}
+
 function openStackMenu(x, y, sourceType, sourceIndex) {
     closeStackMenu();
 
@@ -1222,4 +1275,111 @@ function moveStack(sourceType, sourceIndex, destType, destIndex) {
         destStack.push(...moved);
     }
     updateTabletopUI();
+}
+
+function applyConfigurationChange(options = {}) {
+    const { force = false } = options;
+    const deckSelect = document.getElementById('tabletop-deck-count');
+    const groupSelect = document.getElementById('tabletop-deck-groups');
+    const pileSelect = document.getElementById('tabletop-pile-count');
+    const foundationSelect = document.getElementById('tabletop-foundation-count');
+
+    const pending = pendingConfig || {
+        deckCount: deckSelect ? parseInt(deckSelect.value, 10) : tabletopState.deckCount,
+        deckGroupsCount: groupSelect ? parseInt(groupSelect.value, 10) : tabletopState.deckGroupsCount,
+        pileCount: pileSelect ? parseInt(pileSelect.value, 10) : tabletopState.pileCount,
+        foundationCount: foundationSelect ? parseInt(foundationSelect.value, 10) : tabletopState.foundationCount
+    };
+
+    if (!force) return;
+
+    const nextDeckCount = clampDeckCount(pending.deckCount);
+    const nextGroupCount = clampGroupCount(pending.deckGroupsCount);
+    const nextPileCount = clampPileCount(pending.pileCount);
+    const nextFoundationCount = clampFoundationCount(pending.foundationCount);
+
+    tabletopState.nextZ = Math.max(tabletopState.nextZ, tabletopState.tableau.length + 1);
+
+    // Preserve tableau
+    const lockedCards = tabletopState.tableau.map(entry => entry.card);
+
+    // Keep existing piles/foundations within new counts, move removed cards to discard
+    const keptPiles = tabletopState.piles.slice(0, nextPileCount);
+    const removedPiles = tabletopState.piles.slice(nextPileCount);
+    removedPiles.forEach(p => tabletopState.discard.push(...p));
+
+    const keptFoundations = tabletopState.foundations.slice(0, nextFoundationCount);
+    const removedFoundations = tabletopState.foundations.slice(nextFoundationCount);
+    removedFoundations.forEach(f => tabletopState.discard.push(...f));
+
+    tabletopState.piles = keptPiles.concat(Array.from({ length: nextPileCount - keptPiles.length }, () => []));
+    tabletopState.foundations = keptFoundations.concat(Array.from({ length: nextFoundationCount - keptFoundations.length }, () => []));
+
+    tabletopState.deckCount = nextDeckCount;
+    tabletopState.deckGroupsCount = nextGroupCount;
+    tabletopState.pileCount = nextPileCount;
+    tabletopState.foundationCount = nextFoundationCount;
+
+    rebuildDecksRespectingInPlay(options);
+    pendingConfig = null;
+}
+
+function rebuildDecksRespectingInPlay({ fromShuffle = false } = {}) {
+    // Collect in-play cards we must not duplicate
+    const inPlayCards = [
+        ...tabletopState.tableau.map(e => e.card),
+        ...tabletopState.piles.flat(),
+        ...tabletopState.foundations.flat()
+    ];
+
+    const allowedCounts = {};
+    SUITS.forEach(suit => {
+        VALUES.forEach(val => {
+            allowedCounts[`${val}${suit}`] = tabletopState.deckCount;
+        });
+    });
+
+    const consume = (card) => {
+        const key = `${card.val}${card.suit}`;
+        if (allowedCounts[key] > 0) {
+            allowedCounts[key] -= 1;
+            return true;
+        }
+        return false;
+    };
+
+    inPlayCards.forEach(card => consume(card));
+
+    // Keep discard cards up to availability, drop excess silently
+    const keptDiscard = [];
+    tabletopState.discard.forEach(card => {
+        if (consume(card)) {
+            keptDiscard.push(card);
+        }
+    });
+    tabletopState.discard = keptDiscard;
+
+    // Build full shoe then filter by remaining allowances
+    const shoe = CommonUtils.createShoe(tabletopState.deckCount, SUITS, VALUES);
+    shoe.forEach(card => {
+        card.id = `tt-${nextTabletopCardId++}`;
+        card.hidden = true;
+    });
+
+    const remaining = [];
+    const remainingCounts = { ...allowedCounts };
+    shoe.forEach(card => {
+        const key = `${card.val}${card.suit}`;
+        if (remainingCounts[key] > 0) {
+            remainingCounts[key] -= 1;
+            remaining.push(card);
+        }
+    });
+
+    tabletopState.deckGroups = buildDeckGroups(remaining, tabletopState.deckGroupsCount);
+
+    // Add a bit of space before discard in decks area by storing class hint
+    if (tabletopState.discard.length > 0 && fromShuffle) {
+        tabletopState.discard.forEach(c => { c.hidden = true; });
+    }
 }
