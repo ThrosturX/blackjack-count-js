@@ -14,7 +14,7 @@ const TABLETOP_DRAG_THRESHOLD = 5;
 const TABLETOP_SNAP_RADIUS = 120;
 const CARD_SCALE_STORAGE_KEY = 'bj_table.card_scale';
 const DISCARD_RENDER_LIMIT = 12;
-const DECK_DOUBLE_CLICK_MS = 280;
+const DECK_VISIBLE_CARDS = 3;
 
 const tabletopState = {
     deckGroups: [],
@@ -48,7 +48,8 @@ const tabletopDrag = {
     lastLeft: 0,
     lastTop: 0,
     startFromStackCard: false,
-    cardWasPopped: false
+    cardWasPopped: false,
+    forceFaceUp: false
 };
 
 const tabletopRotate = {
@@ -69,8 +70,6 @@ const tabletopSoundFiles = {
 
 let nextTabletopCardId = 1;
 let stackMenuEl = null;
-let lastDeckClick = { time: 0, index: null };
-let deckClickTimer = null;
 let currentScale = 1;
 let pendingConfig = null;
 
@@ -90,6 +89,11 @@ function setupTabletopEventListeners() {
     const shuffleBtn = document.getElementById('tabletop-shuffle');
     if (shuffleBtn) {
         shuffleBtn.addEventListener('click', shuffleAllDeckGroups);
+    }
+
+    const clearTableauBtn = document.getElementById('tabletop-clear-tableau');
+    if (clearTableauBtn) {
+        clearTableauBtn.addEventListener('click', clearTableauToDiscard);
     }
 
     const deckSelect = document.getElementById('tabletop-deck-count');
@@ -390,8 +394,9 @@ function renderStackArea(containerId, items) {
             count.addEventListener('click', (event) => {
                 event.stopPropagation();
                 if (stack.length === 0) return;
-                dealDeckGroupToCenter(index);
-                updateTabletopUI();
+                const pileEl = event.currentTarget.closest('.tabletop-pile');
+                const surfaceEl = pileEl ? pileEl.querySelector('.pile-surface') : null;
+                dealDeckGroupToCenter(index, { animate: true, sourceEl: surfaceEl });
             });
         }
 
@@ -412,11 +417,18 @@ function renderStackArea(containerId, items) {
         if (stack.length > 0) {
             const cardsToRender = showAll
                 ? (type === 'discard' ? stack.slice(Math.max(0, stack.length - DISCARD_RENDER_LIMIT)) : stack)
-                : [stack[stack.length - 1]];
+                : (type === 'deck'
+                    ? stack.slice(Math.max(0, stack.length - DECK_VISIBLE_CARDS))
+                    : [stack[stack.length - 1]]);
             const { w, h } = getCardDimensions();
             const offsetStepX = Math.max(2, Math.round(w * 0.04));
             const offsetStepY = Math.max(2, Math.round(h * 0.04));
-            const { dx: adjustX, dy: adjustY } = getScaleTranslationAdjust();
+            const styles = getComputedStyle(document.documentElement);
+            const baseW = parseFloat(styles.getPropertyValue('--card-w')) || 70;
+            const baseH = parseFloat(styles.getPropertyValue('--card-h')) || 100;
+            const scale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
+            const adjustX = ((scale - 1) * baseW) / 2;
+            const adjustY = ((scale - 1) * baseH) / 2;
             cardsToRender.forEach((card, cardIndex) => {
                 const cardEl = CommonUtils.createCardEl(card);
                 cardEl.classList.add('tabletop-card');
@@ -501,14 +513,18 @@ function handleStackPointerDown(event) {
     if (!stack || stack.length === 0) return;
 
     if (type === 'deck') {
-        const card = stack[stack.length - 1];
+        const card = stack.pop();
+        if (!card) return;
+        renderStackAreas();
+        updateTabletopStats();
         startDrag({
             sourceType: type,
             sourceIndex: index,
             card,
             entry: null,
             dragEl: createDragElement(card),
-            event
+            event,
+            cardWasPopped: true
         });
     } else {
         const card = stack.pop();
@@ -539,7 +555,11 @@ function handleStackCardPointerDown(event) {
     if (!stack || stack.length === 0) return;
 
     if (type === 'deck') {
-        const card = stack[stack.length - 1];
+        const sourceRect = event.currentTarget.getBoundingClientRect();
+        const card = stack.pop();
+        if (!card) return;
+        renderStackAreas();
+        updateTabletopStats();
         startDrag({
             sourceType: type,
             sourceIndex: index,
@@ -548,9 +568,11 @@ function handleStackCardPointerDown(event) {
             dragEl: createDragElement(card),
             event,
             startFromStackCard: true,
-            cardWasPopped: false
+            cardWasPopped: true,
+            sourceRect
         });
     } else {
+        const sourceRect = event.currentTarget.getBoundingClientRect();
         const card = stack.pop();
         renderStackAreas();
         updateTabletopStats();
@@ -562,7 +584,8 @@ function handleStackCardPointerDown(event) {
             dragEl: createDragElement(card),
             event,
             startFromStackCard: true,
-            cardWasPopped: true
+            cardWasPopped: true,
+            sourceRect
         });
     }
 }
@@ -659,7 +682,7 @@ function canStartPointer(event) {
     return true;
 }
 
-function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl, event, startFromStackCard = false, cardWasPopped = false }) {
+function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl, event, startFromStackCard = false, cardWasPopped = false, sourceRect = null }) {
     const tableauEl = document.getElementById('tabletop-tableau');
     if (!tableauEl) return;
 
@@ -669,7 +692,7 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
     tabletopDrag.card = card;
     tabletopDrag.entry = entry;
     tabletopDrag.groupEntries = Array.isArray(groupEntries) && groupEntries.length > 1
-        ? [...groupEntries].sort((a, b) => a.z - b.z)
+        ? [...groupEntries]
         : null;
     tabletopDrag.dragEls = [];
     tabletopDrag.groupOffsets = [];
@@ -680,6 +703,7 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
     tabletopDrag.startClientX = event.clientX;
     tabletopDrag.startClientY = event.clientY;
     tabletopDrag.moved = false;
+    tabletopDrag.forceFaceUp = sourceType === 'deck' && event.shiftKey;
 
     if (!dragEl.parentNode) {
         tableauEl.appendChild(dragEl);
@@ -717,7 +741,10 @@ function startDrag({ sourceType, sourceIndex, card, entry, groupEntries, dragEl,
     }
 
     const rect = dragEl.getBoundingClientRect();
-    if (sourceType === 'tableau') {
+    if (sourceRect) {
+        tabletopDrag.offsetX = event.clientX - sourceRect.left;
+        tabletopDrag.offsetY = event.clientY - sourceRect.top;
+    } else if (sourceType === 'tableau') {
         tabletopDrag.offsetX = event.clientX - rect.left;
         tabletopDrag.offsetY = event.clientY - rect.top;
     } else {
@@ -757,6 +784,7 @@ function handleDragEnd(event) {
     const inTableau = tableauRect ? isPointInRect(dropX, dropY, tableauRect) : false;
     const stackTarget = findStackTarget(dropX, dropY);
     const wasMoved = tabletopDrag.moved;
+    let didMove = false;
 
     if (tabletopDrag.sourceType === 'tableau') {
         if (!wasMoved) {
@@ -765,44 +793,83 @@ function handleDragEnd(event) {
                 CommonUtils.playSound('card');
             } else {
                 moveTableauCardToStack(tabletopDrag.entry, { type: 'discard', index: 0 });
+                didMove = true;
             }
         } else if (stackTarget) {
             if (tabletopDrag.groupEntries) {
                 moveTableauGroupToStack(tabletopDrag.groupEntries, stackTarget);
+                didMove = true;
             } else {
                 moveTableauCardToStack(tabletopDrag.entry, stackTarget);
+                didMove = true;
             }
         } else if (inTableau) {
             const pos = resolveTableauDropPosition(event, tabletopDrag.entry.card.id);
             applyGroupDropPosition(pos, tabletopDrag.entry);
+            didMove = true;
         } else {
             if (tabletopDrag.groupEntries) {
                 moveTableauGroupToStack(tabletopDrag.groupEntries, { type: 'discard', index: 0 });
+                didMove = true;
             } else {
                 moveTableauCardToStack(tabletopDrag.entry, { type: 'discard', index: 0 });
+                didMove = true;
             }
         }
     } else if (tabletopDrag.sourceType === 'deck') {
         if (!wasMoved) {
-            queueDeckClick(tabletopDrag.sourceIndex);
+            if (event.shiftKey) {
+                if (tabletopDrag.cardWasPopped) {
+                    pushCardToStack('deck', tabletopDrag.sourceIndex, tabletopDrag.card);
+                }
+                toggleTopCard('deck', tabletopDrag.sourceIndex);
+            } else {
+                const surfaceEl = getTopCardElement('deck', tabletopDrag.sourceIndex) || getStackSurface('deck', tabletopDrag.sourceIndex);
+                if (tabletopDrag.cardWasPopped) {
+                    const position = getCenterDealPosition();
+                    dealCardToCenter(tabletopDrag.card, position, { animate: true, sourceEl: surfaceEl, faceUp: false });
+                } else {
+                    dealDeckGroupToCenter(tabletopDrag.sourceIndex, { animate: true, sourceEl: surfaceEl });
+                }
+            }
         } else if (stackTarget) {
-            if (stackTarget.type !== 'deck' || stackTarget.index !== tabletopDrag.sourceIndex) {
+            if (stackTarget.type === 'deck' && stackTarget.index === tabletopDrag.sourceIndex) {
+                if (tabletopDrag.cardWasPopped) {
+                    pushCardToStack('deck', tabletopDrag.sourceIndex, tabletopDrag.card);
+                }
+            } else if (tabletopDrag.cardWasPopped) {
+                pushCardToStack(stackTarget.type, stackTarget.index, tabletopDrag.card, stackTarget.type === 'deck');
+                didMove = true;
+            } else {
                 moveCardBetweenStacks({
                     sourceType: 'deck',
                     sourceIndex: tabletopDrag.sourceIndex,
                     targetType: stackTarget.type,
                     targetIndex: stackTarget.index
                 });
+                didMove = true;
             }
         } else if (inTableau) {
-            drawDeckGroupToTableau(tabletopDrag.sourceIndex, resolveTableauDropPosition(event));
+            const position = resolveTableauDropPosition(event);
+            if (tabletopDrag.cardWasPopped) {
+                tabletopDrag.card.hidden = !tabletopDrag.forceFaceUp;
+                addCardToTableau(tabletopDrag.card, position);
+            } else {
+                drawDeckGroupToTableau(tabletopDrag.sourceIndex, position, { faceUp: tabletopDrag.forceFaceUp });
+            }
+            didMove = true;
         } else {
-            moveCardBetweenStacks({
-                sourceType: 'deck',
-                sourceIndex: tabletopDrag.sourceIndex,
-                targetType: 'discard',
-                targetIndex: 0
-            });
+            if (tabletopDrag.cardWasPopped) {
+                pushCardToStack('discard', 0, tabletopDrag.card);
+            } else {
+                moveCardBetweenStacks({
+                    sourceType: 'deck',
+                    sourceIndex: tabletopDrag.sourceIndex,
+                    targetType: 'discard',
+                    targetIndex: 0
+                });
+            }
+            didMove = true;
         }
     } else {
         if (!wasMoved && tabletopDrag.startFromStackCard) {
@@ -814,15 +881,19 @@ function handleDragEnd(event) {
             } else {
                 pushCardToStack(stackTarget.type, stackTarget.index, tabletopDrag.card, stackTarget.type === 'deck');
             }
+            didMove = true;
         } else if (inTableau) {
             addCardToTableau(tabletopDrag.card, resolveTableauDropPosition(event));
+            didMove = true;
         } else {
             pushCardToStack('discard', 0, tabletopDrag.card);
+            didMove = true;
         }
     }
 
     cleanupDrag(event.pointerId);
     updateTabletopUI();
+    if (didMove) CommonUtils.playSound('card');
 }
 
 function cleanupDrag(pointerId) {
@@ -844,6 +915,7 @@ function cleanupDrag(pointerId) {
     tabletopDrag.moved = false;
     tabletopDrag.startFromStackCard = false;
     tabletopDrag.cardWasPopped = false;
+    tabletopDrag.forceFaceUp = false;
 }
 
 function positionDraggedCard(clientX, clientY) {
@@ -967,42 +1039,36 @@ function normalizeGroupZOrder(entries) {
     tabletopState.nextZ = base + entries.length;
 }
 
-function drawDeckGroupToTableau(groupIndex, position) {
+function drawDeckGroupToTableau(groupIndex, position, { faceUp = false } = {}) {
     const card = popCardFromStack('deck', groupIndex);
     if (!card) return;
-    card.hidden = true;
+    card.hidden = !faceUp;
     addCardToTableau(card, position);
 }
 
-function dealDeckGroupToCenter(groupIndex) {
+function dealDeckGroupToCenter(groupIndex, { animate = false, sourceEl = null, faceUp = false } = {}) {
     const card = popCardFromStack('deck', groupIndex);
     if (!card) return;
-    card.hidden = true;
+    card.hidden = !faceUp;
     const position = getCenterDealPosition();
-    addCardToTableau(card, position);
+    dealCardToCenter(card, position, { animate, sourceEl, faceUp });
 }
 
-function queueDeckClick(index) {
-    const now = Date.now();
-    if (deckClickTimer && deckClickTimer.index === index && (now - deckClickTimer.time) < DECK_DOUBLE_CLICK_MS) {
-        clearTimeout(deckClickTimer.handle);
-        deckClickTimer = null;
-        toggleTopCard('deck', index);
+function dealCardToCenter(card, position, { animate = false, sourceEl = null } = {}) {
+    if (!card || !position) return;
+    if (animate && sourceEl) {
+        const tableauRect = getRectById('tabletop-tableau');
+        const destX = tableauRect ? tableauRect.left + position.x : position.x;
+        const destY = tableauRect ? tableauRect.top + position.y : position.y;
+        CommonUtils.playSound('card');
+        CommonUtils.animateCardDraw(sourceEl, destX, destY, () => {
+            addCardToTableau(card, position);
+            updateTabletopUI();
+        });
         updateTabletopUI();
         return;
     }
-    if (deckClickTimer) {
-        clearTimeout(deckClickTimer.handle);
-    }
-    deckClickTimer = {
-        index,
-        time: now,
-        handle: setTimeout(() => {
-            deckClickTimer = null;
-            dealDeckGroupToCenter(index);
-            updateTabletopUI();
-        }, DECK_DOUBLE_CLICK_MS + 20)
-    };
+    addCardToTableau(card, position);
 }
 
 function getCenterDealPosition() {
@@ -1028,6 +1094,15 @@ function addCardToTableau(card, position) {
     });
 }
 
+function clearTableauToDiscard() {
+    if (tabletopState.tableau.length === 0) return;
+    const ordered = [...tabletopState.tableau].sort((a, b) => a.z - b.z);
+    ordered.forEach(entry => tabletopState.discard.push(entry.card));
+    tabletopState.tableau = [];
+    updateTabletopUI();
+    CommonUtils.playSound('card');
+}
+
 function removeTableauEntry(entry) {
     const index = tabletopState.tableau.indexOf(entry);
     if (index !== -1) {
@@ -1042,9 +1117,8 @@ function moveTableauCardToStack(entry, target) {
 
 function moveTableauGroupToStack(entries, target) {
     if (!entries || entries.length === 0) return;
-    const ordered = [...entries].sort((a, b) => a.z - b.z);
-    ordered.forEach(entry => removeTableauEntry(entry));
-    ordered.forEach(entry => {
+    entries.forEach(entry => removeTableauEntry(entry));
+    entries.forEach(entry => {
         pushCardToStack(target.type, target.index, entry.card, target.type === 'deck');
     });
 }
@@ -1108,6 +1182,17 @@ function getStack(type, index) {
     return null;
 }
 
+function getStackSurface(type, index) {
+    return document.querySelector(`.pile-surface[data-stack-type="${type}"][data-stack-index="${index}"]`);
+}
+
+function getTopCardElement(type, index) {
+    const surface = getStackSurface(type, index);
+    if (!surface) return null;
+    const cards = surface.querySelectorAll('.tabletop-card');
+    return cards.length ? cards[cards.length - 1] : null;
+}
+
 function findStackTarget(clientX, clientY) {
     const piles = document.querySelectorAll('.tabletop-pile');
     for (const pile of piles) {
@@ -1128,16 +1213,6 @@ function getCardDimensions() {
     const h = parseFloat(styles.getPropertyValue('--card-h')) || 100;
     const scale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
     return { w: w * scale, h: h * scale };
-}
-
-function getScaleTranslationAdjust() {
-    const styles = getComputedStyle(document.documentElement);
-    const w = parseFloat(styles.getPropertyValue('--card-w')) || 70;
-    const h = parseFloat(styles.getPropertyValue('--card-h')) || 100;
-    const scale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
-    const dx = -((scale - 1) * w) / 2;
-    const dy = -((scale - 1) * h) / 2;
-    return { dx, dy };
 }
 
 function adjustTableauPositionsForScale(prevScale, nextScale) {
