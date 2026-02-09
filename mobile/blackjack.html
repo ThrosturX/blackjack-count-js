@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Casino Blackjack - Mobile</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../themes.css">
+    <link rel="stylesheet" href="mobile-overrides.css">
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+</head>
+
+<body>
+    <div id="mobile-viewport">
+        <div id="panzoom-container">
+            <header>
+                <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+                <h1>Blackjack</h1>
+                <div class="header-toggles">
+                    <button id="toggle-settings" class="btn-toggle active">Settings</button>
+                    <button id="toggle-addons" class="btn-toggle">Addons</button>
+                    <button id="toggle-themes" class="btn-toggle active">Themes</button>
+                    <button id="toggle-stats" class="btn-toggle active">Stats</button>
+                </div>
+
+                <div class="game-controls">
+                    <div class="controls-section" id="settings-area">
+                        <div class="stats">
+                            <label for="fast-mode-checkbox" class="inline-label">Fast Mode:</label>
+                            <input type="checkbox" id="fast-mode-checkbox">
+                        </div>
+                        <div class="stats">Minimum bet:
+                            <select id="table-minimum-bet">
+                                <option value="5">$5</option>
+                                <option value="10" selected>$10</option>
+                                <option value="15">$15</option>
+                                <option value="20">$20</option>
+                                <option value="25">$25</option>
+                                <option value="30">$30</option>
+                                <option value="50">$50</option>
+                                <option value="100">$100</option>
+                            </select>
+                        </div>
+                        <div class="stats">Seats:
+                            <select id="seat-select">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5" selected>5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                            </select>
+                        </div>
+                        <div class="stats">Decks:
+                            <select id="deck-select">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6" selected>6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                            </select>
+                        </div>
+                        <div class="stats">Count:
+                            <select id="count-system-select"></select>
+                        </div>
+                        <label class="stats" style="display: none;">Card Scale:
+                            <input id="blackjack-card-scale" type="range" min="0.6" max="1.25" step="0.05" value="1">
+                            <span id="blackjack-card-scale-value">100%</span>
+                        </label>
+                    </div>
+
+                    <div class="controls-section collapsed" id="addons-area">
+                        <div class="stats">Add-ons:
+                            <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                            <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                            <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="theme-area">
+                        <div class="stats">Table:
+                            <select id="table-style-select"></select>
+                        </div>
+                        <div class="stats">Deck:
+                            <select id="deck-style-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="stats-area">
+                        <div class="stats">Cards: <span id="cards-left">0</span></div>
+                        <div class="stats">Count: <span id="run-count">0</span></div>
+                        <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
+                        <div class="stats">Played rounds: <span id="played-rounds">0</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <main id="table">
+                <!-- Center Overlay for Timer & Results -->
+                <div id="center-overlay">
+                    <div id="overlay-main" class="overlay-text"></div>
+                    <div id="overlay-sub" class="overlay-sub"></div>
+                </div>
+
+                <!-- Visual Shoe (Bottom Side) -->
+                <div class="shoe-container">
+                    <div class="top-card-preview hidden" id="top-card-preview"></div>
+                    <div class="shoe-body">
+                        <div class="card-stack" id="card-stack">
+                            <!-- Cards will be dynamically inserted here -->
+                        </div>
+                        <div class="shoe-lip"></div>
+                    </div>
+                    <div class="shoe-base"></div>
+                </div>
+
+                <!-- Dealer Section -->
+                <div id="dealer-area">
+                    <div class="score-pill" id="dealer-score">Click anywhere to start</div>
+                    <div class="cards" id="dealer-cards">
+                        <div class="card red" style="transform: rotate(-10deg);">
+                            <div class="val-top">A<br><small>♥</small></div>
+                            <div class="suit-center">♥</div>
+                            <div class="val-bot">A<br><small>♥</small></div>
+                        </div>
+                        <div class="card hidden" style="opacity: 0;"></div>
+                        <div class="card black" style="transform: rotate(12deg);">
+                            <div class="val-top">K<br><small>♠</small></div>
+                            <div class="suit-center">♠</div>
+                            <div class="val-bot">K<br><small>♠</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Players Section -->
+                <div id="seats">
+                    <!-- Seats injected by JS -->
+                </div>
+            </main>
+
+            <!-- Strategy Hint Bar -->
+            <div id="strategy-bar">
+                <span class="hint-label">Basic Strategy Hint</span>
+                <span id="strategy-text" class="hint-text">Place bets to start</span>
+                <span id="count-hint" class="count-hint ch-neutral"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset View Button -->
+    <button id="reset-view-btn" title="Reset View">⟲</button>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+{
+    "addons": [
+        {
+            "id": "default-themes",
+            "label": "Default Themes",
+            "description": "The classic green/red felt tables and some basic simple deck styles.",
+            "scripts": ["../addons/default-themes-pack.js"],
+            "styles": ["../addons/default-themes.css"]
+        },
+        {
+            "id": "basic-themes",
+            "label": "Basic Themes",
+            "description": "Simple table and deck styles, four of each.",
+            "scripts": ["../addons/basic-themes-pack.js"],
+            "styles": ["../addons/basic-themes.css"]
+        },
+        {
+            "id": "cyberpunk-themes",
+            "label": "Cyberpunk",
+            "description": "Adds cyberpunk table and deck styles. The Neon Vibe deck has unique effects if 'worn cards' are enabled. Special effects are recommended.",
+            "scripts": ["../addons/cyberpunk-pack.js"],
+            "styles": ["../addons/cyberpunk-pack.css"]
+        },
+        {
+            "id": "dark-elegance-themes",
+            "label": "Dark Elegance",
+            "description": "Adds dark elegance table and deck styles.",
+            "scripts": ["../addons/dark-elegance-pack.js"],
+            "styles": ["../addons/dark-elegance-pack.css"]
+        },
+        {
+            "id": "luxe-collection",
+            "label": "Luxe Collection",
+            "description": "Adds luxe table and deck styles.",
+            "scripts": ["../addons/luxe-pack.js"],
+            "styles": ["../addons/luxe-pack.css"]
+        },
+        {
+            "id": "wildlife-themes",
+            "label": "Wildlife",
+            "description": "Adds wildlife-inspired table and deck styles. The Open Ocean table combined with special effects will take your breath away.",
+            "scripts": ["../addons/wildlife-pack.js"],
+            "styles": ["../addons/wildlife-pack.css"]
+        },
+        {
+            "id": "ghostly-themes",
+            "label": "Ghostly",
+            "description": "Adds a unique deck style.",
+            "scripts": ["../addons/ghostly-pack.js"],
+            "styles": ["../addons/ghostly-pack.css"]
+        },
+        {
+            "id": "premium-themes",
+            "label": "Premium Themes",
+            "description": "Adds premium table and deck styles. Special effects are highly recommended.",
+            "scripts": ["../addons/themes-pack.js"],
+            "styles": ["../addons/premium-themes.css"]
+        },
+        {
+            "id": "premium-effects",
+            "label": "Special Effects",
+            "description": "Adds visual effects and polish. Can be distracting for some players, but man alive do they look cool.",
+            "styles": ["../addons/premium-effects.css"]
+        },
+        {
+            "id": "classic-faces",
+            "label": "Classic Faces",
+            "description": "Replaces the standard pattern with the classic English pattern (also known as the Anglo-Saxon or International pattern). The face cards feature easily distinguishable and recognizable scalable vector graphics made by Wikimedia user Ekirahardian. Combine this with 'Worn Cards' for that old summer cabin feel.",
+            "scripts": ["../addons/classic-face-art.js", "../addons/classic-faces.js"],
+            "styles": ["../addons/classic-faces.css"]
+        },
+        {
+            "id": "worn-cards",
+            "label": "Worn Cards",
+            "description": "Adds worn card edges, faded inks, scuffed textures, desaturation. Extremely beautiful, but some cards can be a little bit difficult to read at a glance (depending on the deck style). Surprisingly good for practicing card counting due to the effort require to evaluate them quickly. Try counting these in Fast Mode!",
+            "scripts": ["../addons/worn-cards.js"],
+            "styles": ["../addons/worn-cards.css"]
+        },
+        {
+            "id": "counting-balanced",
+            "label": "Balanced Counting",
+            "description": "Adds balanced counting systems like Hi-Opt II, Wong Halves and Zen. You can change the counting system mid-shoe to reset the count to zero without shuffling the deck.",
+            "scripts": ["../addons/counting-balanced-pack.js"]
+        },
+        {
+            "id": "counting-unbalanced",
+            "label": "Unbalanced Counting",
+            "description": "Adds unbalanced counting systems like Knock Out or Red 7. If you're trying to learn the KO or REKO systems, this is the one you want to track the count.",
+            "scripts": ["../addons/counting-unbalanced-pack.js"]
+        }
+    ]
+}
+
+
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+    <script src="../assets.js"></script>
+    <script src="../addons.js"></script>
+    <script src="../themes.js"></script>
+    <script src="../card.js"></script>
+    <script src="../common.js"></script>
+    <script>
+        // Fix audio path for mobile directory
+        if (typeof CommonUtils !== 'undefined' && CommonUtils.preloadAudio) {
+            const originalPreload = CommonUtils.preloadAudio;
+            CommonUtils.preloadAudio = function(files) {
+                Object.keys(files).forEach(key => {
+                    files[key] = files[key].map(f => f.startsWith('../') ? f : '../audio/' + f);
+                });
+                return originalPreload.call(this, files);
+            };
+        }
+    </script>
+    <script src="../blackjack-logic.js"></script>
+    <script src="../blackjack.js"></script>
+
+    <!-- Panzoom Initialization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const elem = document.getElementById('panzoom-container');
+
+            // Stop panzoom from intercepting events on form elements
+            const formElements = elem.querySelectorAll('select, input, button, label, .game-btn, .btn-toggle, .btn-mini');
+            formElements.forEach(el => {
+                el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                el.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+            });
+
+            const panzoom = Panzoom(elem, {
+                maxScale: 4,
+                minScale: 0.2,
+                contain: 'inside',
+                startScale: 0.45,
+                cursor: 'grab'
+            });
+
+            // Enable pinch zoom
+            elem.parentElement.addEventListener('wheel', panzoom.zoomWithWheel);
+
+            // Reset view button
+            document.getElementById('reset-view-btn').addEventListener('click', function() {
+                panzoom.reset();
+                panzoom.zoom(0.45);
+            });
+        });
+    </script>
+</body>
+
+</html>

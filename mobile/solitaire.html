@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Klondike Solitaire - Mobile</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../themes.css">
+    <link rel="stylesheet" href="mobile-overrides.css">
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+</head>
+
+<body>
+    <div id="mobile-viewport">
+        <div id="panzoom-container">
+            <header>
+                <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+                <h1>Klondike Solitaire</h1>
+                <div class="header-toggles">
+                    <button id="toggle-settings" class="btn-toggle active">Settings</button>
+                    <button id="toggle-addons" class="btn-toggle">Addons</button>
+                    <button id="toggle-themes" class="btn-toggle active">Themes</button>
+                    <button id="toggle-stats" class="btn-toggle active">Stats</button>
+                </div>
+
+                <div class="game-controls">
+                    <div class="controls-section" id="settings-area">
+                        <div class="stats">Draw:
+                            <select id="draw-count-select">
+                                <option value="1">Draw 1</option>
+                                <option value="3" selected>Draw 3</option>
+                            </select>
+                        </div>
+                        <div class="stats">Variant:
+                            <select id="variant-select"></select>
+                        </div>
+                        <div class="stats variant-description" id="variant-description"></div>
+                        <label class="stats">Card Scale:
+                            <input id="solitaire-card-scale" type="range" min="0.6" max="2" step="0.05" value="1">
+                            <span id="solitaire-card-scale-value">100%</span>
+                        </label>
+                    </div>
+
+                    <div class="controls-section collapsed" id="addons-area">
+                        <div class="stats">Add-ons:
+                            <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                            <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                            <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="theme-area">
+                        <div class="stats">Table:
+                            <select id="table-style-select"></select>
+                        </div>
+                        <div class="stats">Deck:
+                            <select id="deck-style-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="stats-area">
+                        <div class="stats">Score: <span id="score-display">0</span></div>
+                        <div class="stats">Moves: <span id="moves-display">0</span></div>
+                        <div class="stats">Time: <span id="time-display">0:00</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <main id="solitaire-table">
+                <!-- Top row: Stock/Waste and Foundations -->
+                <div id="top-row">
+                    <div id="stock-waste-area">
+                        <div class="stock-pile pile" id="stock-pile">
+                            <div class="pile-placeholder">Stock</div>
+                        </div>
+                        <div class="waste-pile pile" id="waste-pile">
+                            <div class="pile-placeholder">Waste</div>
+                        </div>
+                    </div>
+
+                    <div id="foundation-area">
+                        <div class="foundation-pile pile" id="foundation-0" data-suit="♥">
+                            <div class="pile-placeholder">♥</div>
+                        </div>
+                        <div class="foundation-pile pile" id="foundation-1" data-suit="♠">
+                            <div class="pile-placeholder">♠</div>
+                        </div>
+                        <div class="foundation-pile pile" id="foundation-2" data-suit="♦">
+                            <div class="pile-placeholder">♦</div>
+                        </div>
+                        <div class="foundation-pile pile" id="foundation-3" data-suit="♣">
+                            <div class="pile-placeholder">♣</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tableau (7 columns) -->
+                <div id="tableau-area">
+                    <div class="tableau-column pile" id="tableau-0"></div>
+                    <div class="tableau-column pile" id="tableau-1"></div>
+                    <div class="tableau-column pile" id="tableau-2"></div>
+                    <div class="tableau-column pile" id="tableau-3"></div>
+                    <div class="tableau-column pile" id="tableau-4"></div>
+                    <div class="tableau-column pile" id="tableau-5"></div>
+                    <div class="tableau-column pile" id="tableau-6"></div>
+                </div>
+
+                <!-- Win overlay -->
+                <div id="win-overlay" class="hidden">
+                    <div class="win-message">
+                        <h2>🎉 You Win! 🎉</h2>
+                        <p>Score: <span id="final-score">0</span></p>
+                        <p>Time: <span id="final-time">0:00</span></p>
+                        <button id="new-game-from-win" class="game-btn">New Game</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Control bar -->
+            <div id="game-controls-bar">
+                <button id="new-game-btn" class="game-btn">New Game</button>
+                <button id="undo-btn" class="game-btn">Undo</button>
+                <button id="hint-btn" class="game-btn">Hint</button>
+                <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset View Button -->
+    <button id="reset-view-btn" title="Reset View">⟲</button>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["../addons/default-themes-pack.js"],
+                "styles": ["../addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["../addons/basic-themes-pack.js"],
+                "styles": ["../addons/basic-themes.css"]
+            },
+            {
+                "id": "cyberpunk-themes",
+                "label": "Cyberpunk Themes",
+                "description": "Adds cyberpunk table and deck styles.",
+                "scripts": ["../addons/cyberpunk-pack.js"],
+                "styles": ["../addons/cyberpunk-pack.css"]
+            },
+            {
+                "id": "dark-elegance-themes",
+                "label": "Dark Elegance",
+                "description": "Adds dark elegance table and deck styles.",
+                "scripts": ["../addons/dark-elegance-pack.js"],
+                "styles": ["../addons/dark-elegance-pack.css"]
+            },
+            {
+                "id": "luxe-collection",
+                "label": "Luxe Collection",
+                "description": "Adds luxe table and deck styles.",
+                "scripts": ["../addons/luxe-pack.js"],
+                "styles": ["../addons/luxe-pack.css"]
+            },
+            {
+                "id": "wildlife-themes",
+                "label": "Wildlife",
+                "description": "Adds wildlife-inspired table and deck styles.",
+                "scripts": ["../addons/wildlife-pack.js"],
+                "styles": ["../addons/wildlife-pack.css"]
+            },
+            {
+                "id": "ghostly-themes",
+                "label": "Ghostly",
+                "description": "Adds ghostly table and deck styles.",
+                "scripts": ["../addons/ghostly-pack.js"],
+                "styles": ["../addons/ghostly-pack.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "description": "Adds premium table and deck styles.",
+                "scripts": ["../addons/themes-pack.js"],
+                "styles": ["../addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Special Effects",
+                "description": "Adds visual effects and polish.",
+                "styles": ["../addons/premium-effects.css"]
+            },
+            {
+                "id": "classic-faces",
+                "label": "Classic Faces",
+                "description": "Displays classic pip layouts on numbered cards and custom icons for face cards.",
+                "scripts": ["../addons/classic-face-art.js", "../addons/classic-faces.js"],
+                "styles": ["../addons/classic-faces.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "description": "Adds worn card edges, faded inks, and scuffed textures.",
+                "scripts": ["../addons/worn-cards.js"],
+                "styles": ["../addons/worn-cards.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+
+    <script src="../assets.js"></script>
+    <script src="../addons.js"></script>
+    <script src="../themes.js"></script>
+    <script src="../card.js"></script>
+    <script src="../common.js"></script>
+    <script>
+        // Fix audio path for mobile directory
+        if (typeof CommonUtils !== 'undefined' && CommonUtils.preloadAudio) {
+            const originalPreload = CommonUtils.preloadAudio;
+            CommonUtils.preloadAudio = function(files) {
+                Object.keys(files).forEach(key => {
+                    files[key] = files[key].map(f => f.startsWith('../') ? f : '../audio/' + f);
+                });
+                return originalPreload.call(this, files);
+            };
+        }
+    </script>
+    <script src="../solitaire-logic.js"></script>
+    <script src="../shared/ui-helpers.js"></script>
+    <script src="../solitaire.js"></script>
+
+    <!-- Panzoom Initialization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const elem = document.getElementById('panzoom-container');
+
+            // Stop panzoom from intercepting events on form elements
+            const formElements = elem.querySelectorAll('select, input, button, label, .game-btn, .btn-toggle, .btn-mini');
+            formElements.forEach(el => {
+                el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                el.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+            });
+
+            const panzoom = Panzoom(elem, {
+                maxScale: 4,
+                minScale: 0.2,
+                contain: 'inside',
+                startScale: 0.45,
+                cursor: 'grab'
+            });
+
+            // Enable pinch zoom
+            elem.parentElement.addEventListener('wheel', panzoom.zoomWithWheel);
+
+            // Reset view button
+            document.getElementById('reset-view-btn').addEventListener('click', function() {
+                panzoom.reset();
+                panzoom.zoom(0.45);
+            });
+        });
+    </script>
+</body>
+
+</html>

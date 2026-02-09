@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Casino Poker (Hold'em) - Mobile</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../themes.css">
+    <link rel="stylesheet" href="mobile-overrides.css">
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+    <style>
+        /* Poker specific styles */
+        .community-cards {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            min-height: var(--card-h);
+        }
+
+        .pot-display {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border: 1px solid var(--gold);
+        }
+
+        .dealer-button {
+            width: 20px;
+            height: 20px;
+            background: white;
+            color: black;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: bold;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            border: 1px solid #333;
+        }
+
+        .seat.folded {
+            opacity: 0.5;
+        }
+
+        .seat.all-in {
+            border-color: var(--red);
+            box-shadow: 0 0 10px var(--red);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mobile-viewport">
+        <div id="panzoom-container">
+            <header>
+                <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+                <h1>Texas Hold'em Poker</h1>
+                <div class="header-toggles">
+                    <button id="toggle-settings" class="btn-toggle active">Settings</button>
+                    <button id="toggle-addons" class="btn-toggle">Addons</button>
+                    <button id="toggle-themes" class="btn-toggle active">Themes</button>
+                    <button id="toggle-stats" class="btn-toggle active">Stats</button>
+                </div>
+
+                <div class="game-controls">
+                    <div class="controls-section" id="settings-area">
+                        <div class="stats">Seats:
+                            <select id="seat-select">
+                                <option value="2">2 (Heads up)</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5" selected>5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="controls-section collapsed" id="addons-area">
+                        <div class="stats">Add-ons:
+                            <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                            <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                            <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="theme-area">
+                        <div class="stats">Table:
+                            <select id="table-style-select"></select>
+                        </div>
+                        <div class="stats">Style:
+                            <select id="deck-style-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="controls-section" id="stats-area">
+                        <div class="stats">Hand: <span id="game-phase-text">Wait</span></div>
+                        <div class="stats">Pot: <span id="pot-total">$0</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <main id="table">
+                <!-- Center Overlay for Timer & Results -->
+                <div id="center-overlay">
+                    <div id="overlay-main" class="overlay-text"></div>
+                    <div id="overlay-sub" class="overlay-sub"></div>
+                </div>
+
+                <!-- Visual Shoe (Bottom Side) -->
+                <div class="shoe-container">
+                    <div class="shoe-body">
+                        <div class="card-stack" id="card-stack"></div>
+                        <div class="shoe-lip"></div>
+                    </div>
+                    <div class="shoe-base"></div>
+                </div>
+
+                <!-- Community Cards Section -->
+                <div id="dealer-area" style="top: 15%;">
+                    <div class="pot-display" id="pot-display">Pot: $0</div>
+                    <div class="community-cards" id="community-cards">
+                        <!-- Flop, Turn, River Cards -->
+                    </div>
+                </div>
+
+                <!-- Players Section -->
+                <div id="seats">
+                    <!-- Seats injected by JS -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Reset View Button -->
+    <button id="reset-view-btn" title="Reset View">⟲</button>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["../addons/default-themes-pack.js"],
+                "styles": ["../addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["../addons/basic-themes-pack.js"],
+                "styles": ["../addons/basic-themes.css"]
+            },
+            {
+                "id": "cyberpunk-themes",
+                "label": "Cyberpunk Themes",
+                "description": "Adds cyberpunk table and deck styles.",
+                "scripts": ["../addons/cyberpunk-pack.js"],
+                "styles": ["../addons/cyberpunk-pack.css"]
+            },
+            {
+                "id": "dark-elegance-themes",
+                "label": "Dark Elegance",
+                "description": "Adds dark elegance table and deck styles.",
+                "scripts": ["../addons/dark-elegance-pack.js"],
+                "styles": ["../addons/dark-elegance-pack.css"]
+            },
+            {
+                "id": "luxe-collection",
+                "label": "Luxe Collection",
+                "description": "Adds luxe table and deck styles.",
+                "scripts": ["../addons/luxe-pack.js"],
+                "styles": ["../addons/luxe-pack.css"]
+            },
+            {
+                "id": "wildlife-themes",
+                "label": "Wildlife",
+                "description": "Adds wildlife-inspired table and deck styles.",
+                "scripts": ["../addons/wildlife-pack.js"],
+                "styles": ["../addons/wildlife-pack.css"]
+            },
+            {
+                "id": "ghostly-themes",
+                "label": "Ghostly",
+                "description": "Adds ghostly table and deck styles.",
+                "scripts": ["../addons/ghostly-pack.js"],
+                "styles": ["../addons/ghostly-pack.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "description": "Adds premium table and deck styles.",
+                "scripts": ["../addons/themes-pack.js"],
+                "styles": ["../addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Special Effects",
+                "description": "Adds visual effects and polish.",
+                "styles": ["../addons/premium-effects.css"]
+            },
+            {
+                "id": "classic-faces",
+                "label": "Classic Faces",
+                "description": "Displays classic pip layouts on numbered cards and custom icons for face cards.",
+                "scripts": ["../addons/classic-face-art.js", "../addons/classic-faces.js"],
+                "styles": ["../addons/classic-faces.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "description": "Adds worn card edges, faded inks, and scuffed textures.",
+                "scripts": ["../addons/worn-cards.js"],
+                "styles": ["../addons/worn-cards.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+
+    <script src="../assets.js"></script>
+    <script src="../addons.js"></script>
+    <script src="../themes.js"></script>
+    <script src="../card.js"></script>
+    <script src="../common.js"></script>
+    <script>
+        // Fix audio path for mobile directory
+        if (typeof CommonUtils !== 'undefined' && CommonUtils.preloadAudio) {
+            const originalPreload = CommonUtils.preloadAudio;
+            CommonUtils.preloadAudio = function(files) {
+                Object.keys(files).forEach(key => {
+                    files[key] = files[key].map(f => f.startsWith('../') ? f : '../audio/' + f);
+                });
+                return originalPreload.call(this, files);
+            };
+        }
+    </script>
+    <script src="../poker-logic.js"></script>
+    <script src="../poker.js"></script>
+
+    <!-- Panzoom Initialization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const elem = document.getElementById('panzoom-container');
+
+            // Stop panzoom from intercepting events on form elements
+            const formElements = elem.querySelectorAll('select, input, button, label, .game-btn, .btn-toggle, .btn-mini');
+            formElements.forEach(el => {
+                el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: false });
+                el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                el.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+            });
+
+            const panzoom = Panzoom(elem, {
+                maxScale: 4,
+                minScale: 0.2,
+                contain: 'inside',
+                startScale: 0.45,
+                cursor: 'grab'
+            });
+
+            // Enable pinch zoom
+            elem.parentElement.addEventListener('wheel', panzoom.zoomWithWheel);
+
+            // Reset view button
+            document.getElementById('reset-view-btn').addEventListener('click', function() {
+                panzoom.reset();
+                panzoom.zoom(0.45);
+            });
+        });
+    </script>
+</body>
+
+</html>

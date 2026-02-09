@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Card Games - Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 40px;
+        }
+
+        .games-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .game-link {
+            display: flex;
+            align-items: center;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .game-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .game-link:hover,
+        .game-link:active {
+            transform: translateY(-2px);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+
+        .game-link:hover::before,
+        .game-link:active::before {
+            opacity: 1;
+        }
+
+        .game-icon {
+            font-size: 2rem;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .game-info {
+            flex: 1;
+            text-align: left;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .game-desc {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .arrow {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-left: 10px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: auto;
+        }
+
+        .desktop-link {
+            color: #667eea;
+            text-decoration: none;
+            margin-top: 10px;
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .desktop-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .logo {
+                font-size: 2rem;
+            }
+
+            .game-link {
+                padding: 18px 20px;
+            }
+
+            .game-name {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Prevent text selection */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Disable pull-to-refresh */
+        body {
+            overscroll-behavior: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">🃏</div>
+        <h1>Card Games</h1>
+        <p class="subtitle">Choose your game</p>
+
+        <nav class="games-list">
+            <a href="solitaire.html" class="game-link">
+                <span class="game-icon">♠️</span>
+                <div class="game-info">
+                    <div class="game-name">Klondike Solitaire</div>
+                    <div class="game-desc">Classic single-player card game</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+
+            <a href="freecell.html" class="game-link">
+                <span class="game-icon">♥️</span>
+                <div class="game-info">
+                    <div class="game-name">FreeCell</div>
+                    <div class="game-desc">Strategic solitaire variant</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+
+            <a href="spider.html" class="game-link">
+                <span class="game-icon">🕷️</span>
+                <div class="game-info">
+                    <div class="game-name">Spider Solitaire</div>
+                    <div class="game-desc">Build sequences to clear the board</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+
+            <a href="blackjack.html" class="game-link">
+                <span class="game-icon">♦️</span>
+                <div class="game-info">
+                    <div class="game-name">Blackjack</div>
+                    <div class="game-desc">Beat the dealer to 21</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+
+            <a href="poker.html" class="game-link">
+                <span class="game-icon">♣️</span>
+                <div class="game-info">
+                    <div class="game-name">Texas Hold'em Poker</div>
+                    <div class="game-desc">Casino-style poker action</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+
+            <a href="tabletop.html" class="game-link">
+                <span class="game-icon">🎲</span>
+                <div class="game-info">
+                    <div class="game-name">Table Top</div>
+                    <div class="game-desc">Customizable card sandbox</div>
+                </div>
+                <span class="arrow">›</span>
+            </a>
+        </nav>
+
+        <footer class="footer">
+            <p>Mobile Optimized Experience</p>
+            <a href="../index.html" class="desktop-link">View Desktop Site →</a>
+        </footer>
+    </div>
+</body>
+
+</html>

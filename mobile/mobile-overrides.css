@@ -1,0 +1,360 @@
+/**
+ * Mobile Overrides - Card Games Mobile Shell
+ * This CSS provides mobile-specific enhancements without modifying original styles.
+ */
+
+/* ============================================
+   VIEWPORT & PANZOOM CONTAINER
+   ============================================ */
+
+#mobile-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #0a0a0a;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#panzoom-container {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    display: flex;
+    flex-direction: column;
+    touch-action: none;
+}
+
+/* Make the game main container fit the panzoom area */
+#panzoom-container > main,
+#panzoom-container > #solitaire-table {
+    flex: 1;
+    min-height: auto;
+    overflow: visible;
+    min-width: 1200px; /* Increased width to fit all foundations */
+    padding: 20px;
+}
+
+/* Ensure table layouts have enough width */
+#solitaire-table,
+#table,
+.freecell-layout,
+.spider-layout,
+.tabletop-layout {
+    min-width: 1200px !important;
+    width: 1200px !important;
+    max-width: none !important;
+}
+
+/* Foundation and tableau areas need room */
+#foundation-area,
+#freecell-foundations,
+#spider-foundations,
+#tabletop-foundation-area {
+    min-width: 400px;
+}
+
+#tableau-area,
+#freecell-tableau,
+#spider-tableau,
+#tabletop-tableau {
+    min-width: 1100px;
+}
+
+/* ============================================
+   HEADER ADJUSTMENTS FOR MOBILE
+   ============================================ */
+
+#panzoom-container > header {
+    flex-shrink: 0;
+    min-height: auto;
+    padding: 8px 12px;
+}
+
+/* Compact header toggles for mobile */
+#panzoom-container .header-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+}
+
+#panzoom-container .btn-toggle {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    min-height: 36px;
+}
+
+/* ============================================
+   TOUCH TARGETS - EXPANDED CLICKABLE AREAS
+   ============================================ */
+
+/* Cards - minimum 44x44px touch target */
+.card,
+.pile,
+.tableau-column,
+.foundation-pile,
+.waste-pile,
+.stock-pile,
+.seat,
+.shoe-container,
+#spider-stock,
+#freecell-freecells > div,
+#freecell-foundations > div {
+    position: relative;
+}
+
+.card::after,
+.pile::after,
+.tableau-column::after,
+.foundation-pile::after,
+.waste-pile::after,
+.stock-pile::after,
+.seat::after,
+.shoe-container::after,
+#spider-stock::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Smaller touch target for cards in piles/stacks */
+.card::after {
+    min-width: max(100%, 44px);
+    min-height: max(100%, 44px);
+}
+
+/* Ensure form elements are clickable and above panzoom */
+select,
+input[type="checkbox"],
+input[type="range"],
+button,
+.game-btn,
+.btn-toggle,
+.btn-mini {
+    position: relative;
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+    touch-action: auto !important;
+}
+
+/* Form containers need proper stacking */
+.controls-section,
+.game-controls,
+.header-toggles {
+    position: relative;
+    z-index: 10000;
+}
+
+/* Game buttons - expanded touch area */
+.game-btn,
+.btn-toggle,
+button[class*="btn"] {
+    position: relative;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.game-btn::after,
+.btn-toggle::after,
+button[class*="btn"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Select elements */
+select,
+input[type="range"] {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* Back link */
+.back-link {
+    position: relative;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-link::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* ============================================
+   RESET VIEW BUTTON
+   ============================================ */
+
+#reset-view-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#reset-view-btn:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#reset-view-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    pointer-events: auto;
+}
+
+/* ============================================
+   GAME CONTROLS BAR ADJUSTMENTS
+   ============================================ */
+
+#game-controls-bar {
+    position: relative;
+    padding: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+#game-controls-bar .game-btn {
+    flex: 1;
+    min-width: 80px;
+    max-width: 150px;
+}
+
+/* Strategy bar adjustments */
+#strategy-bar {
+    padding: 12px;
+    font-size: 0.9rem;
+}
+
+/* ============================================
+   PREVENT NATIVE SCROLLING/REFRESH
+   ============================================ */
+
+body {
+    overscroll-behavior: none;
+    overflow: hidden;
+    touch-action: none;
+}
+
+/* Disable pull-to-refresh on mobile browsers */
+html {
+    overscroll-behavior: none;
+}
+
+/* ============================================
+   GAME-SPECIFIC MOBILE ADJUSTMENTS
+   ============================================ */
+
+/* Solitaire specific */
+#solitaire-table {
+    min-height: auto;
+    padding: 10px;
+}
+
+/* Blackjack/Poker specific */
+#table {
+    min-height: auto;
+    padding: 10px;
+}
+
+/* FreeCell specific */
+.freecell-layout {
+    min-height: auto;
+    padding: 10px;
+}
+
+/* Spider specific */
+.spider-layout {
+    min-height: auto;
+    padding: 10px;
+}
+
+/* TableTop specific */
+.tabletop-layout {
+    min-height: auto;
+    padding: 10px;
+}
+
+/* ============================================
+   SCROLLBARS - HIDE ON MOBILE
+   ============================================ */
+
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================
+   WIN OVERLAY ADJUSTMENTS
+   ============================================ */
+
+#win-overlay {
+    position: fixed;
+    z-index: 1000;
+}
+
+/* ============================================
+   CENTER OVERLAY ADJUSTMENTS
+   ============================================ */
+
+#center-overlay {
+    z-index: 100;
+}
