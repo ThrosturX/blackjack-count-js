@@ -178,6 +178,10 @@ h1 {
     white-space: nowrap;
 }
 
+#game-area {
+    justify-content: flex-start;
+}
+
 .freecell-header-controls {
     justify-content: center;
     flex-wrap: wrap;
@@ -210,6 +214,16 @@ h1 {
     color: #ccc;
     font-size: 0.8rem;
     margin-top: 0;
+}
+
+.stats.subtle:empty {
+    display: none;
+}
+
+.deal-target-display,
+.deal-target-hint {
+    width: 100%;
+    text-align: left;
 }
 
 select {
@@ -1734,6 +1748,7 @@ input:checked+.slider:before {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tabletop-pile .pile-label {
@@ -1764,6 +1779,11 @@ input:checked+.slider:before {
 
 .tabletop-pile--discard {
     margin-left: 18px;
+}
+
+.tabletop-pile.pile-hover {
+    border-color: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) inset;
 }
 
 .tabletop-pile .card {
@@ -1848,6 +1868,12 @@ input:checked+.slider:before {
     letter-spacing: 0.12em;
     color: rgba(255, 255, 255, 0.5);
     margin: 4px 2px;
+}
+
+.stats.subtle {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
 }
 
 /* Game controls bar */
