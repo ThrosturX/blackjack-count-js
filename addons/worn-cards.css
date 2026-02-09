@@ -189,7 +189,7 @@ body.deck-green .card:not(.hidden)::after,
 body.deck-sun .card:not(.hidden)::after {
     content: "";
     position: absolute;
-    inset: 6px;
+    /* inset: 6px; */
     opacity: var(--wear-layer-opacity, 1);
     border: 1px dotted rgba(90, 70, 45, 0.12);
     background:
