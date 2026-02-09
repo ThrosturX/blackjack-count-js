@@ -1,3 +1,7 @@
+html {
+    height: 100%;
+}
+
 :root {
     --felt-color: #2d5e38;
     --felt-border: #4a3b2a;
@@ -32,10 +36,10 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
+    height: 100%;
     user-select: none;
     padding-bottom: 90px;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 /* --- Header --- */
@@ -1358,11 +1362,21 @@ input:checked+.slider:before {
    ======================================== */
 
 /* Solitaire Table Layout */
+#solitaire-table,
+#table.freecell-layout,
+#table.spider-layout,
+#table.tabletop-layout,
+.game-table-layout {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 80vh;
+    max-height: 80vh;
+}
+
 #solitaire-table {
     position: relative;
     width: 95vw;
     max-width: 1400px;
-    height: 80vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
@@ -1372,7 +1386,6 @@ input:checked+.slider:before {
     display: flex;
     flex-direction: column;
     gap: 30px;
-    overflow: visible;
     transition: background 0.5s, border-color 0.5s;
 }
 
@@ -1566,8 +1579,6 @@ input:checked+.slider:before {
     position: relative;
     width: 95vw;
     max-width: 1400px;
-    height: 80vh;
-    max-height: 80vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
@@ -1579,9 +1590,6 @@ input:checked+.slider:before {
     justify-content: flex-start;
     align-items: stretch;
     gap: 30px;
-    overflow: visible;
-    overflow-y: visible;
-    overflow-x: visible;
     transition: background 0.5s, border-color 0.5s;
 }
 
@@ -1597,8 +1605,6 @@ input:checked+.slider:before {
     position: relative;
     width: 95vw;
     max-width: 1400px;
-    height: 80vh;
-    max-height: 80vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
@@ -1610,7 +1616,6 @@ input:checked+.slider:before {
     justify-content: flex-start;
     align-items: stretch;
     gap: 24px;
-    overflow: visible;
     transition: background 0.5s, border-color 0.5s;
 }
 
@@ -1692,8 +1697,6 @@ input:checked+.slider:before {
     position: relative;
     width: 95vw;
     max-width: 1500px;
-    height: 80vh;
-    max-height: 80vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
@@ -1705,7 +1708,6 @@ input:checked+.slider:before {
     justify-content: flex-start;
     align-items: stretch;
     gap: 24px;
-    overflow: visible;
     transition: background 0.5s, border-color 0.5s;
 }
 
