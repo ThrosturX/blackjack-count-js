@@ -297,6 +297,7 @@ function handlePointerMove(e) {
 
     if (freecellDragState.isDragging) {
         updateDragLayerPosition(e.clientX, e.clientY);
+        updateDragIndicators(e.clientX, e.clientY);
     }
 }
 
@@ -403,10 +404,21 @@ function updateDragLayerPosition(clientX, clientY) {
     freecellDragState.dragLayer.style.top = `${clientY - freecellDragState.pointerOffsetY}px`;
 }
 
+function getDropPoint(clientX, clientY) {
+    if (!freecellDragState.dragLayer) {
+        return { x: clientX, y: clientY };
+    }
+    const rect = freecellDragState.dragLayer.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + Math.min(CARD_HEIGHT / 2, rect.height - 1);
+    return { x, y };
+}
+
 function finishDrag(clientX, clientY) {
-    const targetFreeCell = findFreeCellDropTarget(clientX, clientY);
-    const targetFoundation = findFoundationDropPile(clientX, clientY);
-    const targetColumn = findTableauDropColumn(clientX, clientY);
+    const dropPoint = getDropPoint(clientX, clientY);
+    const targetFreeCell = findFreeCellDropTarget(dropPoint.x, dropPoint.y);
+    const targetFoundation = findFoundationDropPile(dropPoint.x, dropPoint.y);
+    const targetColumn = findTableauDropColumn(dropPoint.x, dropPoint.y);
     let handled = false;
     let moveResult = null;
     const scoreBefore = freecellState.score;
@@ -464,6 +476,7 @@ function cleanupDragVisuals() {
         freecellDragState.dragLayer = null;
     }
     freecellDragState.draggedElements = [];
+    clearDropIndicators();
 }
 
 function cleanupPointerHandlers() {
@@ -595,32 +608,94 @@ function removeDraggedCardsFromSource() {
     }
 }
 
+function updateDragIndicators(clientX, clientY) {
+    clearDropIndicators();
+    if (!freecellDragState.isDragging) return;
+
+    const dropPoint = getDropPoint(clientX, clientY);
+    const columnIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
+    if (columnIndex !== null) {
+        const columnEl = document.getElementById(`freecell-column-${columnIndex}`);
+        if (columnEl) {
+            columnEl.classList.add(canDropOnTableau(columnIndex) ? 'drag-over-valid' : 'drag-over-invalid');
+        }
+        return;
+    }
+
+    const freeCellIndex = findFreeCellDropTarget(dropPoint.x, dropPoint.y);
+    if (freeCellIndex !== null) {
+        const slotEl = document.getElementById(`freecell-cell-${freeCellIndex}`);
+        if (slotEl) {
+            slotEl.classList.add(canDropOnFreeCell(freeCellIndex) ? 'drag-over-valid' : 'drag-over-invalid');
+        }
+        return;
+    }
+
+    const foundationIndex = findFoundationDropPile(dropPoint.x, dropPoint.y);
+    if (foundationIndex !== null) {
+        const foundationEl = document.getElementById(`freecell-foundation-${foundationIndex}`);
+        if (foundationEl) {
+            foundationEl.classList.add(canDropOnFoundation(foundationIndex) ? 'drag-over-valid' : 'drag-over-invalid');
+        }
+    }
+}
+
+function clearDropIndicators() {
+    document.querySelectorAll('.freecell-column, .freecell-slot, .freecell-foundation').forEach(el => {
+        el.classList.remove('drag-over-valid', 'drag-over-invalid');
+    });
+}
+
+function canDropOnTableau(targetCol) {
+    if (freecellDragState.draggedCards.length === 0) return false;
+    const movingCards = freecellDragState.draggedCards;
+    const targetPile = freecellState.tableau[targetCol];
+    const baseCard = movingCards[0];
+
+    if (targetPile.length === 0) {
+        const maxMovable = getMaxMovableCards(targetCol, movingCards.length);
+        return movingCards.length <= maxMovable;
+    }
+
+    const topCard = targetPile[targetPile.length - 1];
+    if (topCard.hidden || !SolitaireLogic.canPlaceOnTableau(baseCard, topCard)) return false;
+
+    const maxMovable = getMaxMovableCards(targetCol, movingCards.length);
+    return movingCards.length <= maxMovable;
+}
+
+function canDropOnFreeCell(targetIndex) {
+    if (freecellDragState.draggedCards.length !== 1) return false;
+    return !freecellState.freeCells[targetIndex];
+}
+
+function canDropOnFoundation(targetIndex) {
+    if (freecellDragState.draggedCards.length !== 1) return false;
+    const card = freecellDragState.draggedCards[0];
+    const foundation = freecellState.foundations[targetIndex];
+    return SolitaireLogic.canPlaceOnFoundation(card, foundation);
+}
+
 function findTableauDropColumn(clientX, clientY) {
     let bestColumn = null;
-    let bestDistance = Infinity;
+    let bestCenterDistance = Infinity;
 
     document.querySelectorAll('.freecell-column').forEach(column => {
         const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, STACK_OFFSET);
         const paddedRect = UIHelpers.getRectWithPadding(rect, 30);
 
-        if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
-            bestColumn = column;
-            bestDistance = -1;
-            return;
-        }
+        if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;
 
-        const dist = UIHelpers.distanceToRect(clientX, clientY, rect);
-        if (dist < bestDistance) {
-            bestDistance = dist;
+        const centerX = (rect.left + rect.right) / 2;
+        const dist = Math.abs(centerX - clientX);
+        if (dist < bestCenterDistance) {
+            bestCenterDistance = dist;
             bestColumn = column;
         }
     });
 
     if (!bestColumn) return null;
-    if (bestDistance <= 30) {
-        return parseInt(bestColumn.id.split('-')[2], 10);
-    }
-    return null;
+    return parseInt(bestColumn.id.split('-')[2], 10);
 }
 
 function findFreeCellDropTarget(clientX, clientY) {
