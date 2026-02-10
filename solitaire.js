@@ -73,6 +73,11 @@ const MAX_HISTORY = 200;
 const MAX_SOLVABLE_DEAL_ATTEMPTS = 12;
 const MAX_SIMULATION_ITERATIONS = 1200;
 
+// Mobile detection and touch state
+const isMobile = window.matchMedia('(max-width: 768px)').matches || 
+                navigator.maxTouchPoints > 0 ||
+                'ontouchstart' in window;
+
 const dragState = {
     draggedCards: [],
     sourcePile: null,
@@ -84,7 +89,10 @@ const dragState = {
     isDragging: false,
     pendingDrag: null,
     activePointerId: null,
-    hoveredCard: null
+    hoveredCard: null,
+    pickedUpCard: null,  // For mobile touch-to-pickup
+    pickedUpSource: null,
+    pickedUpElement: null
 };
 
 // Sound files
@@ -358,6 +366,71 @@ function handlePointerDown(e) {
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 
+    // On mobile, immediately pick up the card on touch
+    if (isMobile) {
+        // If there's already a picked up card, try to place it
+        if (dragState.pickedUpCard) {
+            // Try to place the picked up card
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
+            // Find drop target
+            const targetColIndex = findTableauDropColumn(clientX, clientY);
+            if (targetColIndex !== null) {
+                const moveResult = attemptTableauMove(targetColIndex);
+                if (moveResult.success) {
+                    const moveType = dragState.pickedUpSource === 'waste' ? 'waste-to-tableau' : 
+                                    dragState.pickedUpSource === 'foundation' ? 'foundation-to-tableau' : 
+                                    'tableau-to-tableau';
+                    
+                    applyVariantScore(moveType);
+                    gameState.moves++;
+                    recordMove({
+                        type: moveType,
+                        payload: moveResult.payload,
+                        scoreDelta: applyVariantScore(moveType),
+                        movesDelta: 1
+                    });
+                    CommonUtils.playSound('card');
+                    updateUI();
+                    checkWinCondition();
+                    clearPickedUpCard();
+                    return;
+                }
+            }
+
+            const foundationIndex = findFoundationDropPile(clientX, clientY);
+            if (foundationIndex !== null) {
+                const moveResult = attemptFoundationMove(foundationIndex);
+                if (moveResult.success) {
+                    const moveType = dragState.pickedUpSource === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+                    
+                    applyVariantScore(moveType);
+                    gameState.moves++;
+                    recordMove({
+                        type: moveType,
+                        payload: moveResult.payload,
+                        scoreDelta: applyVariantScore(moveType),
+                        movesDelta: 1
+                    });
+                    CommonUtils.playSound('card');
+                    updateUI();
+                    checkWinCondition();
+                    clearPickedUpCard();
+                    return;
+                }
+            }
+
+            // If no valid drop, reset the pickup
+            clearPickedUpCard();
+        } else {
+            // Pick up the card
+            pickupCard(cardEl);
+        }
+        return;
+    }
+
+    // For desktop, continue with drag functionality
     dragState.pendingDrag = {
         cardEl,
         startX: e.clientX,
@@ -370,6 +443,66 @@ function handlePointerDown(e) {
         cardEl.setPointerCapture(e.pointerId);
     }
     e.preventDefault();
+}
+
+/**
+ * Pick up a card for mobile interaction
+ */
+function pickupCard(cardEl) {
+    clearHoveredCard();
+
+    // Determine source pile and cards
+    if (cardEl.dataset.waste) {
+        const card = gameState.waste[gameState.waste.length - 1];
+        dragState.pickedUpCard = card;
+        dragState.pickedUpSource = 'waste';
+        dragState.pickedUpElement = cardEl;
+    } else if (cardEl.dataset.foundation !== undefined) {
+        const foundationIndex = parseInt(cardEl.dataset.foundation, 10);
+        const foundationPile = gameState.foundations[foundationIndex];
+        const card = foundationPile[foundationPile.length - 1];
+        dragState.pickedUpCard = card;
+        dragState.pickedUpSource = 'foundation';
+        dragState.pickedUpElement = cardEl;
+    } else {
+        const col = parseInt(cardEl.dataset.column, 10);
+        const index = parseInt(cardEl.dataset.index, 10);
+        const tableauPile = gameState.tableau[col];
+        
+        // Only allow picking up the top card unless it's a full stack that can be moved
+        if (index === tableauPile.length - 1) {
+            dragState.pickedUpCard = tableauPile[index];
+            dragState.pickedUpSource = 'tableau';
+            dragState.pickedUpElement = cardEl;
+        } else {
+            // Check if we can move the entire stack starting from this index
+            const stack = tableauPile.slice(index);
+            if (SolitaireLogic.isValidSequence(stack)) {
+                dragState.pickedUpCard = stack[0]; // Store the top card of the stack
+                dragState.pickedUpSource = 'tableau';
+                dragState.pickedUpElement = cardEl;
+            } else {
+                return; // Cannot pick up this card
+            }
+        }
+    }
+
+    // Visually indicate the card is picked up
+    cardEl.style.opacity = '0.7';
+    cardEl.style.transform = 'translateY(-10px)';
+}
+
+/**
+ * Clear the picked up card state
+ */
+function clearPickedUpCard() {
+    if (dragState.pickedUpElement) {
+        dragState.pickedUpElement.style.opacity = '';
+        dragState.pickedUpElement.style.transform = '';
+    }
+    dragState.pickedUpCard = null;
+    dragState.pickedUpSource = null;
+    dragState.pickedUpElement = null;
 }
 
 function handlePointerMove(e) {
@@ -577,6 +710,11 @@ function cleanupPointerHandlers() {
     document.removeEventListener('pointerup', handlePointerUp);
     clearHoveredCard();
     dragState.activePointerId = null;
+    
+    // Clear mobile pickup state on pointer up
+    if (isMobile) {
+        clearPickedUpCard();
+    }
 }
 
 function resetDragState() {

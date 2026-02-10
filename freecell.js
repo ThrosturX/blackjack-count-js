@@ -23,6 +23,11 @@ const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
 const MAX_HISTORY = 200;
 
+// Mobile detection and touch state
+const isMobile = window.matchMedia('(max-width: 768px)').matches || 
+                navigator.maxTouchPoints > 0 ||
+                'ontouchstart' in window;
+
 const freecellDragState = {
     draggedCards: [],
     source: null,
@@ -32,7 +37,10 @@ const freecellDragState = {
     pointerOffsetY: 0,
     isDragging: false,
     pendingDrag: null,
-    activePointerId: null
+    activePointerId: null,
+    pickedUpCard: null,  // For mobile touch-to-pickup
+    pickedUpSource: null,
+    pickedUpElement: null
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -270,6 +278,71 @@ function handlePointerDown(e) {
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 
+    // On mobile, immediately pick up the card on touch
+    if (isMobile) {
+        // If there's already a picked up card, try to place it
+        if (freecellDragState.pickedUpCard) {
+            // Try to place the picked up card
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            
+            // Find drop target
+            const targetColIndex = findTableauDropColumn(clientX, clientY);
+            if (targetColIndex !== null) {
+                const moveResult = attemptTableauMove(targetColIndex);
+                if (moveResult.success) {
+                    const moveType = freecellDragState.pickedUpSource.startsWith('freeCell') ? 'freeCell-to-tableau' : 
+                                    freecellDragState.pickedUpSource === 'waste' ? 'waste-to-tableau' : 
+                                    'tableau-to-tableau';
+                    
+                    applyVariantScore(moveType);
+                    freecellState.moves++;
+                    recordMove({
+                        type: moveType,
+                        payload: moveResult.payload,
+                        scoreDelta: applyVariantScore(moveType),
+                        movesDelta: 1
+                    });
+                    CommonUtils.playSound('card');
+                    updateUI();
+                    checkWinCondition();
+                    clearPickedUpCard();
+                    return;
+                }
+            }
+
+            const foundationIndex = findFoundationDropPile(clientX, clientY);
+            if (foundationIndex !== null) {
+                const moveResult = attemptFoundationMove(foundationIndex);
+                if (moveResult.success) {
+                    const moveType = freecellDragState.pickedUpSource.startsWith('freeCell') ? 'freeCell-to-foundation' : 'tableau-to-foundation';
+                    
+                    applyVariantScore(moveType);
+                    freecellState.moves++;
+                    recordMove({
+                        type: moveType,
+                        payload: moveResult.payload,
+                        scoreDelta: applyVariantScore(moveType),
+                        movesDelta: 1
+                    });
+                    CommonUtils.playSound('card');
+                    updateUI();
+                    checkWinCondition();
+                    clearPickedUpCard();
+                    return;
+                }
+            }
+
+            // If no valid drop, reset the pickup
+            clearPickedUpCard();
+        } else {
+            // Pick up the card
+            pickupCard(cardEl);
+        }
+        return;
+    }
+
+    // For desktop, continue with drag functionality
     freecellDragState.pendingDrag = {
         cardEl,
         startX: e.clientX,
@@ -282,6 +355,65 @@ function handlePointerDown(e) {
         cardEl.setPointerCapture(e.pointerId);
     }
     e.preventDefault();
+}
+
+/**
+ * Pick up a card for mobile interaction
+ */
+function pickupCard(cardEl) {
+    // Determine source pile and cards
+    if (cardEl.dataset.freeCellIndex !== undefined) {
+        const cellIndex = parseInt(cardEl.dataset.freeCellIndex, 10);
+        const card = freecellState.freeCells[cellIndex];
+        freecellDragState.pickedUpCard = card;
+        freecellDragState.pickedUpSource = `freeCell${cellIndex}`;
+        freecellDragState.pickedUpElement = cardEl;
+    } else if (cardEl.dataset.foundation !== undefined) {
+        const foundationIndex = parseInt(cardEl.dataset.foundation, 10);
+        const foundationPile = freecellState.foundations[foundationIndex];
+        const card = foundationPile[foundationPile.length - 1];
+        freecellDragState.pickedUpCard = card;
+        freecellDragState.pickedUpSource = 'foundation';
+        freecellDragState.pickedUpElement = cardEl;
+    } else {
+        const col = parseInt(cardEl.dataset.column, 10);
+        const index = parseInt(cardEl.dataset.index, 10);
+        const tableauPile = freecellState.tableau[col];
+        
+        // Only allow picking up the top card unless it's a full stack that can be moved
+        if (index === tableauPile.length - 1) {
+            freecellDragState.pickedUpCard = tableauPile[index];
+            freecellDragState.pickedUpSource = 'tableau';
+            freecellDragState.pickedUpElement = cardEl;
+        } else {
+            // Check if we can move the entire stack starting from this index
+            const stack = tableauPile.slice(index);
+            if (isValidSequence(stack)) {
+                freecellDragState.pickedUpCard = stack[0]; // Store the top card of the stack
+                freecellDragState.pickedUpSource = 'tableau';
+                freecellDragState.pickedUpElement = cardEl;
+            } else {
+                return; // Cannot pick up this card
+            }
+        }
+    }
+
+    // Visually indicate the card is picked up
+    cardEl.style.opacity = '0.7';
+    cardEl.style.transform = 'translateY(-10px)';
+}
+
+/**
+ * Clear the picked up card state
+ */
+function clearPickedUpCard() {
+    if (freecellDragState.pickedUpElement) {
+        freecellDragState.pickedUpElement.style.opacity = '';
+        freecellDragState.pickedUpElement.style.transform = '';
+    }
+    freecellDragState.pickedUpCard = null;
+    freecellDragState.pickedUpSource = null;
+    freecellDragState.pickedUpElement = null;
 }
 
 function handlePointerMove(e) {
@@ -470,6 +602,11 @@ function cleanupPointerHandlers() {
     document.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
     freecellDragState.activePointerId = null;
+    
+    // Clear mobile pickup state on pointer up
+    if (isMobile) {
+        clearPickedUpCard();
+    }
 }
 
 function resetDragState() {
