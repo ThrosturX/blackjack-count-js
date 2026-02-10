@@ -5,55 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casino Poker (Hold'em)</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/card.css">
+    <link rel="stylesheet" href="styles/poker.css">
+    <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="themes.css">
-    <style>
-        /* Poker specific styles */
-        .community-cards {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            min-height: var(--card-h);
-        }
-
-        .pot-display {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px 20px;
-            border-radius: 30px;
-            color: var(--gold);
-            font-weight: bold;
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            border: 1px solid var(--gold);
-        }
-
-        .dealer-button {
-            width: 20px;
-            height: 20px;
-            background: white;
-            color: black;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-            font-weight: bold;
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            border: 1px solid #333;
-        }
-
-        .seat.folded {
-            opacity: 0.5;
-        }
-
-        .seat.all-in {
-            border-color: var(--red);
-            box-shadow: 0 0 10px var(--red);
-        }
-    </style>
 </head>
 
 <body>

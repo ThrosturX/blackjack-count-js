@@ -1,0 +1,94 @@
+/* ========================================
+   SPIDER SOLITAIRE STYLES
+   ======================================== */
+
+#table.spider-layout {
+    position: relative;
+    width: 95vw;
+    max-width: 1400px;
+    height: 80vh;
+    max-height: 80vh;
+    margin-top: 20px;
+    background: var(--table-bg);
+    border-radius: 40px;
+    border: 12px solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 24px;
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+#spider-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+#spider-stock {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+#spider-foundations {
+    display: grid;
+    grid-template-columns: repeat(8, var(--card-w));
+    gap: 12px;
+}
+
+.spider-foundation {
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: 10px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+}
+
+#spider-stock .card,
+.spider-foundation .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin-left: 0;
+}
+
+.spider-stock-stack {
+    width: var(--card-w);
+    height: var(--card-h);
+    position: relative;
+}
+
+#spider-tableau {
+    display: grid;
+    grid-template-columns: repeat(10, var(--card-w));
+    justify-content: center;
+    gap: 12px;
+}
+
+.spider-column {
+    width: var(--card-w);
+    min-height: 220px;
+    border-radius: 10px;
+    border: 2px dashed transparent;
+    position: relative;
+    transition: border 0.3s;
+}
+
+.spider-column .card {
+    margin-left: 0;
+}
+
+.spider-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}

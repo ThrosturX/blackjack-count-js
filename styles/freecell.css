@@ -1,0 +1,90 @@
+#freecell-top-row {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    gap: clamp(12px, calc(100% - (8 * var(--card-w)) - 72px), calc(1.44 * var(--card-w)));
+}
+
+#freecell-freecells {
+    flex: 0 0 auto;
+}
+
+#freecell-foundations {
+    flex: 0 0 auto;
+}
+
+.freecell-group {
+    display: grid;
+    grid-template-columns: repeat(4, var(--card-w));
+    gap: 12px;
+}
+
+.freecell-slot,
+.freecell-foundation {
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: 10px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+}
+
+.freecell-slot .card,
+.freecell-foundation .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin-left: 0;
+}
+
+#freecell-tableau {
+    display: grid;
+    grid-template-columns: repeat(8, var(--card-w));
+    justify-content: center;
+    gap: 12px;
+}
+
+.freecell-column {
+    width: var(--card-w);
+    min-height: 220px;
+    border-radius: 10px;
+    border: 2px dashed transparent;
+    position: relative;
+    transition: border 0.3s;
+}
+
+.freecell-column .card {
+    margin-left: 0;
+}
+
+#table.freecell-layout {
+    position: relative;
+    width: 95vw;
+    max-width: 1400px;
+    height: 80vh;
+    max-height: 80vh;
+    margin-top: 20px;
+    background: var(--table-bg);
+    border-radius: 40px;
+    border: 12px solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 30px;
+    overflow: visible;
+    overflow-y: visible;
+    overflow-x: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+.freecell-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.freecell-header-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+}
