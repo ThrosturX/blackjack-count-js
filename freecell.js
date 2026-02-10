@@ -368,6 +368,10 @@ function pickupCard(cardEl) {
         freecellDragState.pickedUpCard = card;
         freecellDragState.pickedUpSource = `freeCell${cellIndex}`;
         freecellDragState.pickedUpElement = cardEl;
+        
+        // Also set the main drag state for move functions
+        freecellDragState.draggedCards = [card];
+        freecellDragState.source = { type: 'freecell', index: cellIndex };
     } else if (cardEl.dataset.foundation !== undefined) {
         const foundationIndex = parseInt(cardEl.dataset.foundation, 10);
         const foundationPile = freecellState.foundations[foundationIndex];
@@ -375,6 +379,10 @@ function pickupCard(cardEl) {
         freecellDragState.pickedUpCard = card;
         freecellDragState.pickedUpSource = 'foundation';
         freecellDragState.pickedUpElement = cardEl;
+        
+        // Also set the main drag state for move functions
+        freecellDragState.draggedCards = [card];
+        freecellDragState.source = { type: 'foundation', index: foundationIndex };
     } else {
         const col = parseInt(cardEl.dataset.column, 10);
         const index = parseInt(cardEl.dataset.index, 10);
@@ -385,6 +393,10 @@ function pickupCard(cardEl) {
             freecellDragState.pickedUpCard = tableauPile[index];
             freecellDragState.pickedUpSource = 'tableau';
             freecellDragState.pickedUpElement = cardEl;
+            
+            // Also set the main drag state for move functions
+            freecellDragState.draggedCards = [tableauPile[index]];
+            freecellDragState.source = { type: 'tableau', index: col, startIndex: index };
         } else {
             // Check if we can move the entire stack starting from this index
             const stack = tableauPile.slice(index);
@@ -392,6 +404,10 @@ function pickupCard(cardEl) {
                 freecellDragState.pickedUpCard = stack[0]; // Store the top card of the stack
                 freecellDragState.pickedUpSource = 'tableau';
                 freecellDragState.pickedUpElement = cardEl;
+                
+                // Also set the main drag state for move functions
+                freecellDragState.draggedCards = stack;
+                freecellDragState.source = { type: 'tableau', index: col, startIndex: index };
             } else {
                 return; // Cannot pick up this card
             }
@@ -414,6 +430,10 @@ function clearPickedUpCard() {
     freecellDragState.pickedUpCard = null;
     freecellDragState.pickedUpSource = null;
     freecellDragState.pickedUpElement = null;
+    
+    // Also clear the main drag state
+    freecellDragState.draggedCards = [];
+    freecellDragState.source = null;
 }
 
 function handlePointerMove(e) {

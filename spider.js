@@ -352,6 +352,10 @@ function pickupCard(cardEl) {
         spiderDragState.pickedUpCard = tableauPile[index];
         spiderDragState.pickedUpSource = 'tableau';
         spiderDragState.pickedUpElement = cardEl;
+        
+        // Also set the main drag state for move functions
+        spiderDragState.draggedCards = [tableauPile[index]];
+        spiderDragState.source = { type: 'tableau', index: col, startIndex: index };
     } else {
         // Check if we can move the entire sequence starting from this index
         const sequence = tableauPile.slice(index);
@@ -359,6 +363,10 @@ function pickupCard(cardEl) {
             spiderDragState.pickedUpCard = sequence[0]; // Store the top card of the sequence
             spiderDragState.pickedUpSource = 'tableau';
             spiderDragState.pickedUpElement = cardEl;
+            
+            // Also set the main drag state for move functions
+            spiderDragState.draggedCards = sequence;
+            spiderDragState.source = { type: 'tableau', index: col, startIndex: index };
         } else {
             return; // Cannot pick up this card
         }
@@ -380,6 +388,10 @@ function clearPickedUpCard() {
     spiderDragState.pickedUpCard = null;
     spiderDragState.pickedUpSource = null;
     spiderDragState.pickedUpElement = null;
+    
+    // Also clear the main drag state
+    spiderDragState.draggedCards = [];
+    spiderDragState.source = null;
 }
 
 function handlePointerMove(e) {

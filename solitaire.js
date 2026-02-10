@@ -503,6 +503,11 @@ function clearPickedUpCard() {
     dragState.pickedUpCard = null;
     dragState.pickedUpSource = null;
     dragState.pickedUpElement = null;
+    
+    // Also clear the main drag state
+    dragState.draggedCards = [];
+    dragState.sourcePile = null;
+    dragState.sourceIndex = null;
 }
 
 function handlePointerMove(e) {
