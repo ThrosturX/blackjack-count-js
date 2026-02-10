@@ -113,7 +113,7 @@ body.deck-ruby .card.hidden::before {
 
 body.deck-ruby .card:not(.hidden) .suit-center {
     opacity: 0.42;
-    text-shadow:0 0 5px rgba(165, 0, 23, 0.78);
+    text-shadow: 0 0 5px rgba(165, 0, 23, 0.78);
 }
 
 /* --- Midnight Luxe Style --- */
