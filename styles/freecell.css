@@ -46,7 +46,7 @@
 
 .freecell-column {
     width: var(--card-w);
-    min-height: 220px;
+    min-height: 40vh;
     border-radius: 10px;
     border: 2px dashed transparent;
     position: relative;
@@ -62,8 +62,6 @@
     width: 95vw;
     max-width: 1000px;
     min-width: 700px;
-    height: 40vh;
-    max-height: 60vh;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
