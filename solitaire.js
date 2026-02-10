@@ -84,7 +84,8 @@ const dragState = {
     isDragging: false,
     pendingDrag: null,
     activePointerId: null,
-    hoveredCard: null
+    hoveredCard: null,
+    mobileController: null
 };
 
 // Sound files
@@ -106,6 +107,125 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize a new game
  */
 function initGame() {
+    // Initialize mobile controller if not already done
+    if (!dragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
+        dragState.mobileController = new MobileSolitaireController({
+            isMovable: (el) => {
+                if (el.dataset.waste) return true;
+                if (el.dataset.foundation !== undefined) return true;
+                const cardIndex = parseInt(el.dataset.index, 10);
+                const col = parseInt(el.dataset.column, 10);
+                const column = gameState.tableau[col];
+                const card = column ? column[cardIndex] : null;
+                return card && !card.hidden;
+            },
+            getSequence: (el) => {
+                if (el.dataset.waste) {
+                    return [gameState.waste[gameState.waste.length - 1]];
+                } else if (el.dataset.foundation !== undefined) {
+                    const idx = parseInt(el.dataset.foundation, 10);
+                    const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
+                    return card ? [card] : [];
+                } else {
+                    const col = parseInt(el.dataset.column, 10);
+                    const index = parseInt(el.dataset.index, 10);
+                    return gameState.tableau[col].slice(index);
+                }
+            },
+            getSource: (el) => {
+                if (el.dataset.waste) return { type: 'waste' };
+                if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
+                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            findDropTarget: (x, y) => {
+                const colIndex = findTableauDropColumn(x, y);
+                if (colIndex !== null) return { type: 'tableau', index: colIndex };
+                const foundationIndex = findFoundationDropPile(x, y);
+                if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
+                return null;
+            },
+            isValidMove: (source, target) => {
+                // Setup temporary drag state for validity checks
+                dragState.draggedCards = dragState.mobileController.selectedData.cards;
+                dragState.sourcePile = source.type;
+                dragState.sourceIndex = source.index;
+
+                let valid = false;
+                if (target.type === 'tableau') {
+                    valid = canDropOnTableau(target.index);
+                } else if (target.type === 'foundation') {
+                    valid = canDropOnFoundation(target.index);
+                }
+
+                // Cleanup temp state
+                dragState.draggedCards = [];
+                dragState.sourcePile = null;
+                dragState.sourceIndex = null;
+                return valid;
+            },
+            executeMove: (source, target) => {
+                // Setup drag state for finishDrag
+                dragState.draggedCards = dragState.mobileController.selectedData.cards;
+                dragState.sourcePile = source.type;
+                dragState.sourceIndex = source.index;
+
+                // We use drop point calculation similar to finishDrag
+                // But since we already have the target, we can call attemptTableauMove/attemptFoundationMove directly
+                // However, finishDrag does score recording, history, etc.
+                // Let's use a simplified version or just mock the drop coordinates
+
+                // To reuse finishDrag's logic for scoring, sounds, and history:
+                // We need to provide coordinates that will resolve to the target.
+                // Or just call the attempt functions.
+
+                const scoreBeforeDrag = gameState.score;
+                const movesBeforeDrag = gameState.moves;
+                let movePayload = null;
+                let moveType = '';
+                let moveResult = { success: false };
+
+                if (target.type === 'tableau') {
+                    moveResult = attemptTableauMove(target.index);
+                    if (moveResult.success) {
+                        if (source.type === 'waste') moveType = 'waste-to-tableau';
+                        else if (source.type === 'foundation') moveType = 'foundation-to-tableau';
+                        else moveType = 'tableau-to-tableau';
+                        movePayload = moveResult.payload;
+                    }
+                } else if (target.type === 'foundation') {
+                    moveResult = attemptFoundationMove(target.index);
+                    if (moveResult.success) {
+                        if (source.type === 'waste') moveType = 'waste-to-foundation';
+                        else if (source.type === 'foundation') moveType = 'foundation-to-foundation';
+                        else moveType = 'tableau-to-foundation';
+                        movePayload = moveResult.payload;
+                    }
+                }
+
+                if (moveResult.success) {
+                    applyVariantScore(moveType);
+                    gameState.moves++;
+                    const scoreDelta = gameState.score - scoreBeforeDrag;
+                    recordMove({
+                        type: moveType,
+                        payload: movePayload,
+                        scoreDelta,
+                        movesDelta: gameState.moves - movesBeforeDrag
+                    });
+                    CommonUtils.playSound('card');
+                    updateUI();
+                    checkWinCondition();
+                }
+
+                // Cleanup
+                dragState.draggedCards = [];
+                dragState.sourcePile = null;
+                dragState.sourceIndex = null;
+            }
+        });
+    }
+
     // Reset state
     gameState.tableau = [[], [], [], [], [], [], []];
     gameState.foundations = [[], [], [], []];
@@ -357,53 +477,10 @@ function handlePointerDown(e) {
     if (e.button !== 0) return;
 
     // Mobile pickup UX
-    if (CommonUtils.isMobile()) {
-        const handled = CommonUtils.handleMobilePickup(e, gameState, dragState, {
-            isMovable: (el) => {
-                // Same logic as startPointerDrag but just check if it's movable
-                if (el.dataset.waste) return true;
-                if (el.dataset.foundation !== undefined) return true;
-                const cardIndex = parseInt(el.dataset.index, 10);
-                const col = parseInt(el.dataset.column, 10);
-                const card = gameState.tableau[col][cardIndex];
-                return card && !card.hidden;
-            },
-            getSequence: (el) => {
-                if (el.dataset.waste) {
-                    return [gameState.waste[gameState.waste.length - 1]];
-                } else if (el.dataset.foundation !== undefined) {
-                    const idx = parseInt(el.dataset.foundation, 10);
-                    const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
-                    return card ? [card] : [];
-                } else {
-                    const col = parseInt(el.dataset.column, 10);
-                    const index = parseInt(el.dataset.index, 10);
-                    return gameState.tableau[col].slice(index);
-                }
-            },
-            getSource: (el) => {
-                // Normalize for common use
-                if (el.dataset.waste) return { type: 'waste' };
-                if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
-                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
-            },
-            getElements: (el) => collectDraggedElements(el),
-            onAttemptDrop: (x, y) => {
-                // We need to set up the dragState variables that finishDrag expects
-                // finishDrag uses dragState.sourcePile, sourceIndex, etc.
-                const source = dragState.pickedUpSource;
-                dragState.sourcePile = source.type;
-                dragState.sourceIndex = source.index;
-
-                // Call finishDrag directly
-                // finishDrag normally calls cleanupDragVisuals which we want to avoid double-calling
-                // but CommonUtils.handleMobilePickup calls clearPickup after.
-                // We'll wrap the logic of finishDrag slightly or just call it.
-                finishDrag(x, y);
-                return !dragState.isDragging; // if it finished, it succeeded or failed but cleaned up
-            }
-        });
-        if (handled) return;
+    if (CommonUtils.isMobile() && dragState.mobileController) {
+        if (dragState.mobileController.handlePointerDown(e)) {
+            return;
+        }
     }
 
     const cardEl = e.target.closest('.card');
@@ -763,7 +840,13 @@ function attemptFoundationMove(targetFoundation) {
  * Handle card click (for auto-move to foundation)
  */
 function handleCardClick(e) {
-    const cardEl = e.target.closest('.card');
+    // If mobile controller is active, this click might be part of a tap-to-select/drop, so don't auto-move.
+    // The mobile controller handles drop and will call executeMove which includes foundation moves.
+    if (CommonUtils.isMobile() && dragState.mobileController && dragState.mobileController.state === "SELECTED") {
+        return; // Let the mobile controller handle it
+    }
+
+    const cardEl = e.target.closest(".card");
     if (!cardEl) return;
 
     let card = null;
@@ -773,7 +856,7 @@ function handleCardClick(e) {
     // Determine source
     if (cardEl.dataset.waste) {
         card = gameState.waste[gameState.waste.length - 1];
-        sourcePile = 'waste';
+        sourcePile = "waste";
     } else if (cardEl.dataset.column !== undefined) {
         const col = parseInt(cardEl.dataset.column);
         const index = parseInt(cardEl.dataset.index);
@@ -783,8 +866,12 @@ function handleCardClick(e) {
         if (index !== tableau.length - 1) return;
 
         card = tableau[index];
-        sourcePile = 'tableau';
+        sourcePile = "tableau";
         sourceIndex = col;
+    } else if (cardEl.dataset.foundation !== undefined) {
+        // Clicking on a foundation card should not trigger auto-move to foundation
+        // but should allow pickup from foundation in mobile. For desktop, it does nothing.
+        return;
     }
 
     if (!card) return;
@@ -793,9 +880,9 @@ function handleCardClick(e) {
     for (let i = 0; i < 4; i++) {
         if (SolitaireLogic.canPlaceOnFoundation(card, gameState.foundations[i])) {
             // Remove from source
-            if (sourcePile === 'waste') {
+            if (sourcePile === "waste") {
                 gameState.waste.pop();
-            } else if (sourcePile === 'tableau') {
+            } else if (sourcePile === "tableau") {
                 gameState.tableau[sourceIndex].pop();
 
                 // Flip top card if hidden
@@ -803,7 +890,7 @@ function handleCardClick(e) {
                     const topCard = gameState.tableau[sourceIndex][gameState.tableau[sourceIndex].length - 1];
                 if (topCard.hidden) {
                     topCard.hidden = false;
-                    applyVariantScore('flip-card');
+                    applyVariantScore("flip-card");
                 }
                 }
             }
@@ -811,11 +898,11 @@ function handleCardClick(e) {
             // Add to foundation
             gameState.foundations[i].push(card);
 
-            const moveType = sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+            const moveType = sourcePile === "waste" ? "waste-to-foundation" : "tableau-to-foundation";
             applyVariantScore(moveType);
             gameState.moves++;
 
-            CommonUtils.playSound('card');
+            CommonUtils.playSound("card");
             updateUI();
             checkWinCondition();
             return;
