@@ -128,11 +128,10 @@
 
 @media screen and (max-width: 900px) {
 
-    /* 1. Resize the Cards globally */
+    /* 1a. Previously: Resize the Cards globally */
+    /* 1b. TODO: scale everything down uniformly */
     :root {
-        --card-base-w: 45px;
-        /* Smaller cards */
-        --card-base-h: 65px;
+        /* placeholder */
     }
 
     /* 2. Fix the Table Container */

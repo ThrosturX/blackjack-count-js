@@ -267,6 +267,45 @@ function undoFreecellToFoundationMove(payload) {
 
 function handlePointerDown(e) {
     if (e.button !== 0) return;
+
+    // Mobile pickup UX
+    if (CommonUtils.isMobile()) {
+        const handled = CommonUtils.handleMobilePickup(e, freecellState, freecellDragState, {
+            isMovable: (el) => {
+                if (el.dataset.freecell !== undefined) return true;
+                const colIndex = parseInt(el.dataset.column, 10);
+                const rowIndex = parseInt(el.dataset.index, 10);
+                const column = freecellState.tableau[colIndex];
+                return getTableauSequence(column, rowIndex) !== null;
+            },
+            getSequence: (el) => {
+                if (el.dataset.freecell !== undefined) {
+                    return [freecellState.freeCells[parseInt(el.dataset.freecell, 10)]];
+                }
+                const colIndex = parseInt(el.dataset.column, 10);
+                const rowIndex = parseInt(el.dataset.index, 10);
+                return getTableauSequence(freecellState.tableau[colIndex], rowIndex);
+            },
+            getSource: (el) => {
+                if (el.dataset.freecell !== undefined) {
+                    return { type: 'freecell', index: parseInt(el.dataset.freecell, 10) };
+                }
+                return {
+                    type: 'tableau',
+                    index: parseInt(el.dataset.column, 10),
+                    startIndex: parseInt(el.dataset.index, 10)
+                };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            onAttemptDrop: (x, y) => {
+                freecellDragState.source = freecellDragState.pickedUpSource;
+                finishDrag(x, y);
+                return !freecellDragState.isDragging;
+            }
+        });
+        if (handled) return;
+    }
+
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 

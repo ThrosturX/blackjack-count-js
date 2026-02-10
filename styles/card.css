@@ -17,6 +17,8 @@
     transition: transform 0.2s;
     position: relative;
     transform: scale(var(--card-scale));
+    touch-action: none;     /* ← critical: stops page scroll/zoom during drag */
+    user-select: none;      /* prevents text selection */
 }
 
 .card:first-child {
@@ -96,6 +98,13 @@
 
 .card.hidden * {
     display: none;
+}
+
+.card.picked-up {
+    transform: scale(calc(var(--card-scale) * 1.08)) translateY(-15px) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+    z-index: 1000 !important;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
 /* Thin line representations for card backs and edges */

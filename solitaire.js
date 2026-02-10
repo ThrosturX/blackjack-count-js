@@ -355,6 +355,57 @@ function recycleWaste() {
  */
 function handlePointerDown(e) {
     if (e.button !== 0) return;
+
+    // Mobile pickup UX
+    if (CommonUtils.isMobile()) {
+        const handled = CommonUtils.handleMobilePickup(e, gameState, dragState, {
+            isMovable: (el) => {
+                // Same logic as startPointerDrag but just check if it's movable
+                if (el.dataset.waste) return true;
+                if (el.dataset.foundation !== undefined) return true;
+                const cardIndex = parseInt(el.dataset.index, 10);
+                const col = parseInt(el.dataset.column, 10);
+                const card = gameState.tableau[col][cardIndex];
+                return card && !card.hidden;
+            },
+            getSequence: (el) => {
+                if (el.dataset.waste) {
+                    return [gameState.waste[gameState.waste.length - 1]];
+                } else if (el.dataset.foundation !== undefined) {
+                    const idx = parseInt(el.dataset.foundation, 10);
+                    const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
+                    return card ? [card] : [];
+                } else {
+                    const col = parseInt(el.dataset.column, 10);
+                    const index = parseInt(el.dataset.index, 10);
+                    return gameState.tableau[col].slice(index);
+                }
+            },
+            getSource: (el) => {
+                // Normalize for common use
+                if (el.dataset.waste) return { type: 'waste' };
+                if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
+                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            onAttemptDrop: (x, y) => {
+                // We need to set up the dragState variables that finishDrag expects
+                // finishDrag uses dragState.sourcePile, sourceIndex, etc.
+                const source = dragState.pickedUpSource;
+                dragState.sourcePile = source.type;
+                dragState.sourceIndex = source.index;
+
+                // Call finishDrag directly
+                // finishDrag normally calls cleanupDragVisuals which we want to avoid double-calling
+                // but CommonUtils.handleMobilePickup calls clearPickup after.
+                // We'll wrap the logic of finishDrag slightly or just call it.
+                finishDrag(x, y);
+                return !dragState.isDragging; // if it finished, it succeeded or failed but cleaned up
+            }
+        });
+        if (handled) return;
+    }
+
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 

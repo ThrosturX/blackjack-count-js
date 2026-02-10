@@ -271,6 +271,42 @@ function getStockStackRotation(index, rowsLeft) {
 
 function handlePointerDown(e) {
     if (e.button !== 0) return;
+
+    // Mobile pickup UX
+    if (CommonUtils.isMobile()) {
+        const handled = CommonUtils.handleMobilePickup(e, spiderState, spiderDragState, {
+            isMovable: (el) => {
+                const col = parseInt(el.dataset.column, 10);
+                const index = parseInt(el.dataset.index, 10);
+                const column = spiderState.tableau[col];
+                const sequence = column.slice(index);
+                if (!sequence.length || sequence.some(c => c.hidden)) return false;
+                if (sequence.length > 1) {
+                    for (let i = 0; i < sequence.length - 1; i++) {
+                        if (sequence[i].rank !== sequence[i + 1].rank + 1) return false;
+                    }
+                }
+                return true;
+            },
+            getSequence: (el) => {
+                const col = parseInt(el.dataset.column, 10);
+                const index = parseInt(el.dataset.index, 10);
+                return spiderState.tableau[col].slice(index);
+            },
+            getSource: (el) => {
+                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            onAttemptDrop: (x, y) => {
+                // finishDrag in spider.js doesn't use sourcePile/sourceIndex,
+                // it gets source from dataset of draggedElements[0]
+                finishDrag(x, y);
+                return !spiderDragState.isDragging;
+            }
+        });
+        if (handled) return;
+    }
+
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 
