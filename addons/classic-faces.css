@@ -27,7 +27,7 @@
     width: auto;
     transform: none;
     font-size: clamp(1.95rem, 3vw, 3rem);
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 0 1px rgba(44, 42, 49, 0.35);
 }
 
 .card.classic-faces-card .classic-face-art {

@@ -1,0 +1,107 @@
+:root {
+    --felt-color: #2d5e38;
+    --felt-border: #4a3b2a;
+    --gold: #f2c94c;
+    --red: #eb5757;
+    --black: #333;
+    --green: #4caf50;
+    --blue: #2196f3;
+    --orange: #f2994a;
+    --card-base-w: 70px;
+    --card-base-h: 100px;
+    --card-scale: 1;
+    --card-w: var(--card-base-w);
+    --card-h: var(--card-base-h);
+    --table-bg: radial-gradient(circle, #357a44 0%, var(--felt-color) 90%);
+    --table-border: var(--felt-border);
+    --table-shadow: inset 0 0 60px rgba(0, 0, 0, 0.7);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #111;
+    color: white;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+    padding-bottom: 90px;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+header {
+    width: 100%;
+    background: #000;
+    padding: 10px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+    box-sizing: border-box;
+    z-index: 10;
+    gap: 10px;
+    position: relative;
+}
+
+.back-link {
+    position: absolute;
+    top: 12px;
+    left: 20px;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.back-link:hover {
+    color: #fff;
+}
+
+.back-arrow {
+    position: relative;
+    display: inline-block;
+    width: 18px;
+    height: 12px;
+}
+
+.back-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 14px;
+    height: 4px;
+    background: currentColor;
+    transform: translateY(-50%);
+    border-radius: 2px;
+}
+
+.back-arrow::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 8px;
+    height: 8px;
+    border-left: 4px solid currentColor;
+    border-bottom: 4px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+}
+
+
+h1 {
+    margin: 0;
+    color: var(--gold);
+    font-size: 1.4rem;
+    width: 100%;
+    text-align: center;
+}
