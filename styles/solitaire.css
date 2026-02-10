@@ -178,3 +178,29 @@
         width: 70px;
     }
 }
+
+/* --- KLONDIKE-SPECIFIC STABILITY OVERRIDE --- */
+
+/* 1. Fix the Table Container for proper scrolling */
+#solitaire-table {
+    min-width: 600px; /* Prevent columns from wrapping/squishing */
+    width: max-content; /* Grow to fit all content */
+    overflow-x: auto; /* Enable horizontal scrolling */
+}
+
+/* 2. Close the gap in the top row (Stock vs Foundations) */
+#top-row {
+    justify-content: flex-start !important;
+    gap: 60px !important;
+    width: 100% !important;
+    padding: 10px 0;
+}
+
+/* 3. Force Tableau columns to stay in one row with left alignment */
+#tableau-area {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 15px !important;
+    transform: none !important;
+}

@@ -284,63 +284,6 @@ body {
     overflow-x: auto;
 }
 
-/* 3. Specific fix for Klondike (Solitaire) columns */
-#solitaire-table {
-    min-width: 1100px; /* Adjust based on your 138vw observation */
-}
-
-/* 4. CRITICAL: Override the mobile media query that causes wrapping */
-@media screen and (max-width: 900px) {
-    #tableau-area, #freecell-tableau, #spider-tableau {
-        flex-wrap: nowrap !important; /* Forces columns to stay in one row */
-        display: flex !important;
-        justify-content: flex-start !important;
-        transform: none !important; /* Remove scaling to keep hitboxes accurate */
-    }
-
-    #table {
-        height: auto !important; /* Allow table to grow vertically with cards */
-        min-height: 80vh;
-    }
-}
-
-/* --- THE STABILITY OVERRIDE --- */
-
-/* 1. Reset Body: Allow left-alignment so we can scroll right properly */
-body[class*="-game-page"] {
-    display: block !important;
-    overflow: auto !important;
-    padding: 20px;
-}
-
-/* 2. Fix the Table Container */
-#solitaire-table, .game-table-layout {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center;
-    width: fit-content !important; /* Only as wide as the cards need */
-    min-width: 500px !important;   /* The "Floor" that prevents wrapping */
-    margin: 0 auto;                /* Center only if there is room */
-}
-
-/* 3. Close the gap in the top row (Stock vs Foundations) */
-#top-row {
-    display: flex !important;
-    justify-content: flex-start !important;
-    gap: 60px !important; /* Consistent, reachable distance */
-    width: 100% !important;
-    padding: 10px 0;
-}
-
-/* 4. Force Tableau ranks to stay in one single row */
-#tableau-area, #freecell-tableau, #spider-tableau {
-    display: flex !important;
-    flex-wrap: nowrap !important; /* NO WRAPPING */
-    justify-content: center !important;
-    gap: 15px !important;
-    transform: none !important;  /* Remove scale transforms that break hitboxes */
-}
-
 /* 5. Ensure horizontal scroll visibility */
 html {
     overflow-x: auto !important;
