@@ -165,65 +165,39 @@ function initGame() {
                 return valid;
             },
             executeMove: (source, target) => {
-                // Setup drag state for finishDrag
+                // Setup drag state for finishDrag with necessary info
                 dragState.draggedCards = dragState.mobileController.selectedData.cards;
                 dragState.sourcePile = source.type;
                 dragState.sourceIndex = source.index;
 
-                // We use drop point calculation similar to finishDrag
-                // But since we already have the target, we can call attemptTableauMove/attemptFoundationMove directly
-                // However, finishDrag does score recording, history, etc.
-                // Let's use a simplified version or just mock the drop coordinates
-
-                // To reuse finishDrag's logic for scoring, sounds, and history:
-                // We need to provide coordinates that will resolve to the target.
-                // Or just call the attempt functions.
-
-                const scoreBeforeDrag = gameState.score;
-                const movesBeforeDrag = gameState.moves;
-                let movePayload = null;
-                let moveType = '';
-                let moveResult = { success: false };
-
+                let targetEl = null;
                 if (target.type === 'tableau') {
-                    moveResult = attemptTableauMove(target.index);
-                    if (moveResult.success) {
-                        if (source.type === 'waste') moveType = 'waste-to-tableau';
-                        else if (source.type === 'foundation') moveType = 'foundation-to-tableau';
-                        else moveType = 'tableau-to-tableau';
-                        movePayload = moveResult.payload;
-                    }
+                    targetEl = document.getElementById(`tableau-${target.index}`);
                 } else if (target.type === 'foundation') {
-                    moveResult = attemptFoundationMove(target.index);
-                    if (moveResult.success) {
-                        if (source.type === 'waste') moveType = 'waste-to-foundation';
-                        else if (source.type === 'foundation') moveType = 'foundation-to-foundation';
-                        else moveType = 'tableau-to-foundation';
-                        movePayload = moveResult.payload;
-                    }
+                    targetEl = document.getElementById(`foundation-${target.index}`);
                 }
 
-                if (moveResult.success) {
-                    applyVariantScore(moveType);
-                    gameState.moves++;
-                    const scoreDelta = gameState.score - scoreBeforeDrag;
-                    recordMove({
-                        type: moveType,
-                        payload: movePayload,
-                        scoreDelta,
-                        movesDelta: gameState.moves - movesBeforeDrag
-                    });
-                    CommonUtils.playSound('card');
+                if (targetEl) {
+                    const rect = targetEl.getBoundingClientRect();
+                    // Simulate a drop point near the center of the target element
+                    const clientX = rect.left + rect.width / 2;
+                    const clientY = rect.top + rect.height / 2;
+
+                    finishDrag(clientX, clientY);
+                } else {
+                    // If for some reason the target element is not found, just reset and update UI
+                    resetDragState(); // Ensure drag state is clean
                     updateUI();
-                    checkWinCondition();
                 }
-
-                // Cleanup
-                dragState.draggedCards = [];
-                dragState.sourcePile = null;
-                dragState.sourceIndex = null;
             }
         });
+
+        if (CommonUtils.isMobile() && dragState.mobileController) {
+            const table = document.getElementById('solitaire-table');
+            table.addEventListener('pointerdown', (e) => {
+                dragState.mobileController.handlePointerDown(e);
+            });
+        }
     }
 
     // Reset state
@@ -301,7 +275,12 @@ function updateTableau() {
 
             // Only allow interaction with face-up cards
             if (!card.hidden) {
-                cardEl.addEventListener('pointerdown', handlePointerDown);
+                /* Stop attaching pointerdown to individual cards on mobile
+                 * (so the container can catch everything) ; Credit: Grok 
+                 */
+                if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                    cardEl.addEventListener('pointerdown', handlePointerDown);
+                } 
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
             }
@@ -324,7 +303,9 @@ function updateFoundations() {
             const topCard = cards[cards.length - 1];
             const cardEl = CommonUtils.createCardEl(topCard);
             cardEl.dataset.foundation = i;
-            cardEl.addEventListener('pointerdown', handlePointerDown);
+            if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                cardEl.addEventListener('pointerdown', handlePointerDown);
+            } 
             cardEl.style.cursor = 'pointer';
             foundationEl.appendChild(cardEl);
         } else {
@@ -391,7 +372,9 @@ function updateWaste() {
             // Only top card responds to drag
             if (i === gameState.waste.length - 1) {
                 cardEl.dataset.waste = 'true';
-                cardEl.addEventListener('pointerdown', handlePointerDown);
+                if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                    cardEl.addEventListener('pointerdown', handlePointerDown);
+                } 
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
                 cardEl.style.zIndex = 10;
@@ -476,15 +459,17 @@ function recycleWaste() {
 function handlePointerDown(e) {
     if (e.button !== 0) return;
 
-    // Mobile pickup UX
+    // Mobile pickup UX (always allow mobile controller to handle pointerdown)
     if (CommonUtils.isMobile() && dragState.mobileController) {
+        // The mobile controller handles deselection on empty space, so no early return here.
+        // It will return true if it handled the event (e.g., selection or drop).
         if (dragState.mobileController.handlePointerDown(e)) {
             return;
         }
     }
 
-    const cardEl = e.target.closest('.card');
-    if (!cardEl) return;
+    const cardEl = e.target.closest(".card");
+    if (!cardEl) return; // If it wasn't a mobile interaction and no card was clicked, do nothing.
 
     dragState.pendingDrag = {
         cardEl,
@@ -492,8 +477,8 @@ function handlePointerDown(e) {
         startY: e.clientY
     };
     dragState.activePointerId = e.pointerId;
-    document.addEventListener('pointermove', handlePointerMove);
-    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
     if (cardEl.setPointerCapture) {
         cardEl.setPointerCapture(e.pointerId);
     }
