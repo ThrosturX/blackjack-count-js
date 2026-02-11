@@ -17,8 +17,30 @@ const spiderState = {
     timerInterval: null,
     isGameWon: false,
     isDealing: false,
-    moveHistory: []
+    moveHistory: [],
+    suitMode: 4
 };
+
+const SPIDER_SUIT_MODES = {
+    4: { label: '4 Suits', suits: SUITS, deckCount: 2 },
+    2: { label: '2 Suits', suits: ['♠', '♥'], deckCount: 4 },
+    1: { label: '1 Suit', suits: ['♠'], deckCount: 8 }
+};
+
+function getSpiderSuitConfig() {
+    const key = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
+    if (!SPIDER_SUIT_MODES[key]) {
+        spiderState.suitMode = 4;
+        return SPIDER_SUIT_MODES[4];
+    }
+    return SPIDER_SUIT_MODES[key];
+}
+
+function syncSpiderSuitUI() {
+    const select = document.getElementById('spider-suit-select');
+    if (!select) return;
+    select.value = String(spiderState.suitMode || 4);
+}
 
 let spiderStateManager = null;
 
@@ -214,6 +236,7 @@ function getSpiderSaveState() {
         score: spiderState.score,
         moves: spiderState.moves,
         moveHistory: spiderState.moveHistory,
+        suitMode: spiderState.suitMode,
         elapsedSeconds: getElapsedSeconds(spiderState.startTime),
         isGameWon: spiderState.isGameWon
     };
@@ -229,6 +252,7 @@ function restoreSpiderState(saved) {
     spiderState.score = Number.isFinite(saved.score) ? saved.score : 0;
     spiderState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     spiderState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    spiderState.suitMode = SPIDER_SUIT_MODES[saved.suitMode] ? saved.suitMode : 4;
     spiderState.isGameWon = false;
     spiderState.isDealing = false;
 
@@ -239,12 +263,14 @@ function restoreSpiderState(saved) {
     spiderState.startTime = Date.now() - elapsed * 1000;
     startTimer();
 
+    syncSpiderSuitUI();
     updateUI();
     updateUndoButtonState();
 }
 
 function dealSpiderLayout() {
-    const deck = CommonUtils.createShoe(2, SUITS, VALUES);
+    const config = getSpiderSuitConfig();
+    const deck = CommonUtils.createShoe(config.deckCount, config.suits, VALUES);
     spiderState.tableau = Array.from({ length: 10 }, () => []);
 
     for (let col = 0; col < 10; col++) {
@@ -881,6 +907,17 @@ function setupSpiderEventListeners() {
     const newGameBtn = document.getElementById('spider-new-game');
     if (newGameBtn) {
         newGameBtn.addEventListener('click', initSpiderGame);
+    }
+
+    const suitSelect = document.getElementById('spider-suit-select');
+    if (suitSelect) {
+        syncSpiderSuitUI();
+        suitSelect.addEventListener('change', (event) => {
+            const nextMode = parseInt(event.target.value, 10);
+            spiderState.suitMode = SPIDER_SUIT_MODES[nextMode] ? nextMode : 4;
+            syncSpiderSuitUI();
+            initSpiderGame();
+        });
     }
 
     const dealBtn = document.getElementById('spider-deal');

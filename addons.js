@@ -27,6 +27,13 @@
         }
     };
 
+    const readScriptManifest = () => {
+        if (!window.AddonManifest || typeof window.AddonManifest !== 'object') return null;
+        const addons = Array.isArray(window.AddonManifest.addons) ? window.AddonManifest.addons : null;
+        if (!addons) return null;
+        return window.AddonManifest;
+    };
+
     const loadFromManifest = async () => {
         try {
             const response = await fetch('addons/manifest.json', { cache: 'no-store' });
@@ -91,9 +98,10 @@
     };
 
     const ready = (async () => {
+        const scriptManifest = readScriptManifest();
         const inline = parseInlineManifest();
         const useFetch = window.location && window.location.protocol !== 'file:';
-        const manifest = inline || (useFetch ? await loadFromManifest() : { addons: [] });
+        const manifest = scriptManifest || inline || (useFetch ? await loadFromManifest() : { addons: [] });
         const list = Array.isArray(manifest.addons) ? manifest.addons : [];
         for (const addon of list) {
             await loadAddon(addon);

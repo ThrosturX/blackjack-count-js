@@ -1,14 +1,81 @@
-# What this is
+# Card Playing Suite (Working Name)
 
-This repository represents realistic capabilities of froniter LLM models as of late january 2026. The *first steps* were developed by Z.ai's GLM-4.7, followed by refinements by Qwen, then Gemini, then Claude.
-After the first steps, other agentic tools were tested such as Antigravity and some in-IDE AI-based code-completion tools. Due to meager limits on frontier models, some chat-based "pair-programming" was also interleaved between agentic tasks. LLM attribution can mostly be found in commit messages. Cursor was deliberately skipped as it has been covered extensively elsewhere.
+Browser-first card game suite with shared UI, shared gameplay utilities, and mobile-friendly interaction patterns.
+Current repository name is `bj_table` (subject to be renamed appropriately).
 
-## Summary of results
-The goal was to see what it was like to be a project manager for AI agents, so most of the coding was done by the agents themselves (although I definitely got carried away with the themes a bit during review).
-All in all, the agents performed faster than junior developers, but lacked the quality control of senior engineer. As such, I conclude that some hand-holding is still mostly necessary even for frontier models.
+## Quick Start
 
-### What ths means for you if you are a developer
-AI Code completion in-IDE is usable, but not to be trusted in the slightest. The same goes for agentic coding. You can probably expect a minor speed gain at the start of projects, at the expense of refactoring later. This is what a lot of organizations do; prototypes or POCs are developed by "cheaper labour". Basically, your job isn't going anywhere, but _QA pivots_ are going to start winning over _DevOps pivots_.
+No build step is required.
 
-## Extrapolation
-The good news is that local models are catching up FAST. Although this sort of code may seem trivial now (especially for a frontier model), I expect local models running on modest consumer hardware will start to match, if not beat the current state of frontier models in comfort (but not necessarily speed).
+- Open `index.html` directly, or
+- Serve statically: `python3 -m http.server` and open `http://localhost:8000`.
+
+The project is designed to run from both static hosting and `file://`.
+
+## Included Games
+
+- Blackjack (`blackjack.html`)
+- Texas Hold'em (`poker.html`)
+- Klondike Solitaire (`klondike.html`)
+- FreeCell (`freecell.html`)
+- Spider Solitaire (`spider.html`)
+- Pyramid Solitaire (`pyramid.html`)
+- Table Top Sandbox (`tabletop.html`)
+- And potentially other card games.
+
+## Variants and Game Options
+
+- Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
+- Spider: 4-Suit, 2-Suit, and 1-Suit modes.
+- Pyramid: Draw 1 / Draw 3.
+- Blackjack: seats (1-9), decks (1-8), configurable table minimum bet.
+- Table Top: configurable deck count, deck groups, center piles, and foundation counts.
+
+## Shared Architecture
+
+- `common.js`: shared card/deck utilities, responsive sizing helpers, toasts/audio helpers, and `StateManager`.
+- `header.js`: shared header toggle/collapse behavior.
+- `shared/mobile-controller.js`: shared mobile touch logic for pick-up and panning coordination.
+- `shared/ui-helpers.js`: shared hit-testing and pointer utility helpers.
+- `addons.js` + `addons/manifest.js`: add-on loading and add-on catalog registration.
+- `styles/core.css`, `styles/layout.css`, `styles/mobile.css`: shared base, layout, and mobile override style layers.
+
+## Persistence
+
+Solitaire games currently persist in-progress state with `localStorage` via `CommonUtils.StateManager`.
+
+- Keys are namespaced as `bj_table.save.<gameId>`.
+- State is marked dirty on moves and saved on interval/page lifecycle events.
+- Winning a game clears that game’s save.
+- Restores happen automatically on page load when a valid save exists.
+
+## Mobile and Responsive Behavior
+
+- Horizontal scrolling is enabled only when content actually overflows.
+- Game tables center when there is extra horizontal space.
+- Header controls are responsive and avoid overlap with back button/title/menu toggles.
+- Blackjack shoe is hidden on phones and visible on tablets/desktop.
+- Solitaire drag/drop supports mobile panning while a card is selected.
+
+## Add-ons and Themes
+
+- Add-on catalog is defined in `addons/manifest.js`.
+- `addons.js` supports script manifest (`window.AddonManifest`), legacy inline manifest, and network fallback to `addons/manifest.json` when not on `file://`.
+
+## Tests
+
+Current logic tests are plain Node scripts:
+
+- `node logic.test.js`
+- `node poker-logic.test.js`
+- `node solitaire-logic.test.js`
+
+## Documentation to Keep Updated
+
+When behavior or architecture changes substantially, keep these files in sync:
+
+- `AGENTS.md` for engineering constraints, shared systems map, and QA smoke checklist
+- `README.md` for project overview, runtime expectations, and current feature set
+- `ARCHITECTURE.md` for shared-system boundaries and runtime contracts
+- `QA_SMOKE.md` for cross-game verification steps
+- `ROADMAP.md` for sequencing, mobile deployment goals, and monetization milestones

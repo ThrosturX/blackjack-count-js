@@ -20,9 +20,16 @@
 
 .table-scroll {
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
     overflow-x: auto;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll.scroll-active {
+    justify-content: flex-start;
 }
 
 #seats {
@@ -126,7 +133,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: center;
+    justify-content: flex-end;
     margin-left: auto;
 }
 
@@ -161,12 +168,13 @@
 
     /* Simplify the header */
     header {
-        padding: 5px;
-        justify-content: center;
+        padding: 6px 10px;
+        justify-content: flex-start;
     }
 
     h1 {
         font-size: 1rem;
+        text-align: left;
     }
 
     /* 4. Fix the Dealer Area */
