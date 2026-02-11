@@ -139,6 +139,18 @@ function initGame() {
             },
             getElements: (el) => collectDraggedElements(el),
             findDropTarget: (x, y) => {
+                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                    {
+                        selector: '.foundation-pile',
+                        resolve: (el) => ({ type: 'foundation', index: parseInt(el.id.split('-')[1], 10) })
+                    },
+                    {
+                        selector: '.tableau-column',
+                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[1], 10) })
+                    }
+                ]);
+                if (directTarget) return directTarget;
+
                 const colIndex = findTableauDropColumn(x, y);
                 if (colIndex !== null) return { type: 'tableau', index: colIndex };
                 const foundationIndex = findFoundationDropPile(x, y);
@@ -196,6 +208,15 @@ function initGame() {
             const table = document.getElementById('klondike-table');
             table.addEventListener('pointerdown', (e) => {
                 dragState.mobileController.handlePointerDown(e);
+            });
+            document.addEventListener('pointermove', (e) => {
+                dragState.mobileController.handlePointerMove(e);
+            });
+            document.addEventListener('pointerup', (e) => {
+                dragState.mobileController.handlePointerUp(e);
+            });
+            document.addEventListener('pointercancel', (e) => {
+                dragState.mobileController.handlePointerCancel(e);
             });
         }
     }

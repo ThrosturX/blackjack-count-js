@@ -92,3 +92,23 @@
 .spider-column:hover {
     border-color: rgba(255, 255, 255, 0.2);
 }
+
+/* Mobile horizontal scroll fix for Spider */
+@media (max-width: 900px) {
+    #table.spider-layout {
+        width: max-content !important;
+        min-width: 480px;
+        overflow-x: auto;
+        margin: 0 auto;
+    }
+
+    #spider-top-row {
+        justify-content: flex-start !important;
+        gap: 24px;
+    }
+
+    #spider-foundations,
+    #spider-tableau {
+        justify-content: flex-start !important;
+    }
+}

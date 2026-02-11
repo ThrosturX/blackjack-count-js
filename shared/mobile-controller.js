@@ -4,7 +4,7 @@
  * in solitaire-style games.
  */
 class MobileSolitaireController {
-    constructor(delegate) {
+    constructor(delegate, options = {}) {
         /**
          * Delegate should implement:
          * - isMovable(element) -> boolean
@@ -24,8 +24,22 @@ class MobileSolitaireController {
             source: null
         };
 
+        this.tapMoveThreshold = Number.isFinite(options.tapMoveThreshold) ? options.tapMoveThreshold : 10;
+        this.activePointerId = null;
+        this.pointerStart = null;
+        this.pointerMoved = false;
+
         this.handlePointerDown = this.handlePointerDown.bind(this);
+        this.handlePointerMove = this.handlePointerMove.bind(this);
+        this.handlePointerUp = this.handlePointerUp.bind(this);
+        this.handlePointerCancel = this.handlePointerCancel.bind(this);
         this.deselect = this.deselect.bind(this);
+    }
+
+    resetPointerTracking() {
+        this.activePointerId = null;
+        this.pointerStart = null;
+        this.pointerMoved = false;
     }
 
     /**
@@ -34,6 +48,55 @@ class MobileSolitaireController {
      * @returns {boolean} Whether the event was handled by the controller.
      */
     handlePointerDown(e) {
+        if (this.activePointerId !== null) return false;
+        this.activePointerId = e.pointerId;
+        this.pointerStart = { x: e.clientX, y: e.clientY };
+        this.pointerMoved = false;
+        return true;
+    }
+
+    /**
+     * Track pointer movement so we can distinguish a tap from a pan/scroll gesture.
+     * @param {PointerEvent} e
+     * @returns {boolean} Whether the event was handled by the controller.
+     */
+    handlePointerMove(e) {
+        if (this.activePointerId !== e.pointerId || !this.pointerStart) return false;
+
+        const dx = e.clientX - this.pointerStart.x;
+        const dy = e.clientY - this.pointerStart.y;
+        if (Math.hypot(dx, dy) > this.tapMoveThreshold) {
+            this.pointerMoved = true;
+        }
+        return true;
+    }
+
+    /**
+     * Complete a pointer interaction. Only treat it as a tap if no pan gesture occurred.
+     * @param {PointerEvent} e
+     * @returns {boolean} Whether the event was handled by the controller.
+     */
+    handlePointerUp(e) {
+        if (this.activePointerId !== e.pointerId) return false;
+        const didMove = this.pointerMoved;
+        this.resetPointerTracking();
+
+        if (didMove) return false;
+        return this.handleTap(e);
+    }
+
+    /**
+     * Reset tracking on pointer cancel (e.g., when the browser takes over scrolling).
+     * @param {PointerEvent} e
+     * @returns {boolean} Whether the event was handled by the controller.
+     */
+    handlePointerCancel(e) {
+        if (this.activePointerId !== e.pointerId) return false;
+        this.resetPointerTracking();
+        return true;
+    }
+
+    handleTap(e) {
         const cardEl = e.target.closest('.card');
         const x = e.clientX;
         const y = e.clientY;
