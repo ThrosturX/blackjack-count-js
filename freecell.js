@@ -22,6 +22,7 @@ const freecellState = {
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
 const MAX_HISTORY = 200;
+const FREECELL_MIN_TABLEAU_CARDS = 20;
 
 const freecellDragState = {
     draggedCards: [],
@@ -221,7 +222,33 @@ function updateUI() {
     updateFreeCells();
     updateFoundations();
     updateStats();
+    scheduleTableauSizing();
 }
+
+function getMaxTableauLength() {
+    return freecellState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
+}
+
+function ensureTableauSizing() {
+    const maxCards = Math.max(FREECELL_MIN_TABLEAU_CARDS, getMaxTableauLength());
+    const stackHeight = CommonUtils.getStackHeight(maxCards, STACK_OFFSET);
+    CommonUtils.ensureTableauMinHeight({
+        table: 'table',
+        topRow: 'freecell-top-row',
+        stackOffset: STACK_OFFSET,
+        maxCards
+    });
+    const tableauArea = document.getElementById('freecell-tableau');
+    if (tableauArea) {
+        tableauArea.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    }
+    const columnMinHeight = stackHeight;
+    document.querySelectorAll('.freecell-column').forEach(column => {
+        column.style.minHeight = `${Math.ceil(columnMinHeight)}px`;
+    });
+}
+
+const scheduleTableauSizing = CommonUtils.createRafScheduler(ensureTableauSizing);
 
 function updateTableau() {
     const tableauArea = document.getElementById('freecell-tableau');
@@ -892,4 +919,6 @@ function setupFreeCellEventListeners() {
         scheduleThemeSync();
     }
     window.addEventListener('addons:changed', scheduleThemeSync);
+    window.addEventListener('resize', scheduleTableauSizing);
+    window.addEventListener('card-scale:changed', scheduleTableauSizing);
 }

@@ -72,11 +72,74 @@ const CommonUtils = {
         } catch (err) {
             // Ignore storage failures.
         }
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('card-scale:changed', { detail: { scale } }));
+        }
     },
 
     clampNumber: function (value, min, max, fallback) {
         if (!Number.isFinite(value)) return fallback;
         return Math.min(max, Math.max(min, value));
+    },
+
+    getCardMetrics: function () {
+        const styles = getComputedStyle(document.documentElement);
+        const baseW = parseFloat(styles.getPropertyValue('--card-w')) || 70;
+        const baseH = parseFloat(styles.getPropertyValue('--card-h')) || 100;
+        const scale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
+        return {
+            cardWidth: baseW * scale,
+            cardHeight: baseH * scale,
+            scale
+        };
+    },
+
+    getStackHeight: function (cardCount, stackOffset, cardHeight) {
+        if (!Number.isFinite(cardCount) || cardCount <= 0) return 0;
+        const baseHeight = Number.isFinite(cardHeight) ? cardHeight : this.getCardMetrics().cardHeight;
+        const offset = Number.isFinite(stackOffset) ? stackOffset : 0;
+        return baseHeight + Math.max(0, cardCount - 1) * offset;
+    },
+
+    ensureTableauMinHeight: function (options = {}) {
+        const tableEl = typeof options.table === 'string'
+            ? document.getElementById(options.table)
+            : options.table;
+        if (!tableEl) return;
+
+        const topRowEl = typeof options.topRow === 'string'
+            ? document.getElementById(options.topRow)
+            : options.topRow;
+
+        const styles = getComputedStyle(tableEl);
+        const paddingTop = parseFloat(styles.paddingTop) || 0;
+        const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+        const gapValue = styles.rowGap || styles.gap;
+        const gap = parseFloat(gapValue) || 0;
+
+        const metrics = this.getCardMetrics();
+        const cardHeight = Number.isFinite(options.cardHeight) ? options.cardHeight : metrics.cardHeight;
+        const stackOffset = Number.isFinite(options.stackOffset) ? options.stackOffset : 0;
+        const maxCards = Math.max(1, options.maxCards || 1);
+        const stackHeight = this.getStackHeight(maxCards, stackOffset, cardHeight);
+        const topRowHeight = topRowEl ? topRowEl.getBoundingClientRect().height : 0;
+        const extraBottom = Number.isFinite(options.extraBottom) ? options.extraBottom : 0;
+        const minHeight = paddingTop + paddingBottom + topRowHeight + gap + stackHeight + extraBottom;
+
+        tableEl.style.minHeight = `${Math.ceil(minHeight)}px`;
+    },
+
+    createRafScheduler: function (fn) {
+        let frame = null;
+        return () => {
+            if (frame !== null) {
+                cancelAnimationFrame(frame);
+            }
+            frame = requestAnimationFrame(() => {
+                frame = null;
+                fn();
+            });
+        };
     },
 
     /**

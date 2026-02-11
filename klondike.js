@@ -72,6 +72,7 @@ const FOUNDATION_DROP_PADDING = 30;
 const MAX_HISTORY = 200;
 const MAX_SOLVABLE_DEAL_ATTEMPTS = 12;
 const MAX_SIMULATION_ITERATIONS = 1200;
+const KLONDIKE_MIN_TABLEAU_CARDS = 13;
 
 const dragState = {
     draggedCards: [],
@@ -275,7 +276,32 @@ function updateUI() {
     updateStock();
     updateWaste();
     updateStats();
+    scheduleTableauSizing();
 }
+
+function getMaxTableauLength() {
+    return gameState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
+}
+
+function ensureTableauSizing() {
+    const maxCards = Math.max(KLONDIKE_MIN_TABLEAU_CARDS, getMaxTableauLength());
+    const stackHeight = CommonUtils.getStackHeight(maxCards, STACK_OFFSET);
+    CommonUtils.ensureTableauMinHeight({
+        table: 'klondike-table',
+        topRow: 'top-row',
+        stackOffset: STACK_OFFSET,
+        maxCards
+    });
+    const tableauArea = document.getElementById('tableau-area');
+    if (tableauArea) {
+        tableauArea.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    }
+    document.querySelectorAll('.tableau-column').forEach(column => {
+        column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    });
+}
+
+const scheduleTableauSizing = CommonUtils.createRafScheduler(ensureTableauSizing);
 
 /**
  * Update tableau columns
@@ -1122,6 +1148,9 @@ function setupEventListeners() {
         deckSelect.addEventListener('change', applyDeckStyle);
         applyDeckStyle();
     }
+
+    window.addEventListener('resize', scheduleTableauSizing);
+    window.addEventListener('card-scale:changed', scheduleTableauSizing);
 
     // Draw count
     document.getElementById('draw-count-select').addEventListener('change', (e) => {

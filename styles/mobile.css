@@ -10,23 +10,8 @@
 }
 
 @media screen and (max-height: 600px) and (orientation: landscape) {
-    /* Landscape tune-ups for compact heights */
+    /* Allow scrolling when height is constrained */
     body {
         overflow: auto;
-    }
-
-    #klondike-table {
-        height: auto;
-        min-height: 120vh;
-    }
-
-    #table.freecell-layout {
-        height: auto;
-        max-height: none;
-        min-height: 140vh;
-    }
-
-    .freecell-column {
-        min-height: 100vh;
     }
 }
