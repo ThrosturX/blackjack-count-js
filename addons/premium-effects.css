@@ -27,7 +27,7 @@ body.deck-crimson-veil .card.hidden {
     body.table-cyber #table,
     body.table-diner #table,
     body.table-ocean #table,
-    body.table-ocean #solitaire-table {
+    body.table-ocean #klondike-table {
         animation: none !important;
     }
 
@@ -123,7 +123,7 @@ body.table-diner #table:hover {
 
 /* --- Open Ocean - Enhanced --- */
 body.table-ocean #table,
-body.table-ocean #solitaire-table {
+body.table-ocean #klondike-table {
     box-shadow:
         inset 0 0 120px rgba(0, 120, 160, 0.4),
         0 0 50px rgba(0, 160, 200, 0.3),
@@ -134,7 +134,7 @@ body.table-ocean #solitaire-table {
 }
 
 body.table-ocean #table::before,
-body.table-ocean #solitaire-table::before {
+body.table-ocean #klondike-table::before {
     content: "";
     position: absolute;
     inset: -30%;
@@ -149,7 +149,7 @@ body.table-ocean #solitaire-table::before {
 }
 
 body.table-ocean #table::after,
-body.table-ocean #solitaire-table::after {
+body.table-ocean #klondike-table::after {
     content: "";
     position: absolute;
     inset: -30%;
@@ -163,7 +163,7 @@ body.table-ocean #solitaire-table::after {
 }
 
 body.table-ocean #table > :not(.ocean-creature):not(.ocean-orca),
-body.table-ocean #solitaire-table > :not(.ocean-creature):not(.ocean-orca) {
+body.table-ocean #klondike-table > :not(.ocean-creature):not(.ocean-orca) {
     z-index: 2;
 }
 

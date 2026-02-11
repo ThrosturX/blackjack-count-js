@@ -24,7 +24,7 @@ body.table-cyber {
     background: radial-gradient(circle, #1a0033 0%, #050505 100%);
 }
 body.table-cyber #table,
-body.table-cyber #solitaire-table {
+body.table-cyber #klondike-table {
     background-image: 
         linear-gradient(rgba(0, 242, 255, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0, 242, 255, 0.1) 1px, transparent 1px);

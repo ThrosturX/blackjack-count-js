@@ -1,11 +1,11 @@
 /**
- * Solitaire (Klondike) Game Controller
+ * Klondike Solitaire Game Controller
  * Manages game state, UI updates, and user interactions
  */
 
 const DEFAULT_VARIANT_ID = 'classic';
-const SOLITAIRE_VARIANT_ORDER = ['classic', 'vegas', 'open-towers'];
-const SOLITAIRE_VARIANTS = {
+const KLONDIKE_VARIANT_ORDER = ['classic', 'vegas', 'open-towers'];
+const KLONDIKE_VARIANTS = {
     classic: {
         id: 'classic',
         label: 'Classic Klondike',
@@ -60,7 +60,7 @@ const gameState = {
     drawCount: 3,
     isGameWon: false,
     variantId: DEFAULT_VARIANT_ID,
-    variantConfig: SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID]
+    variantConfig: KLONDIKE_VARIANTS[DEFAULT_VARIANT_ID]
 };
 
 // Drag state / UI tuning
@@ -84,7 +84,8 @@ const dragState = {
     isDragging: false,
     pendingDrag: null,
     activePointerId: null,
-    hoveredCard: null
+    hoveredCard: null,
+    mobileController: null
 };
 
 // Sound files
@@ -98,7 +99,7 @@ const soundFiles = {
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(soundFiles);
     setupEventListeners();
-    CommonUtils.initCardScaleControls('solitaire-card-scale', 'solitaire-card-scale-value');
+    CommonUtils.initCardScaleControls('klondike-card-scale', 'klondike-card-scale-value');
     initGame();
 });
 
@@ -106,6 +107,120 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize a new game
  */
 function initGame() {
+    // Initialize mobile controller if not already done
+    if (!dragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
+        dragState.mobileController = new MobileSolitaireController({
+            isMovable: (el) => {
+                if (el.dataset.waste) return true;
+                if (el.dataset.foundation !== undefined) return true;
+                const cardIndex = parseInt(el.dataset.index, 10);
+                const col = parseInt(el.dataset.column, 10);
+                const column = gameState.tableau[col];
+                const card = column ? column[cardIndex] : null;
+                return card && !card.hidden;
+            },
+            getSequence: (el) => {
+                if (el.dataset.waste) {
+                    return [gameState.waste[gameState.waste.length - 1]];
+                } else if (el.dataset.foundation !== undefined) {
+                    const idx = parseInt(el.dataset.foundation, 10);
+                    const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
+                    return card ? [card] : [];
+                } else {
+                    const col = parseInt(el.dataset.column, 10);
+                    const index = parseInt(el.dataset.index, 10);
+                    return gameState.tableau[col].slice(index);
+                }
+            },
+            getSource: (el) => {
+                if (el.dataset.waste) return { type: 'waste' };
+                if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
+                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            findDropTarget: (x, y) => {
+                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                    {
+                        selector: '.foundation-pile',
+                        resolve: (el) => ({ type: 'foundation', index: parseInt(el.id.split('-')[1], 10) })
+                    },
+                    {
+                        selector: '.tableau-column',
+                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[1], 10) })
+                    }
+                ]);
+                if (directTarget) return directTarget;
+
+                const colIndex = findTableauDropColumn(x, y);
+                if (colIndex !== null) return { type: 'tableau', index: colIndex };
+                const foundationIndex = findFoundationDropPile(x, y);
+                if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
+                return null;
+            },
+            isValidMove: (source, target) => {
+                // Setup temporary drag state for validity checks
+                dragState.draggedCards = dragState.mobileController.selectedData.cards;
+                dragState.sourcePile = source.type;
+                dragState.sourceIndex = source.index;
+
+                let valid = false;
+                if (target.type === 'tableau') {
+                    valid = canDropOnTableau(target.index);
+                } else if (target.type === 'foundation') {
+                    valid = canDropOnFoundation(target.index);
+                }
+
+                // Cleanup temp state
+                dragState.draggedCards = [];
+                dragState.sourcePile = null;
+                dragState.sourceIndex = null;
+                return valid;
+            },
+            executeMove: (source, target) => {
+                // Setup drag state for finishDrag with necessary info
+                dragState.draggedCards = dragState.mobileController.selectedData.cards;
+                dragState.sourcePile = source.type;
+                dragState.sourceIndex = source.index;
+
+                let targetEl = null;
+                if (target.type === 'tableau') {
+                    targetEl = document.getElementById(`tableau-${target.index}`);
+                } else if (target.type === 'foundation') {
+                    targetEl = document.getElementById(`foundation-${target.index}`);
+                }
+
+                if (targetEl) {
+                    const rect = targetEl.getBoundingClientRect();
+                    // Simulate a drop point near the center of the target element
+                    const clientX = rect.left + rect.width / 2;
+                    const clientY = rect.top + rect.height / 2;
+
+                    finishDrag(clientX, clientY);
+                } else {
+                    // If for some reason the target element is not found, just reset and update UI
+                    resetDragState(); // Ensure drag state is clean
+                    updateUI();
+                }
+            }
+        });
+
+        if (CommonUtils.isMobile() && dragState.mobileController) {
+            const table = document.getElementById('klondike-table');
+            table.addEventListener('pointerdown', (e) => {
+                dragState.mobileController.handlePointerDown(e);
+            });
+            document.addEventListener('pointermove', (e) => {
+                dragState.mobileController.handlePointerMove(e);
+            });
+            document.addEventListener('pointerup', (e) => {
+                dragState.mobileController.handlePointerUp(e);
+            });
+            document.addEventListener('pointercancel', (e) => {
+                dragState.mobileController.handlePointerCancel(e);
+            });
+        }
+    }
+
     // Reset state
     gameState.tableau = [[], [], [], [], [], [], []];
     gameState.foundations = [[], [], [], []];
@@ -181,7 +296,12 @@ function updateTableau() {
 
             // Only allow interaction with face-up cards
             if (!card.hidden) {
-                cardEl.addEventListener('pointerdown', handlePointerDown);
+                /* Stop attaching pointerdown to individual cards on mobile
+                 * (so the container can catch everything) ; Credit: Grok 
+                 */
+                if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                    cardEl.addEventListener('pointerdown', handlePointerDown);
+                } 
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
             }
@@ -204,7 +324,9 @@ function updateFoundations() {
             const topCard = cards[cards.length - 1];
             const cardEl = CommonUtils.createCardEl(topCard);
             cardEl.dataset.foundation = i;
-            cardEl.addEventListener('pointerdown', handlePointerDown);
+            if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                cardEl.addEventListener('pointerdown', handlePointerDown);
+            } 
             cardEl.style.cursor = 'pointer';
             foundationEl.appendChild(cardEl);
         } else {
@@ -271,7 +393,9 @@ function updateWaste() {
             // Only top card responds to drag
             if (i === gameState.waste.length - 1) {
                 cardEl.dataset.waste = 'true';
-                cardEl.addEventListener('pointerdown', handlePointerDown);
+                if (!CommonUtils.isMobile() || !dragState.mobileController) {
+                    cardEl.addEventListener('pointerdown', handlePointerDown);
+                } 
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
                 cardEl.style.zIndex = 10;
@@ -355,8 +479,18 @@ function recycleWaste() {
  */
 function handlePointerDown(e) {
     if (e.button !== 0) return;
-    const cardEl = e.target.closest('.card');
-    if (!cardEl) return;
+
+    // Mobile pickup UX (always allow mobile controller to handle pointerdown)
+    if (CommonUtils.isMobile() && dragState.mobileController) {
+        // The mobile controller handles deselection on empty space, so no early return here.
+        // It will return true if it handled the event (e.g., selection or drop).
+        if (dragState.mobileController.handlePointerDown(e)) {
+            return;
+        }
+    }
+
+    const cardEl = e.target.closest(".card");
+    if (!cardEl) return; // If it wasn't a mobile interaction and no card was clicked, do nothing.
 
     dragState.pendingDrag = {
         cardEl,
@@ -364,8 +498,8 @@ function handlePointerDown(e) {
         startY: e.clientY
     };
     dragState.activePointerId = e.pointerId;
-    document.addEventListener('pointermove', handlePointerMove);
-    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
     if (cardEl.setPointerCapture) {
         cardEl.setPointerCapture(e.pointerId);
     }
@@ -712,7 +846,13 @@ function attemptFoundationMove(targetFoundation) {
  * Handle card click (for auto-move to foundation)
  */
 function handleCardClick(e) {
-    const cardEl = e.target.closest('.card');
+    // If mobile controller is active, this click might be part of a tap-to-select/drop, so don't auto-move.
+    // The mobile controller handles drop and will call executeMove which includes foundation moves.
+    if (CommonUtils.isMobile() && dragState.mobileController && dragState.mobileController.state === "SELECTED") {
+        return; // Let the mobile controller handle it
+    }
+
+    const cardEl = e.target.closest(".card");
     if (!cardEl) return;
 
     let card = null;
@@ -722,7 +862,7 @@ function handleCardClick(e) {
     // Determine source
     if (cardEl.dataset.waste) {
         card = gameState.waste[gameState.waste.length - 1];
-        sourcePile = 'waste';
+        sourcePile = "waste";
     } else if (cardEl.dataset.column !== undefined) {
         const col = parseInt(cardEl.dataset.column);
         const index = parseInt(cardEl.dataset.index);
@@ -732,8 +872,12 @@ function handleCardClick(e) {
         if (index !== tableau.length - 1) return;
 
         card = tableau[index];
-        sourcePile = 'tableau';
+        sourcePile = "tableau";
         sourceIndex = col;
+    } else if (cardEl.dataset.foundation !== undefined) {
+        // Clicking on a foundation card should not trigger auto-move to foundation
+        // but should allow pickup from foundation in mobile. For desktop, it does nothing.
+        return;
     }
 
     if (!card) return;
@@ -742,9 +886,9 @@ function handleCardClick(e) {
     for (let i = 0; i < 4; i++) {
         if (SolitaireLogic.canPlaceOnFoundation(card, gameState.foundations[i])) {
             // Remove from source
-            if (sourcePile === 'waste') {
+            if (sourcePile === "waste") {
                 gameState.waste.pop();
-            } else if (sourcePile === 'tableau') {
+            } else if (sourcePile === "tableau") {
                 gameState.tableau[sourceIndex].pop();
 
                 // Flip top card if hidden
@@ -752,7 +896,7 @@ function handleCardClick(e) {
                     const topCard = gameState.tableau[sourceIndex][gameState.tableau[sourceIndex].length - 1];
                 if (topCard.hidden) {
                     topCard.hidden = false;
-                    applyVariantScore('flip-card');
+                    applyVariantScore("flip-card");
                 }
                 }
             }
@@ -760,11 +904,11 @@ function handleCardClick(e) {
             // Add to foundation
             gameState.foundations[i].push(card);
 
-            const moveType = sourcePile === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
+            const moveType = sourcePile === "waste" ? "waste-to-foundation" : "tableau-to-foundation";
             applyVariantScore(moveType);
             gameState.moves++;
 
-            CommonUtils.playSound('card');
+            CommonUtils.playSound("card");
             updateUI();
             checkWinCondition();
             return;
@@ -857,7 +1001,7 @@ function showHint() {
     if (autoMoves.length > 0) {
         CommonUtils.showTableToast(
             `Hint: Move ${autoMoves[0].card.val}${autoMoves[0].card.suit} to foundation!`,
-            { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+            { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
         );
         return;
     }
@@ -873,7 +1017,7 @@ function showHint() {
                     const move = validMoves[0];
                     CommonUtils.showTableToast(
                         `Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`,
-                        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+                        { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
                     );
                     return;
                 }
@@ -889,7 +1033,7 @@ function showHint() {
             const move = validMoves[0];
             CommonUtils.showTableToast(
                 `Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`,
-                { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+                { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
             );
             return;
         }
@@ -897,7 +1041,7 @@ function showHint() {
 
     CommonUtils.showTableToast(
         'Hint: Try drawing from the stock or recycling the waste pile!',
-        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+        { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
     );
 }
 
@@ -1251,12 +1395,12 @@ function dealSolvableGame() {
         dealDeck(deck);
         if (isDealLikelySolvable(gameState)) {
             if (attempt > 1) {
-                console.debug(`Solitaire: solvable deal found after ${attempt} attempts.`);
+                console.debug(`Klondike: solvable deal found after ${attempt} attempts.`);
             }
             return;
         }
     }
-    console.warn(`Solitaire: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
+    console.warn(`Klondike: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
 }
 
 function dealDeck(deck) {
@@ -1464,7 +1608,7 @@ function applySimulationWasteToTableauMove(state, options) {
 }
 
 function getActiveVariantConfig() {
-    return SOLITAIRE_VARIANTS[gameState.variantId] || SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID];
+    return KLONDIKE_VARIANTS[gameState.variantId] || KLONDIKE_VARIANTS[DEFAULT_VARIANT_ID];
 }
 
 function getVariantOptions() {
@@ -1506,8 +1650,8 @@ function populateVariantSelect() {
     if (!select) return;
 
     select.innerHTML = '';
-    SOLITAIRE_VARIANT_ORDER.forEach(variantId => {
-        const variant = SOLITAIRE_VARIANTS[variantId];
+    KLONDIKE_VARIANT_ORDER.forEach(variantId => {
+        const variant = KLONDIKE_VARIANTS[variantId];
         if (!variant) return;
         const option = document.createElement('option');
         option.value = variant.id;
@@ -1523,7 +1667,7 @@ function populateVariantSelect() {
 }
 
 function handleVariantChange(variantId) {
-    if (!SOLITAIRE_VARIANTS[variantId]) return;
+    if (!KLONDIKE_VARIANTS[variantId]) return;
     gameState.variantId = variantId;
     const select = document.getElementById('variant-select');
     if (select) {

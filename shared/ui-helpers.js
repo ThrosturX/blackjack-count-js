@@ -3,6 +3,17 @@
  */
 const UIHelpers = (function () {
     return {
+        getTargetFromPoint(x, y, targets) {
+            if (typeof document === 'undefined' || !document.elementFromPoint) return null;
+            const hit = document.elementFromPoint(x, y);
+            if (!hit) return null;
+            for (const target of targets) {
+                const match = hit.closest(target.selector);
+                if (match) return target.resolve(match);
+            }
+            return null;
+        },
+
         getRectWithPadding(rect, padding) {
             return {
                 top: rect.top - padding,

@@ -32,7 +32,8 @@ const freecellDragState = {
     pointerOffsetY: 0,
     isDragging: false,
     pendingDrag: null,
-    activePointerId: null
+    activePointerId: null,
+    mobileController: null
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,6 +44,135 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initFreeCellGame() {
+    if (!freecellDragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
+        freecellDragState.mobileController = new MobileSolitaireController({
+            isMovable: (el) => {
+                if (el.dataset.freecell !== undefined) {
+                    return !!freecellState.freeCells[parseInt(el.dataset.freecell, 10)];
+                }
+                const colIndex = parseInt(el.dataset.column, 10);
+                const rowIndex = parseInt(el.dataset.index, 10);
+                const column = freecellState.tableau[colIndex];
+                return getTableauSequence(column, rowIndex) !== null;
+            },
+            getSequence: (el) => {
+                if (el.dataset.freecell !== undefined) {
+                    return [freecellState.freeCells[parseInt(el.dataset.freecell, 10)]];
+                }
+                const colIndex = parseInt(el.dataset.column, 10);
+                const rowIndex = parseInt(el.dataset.index, 10);
+                return getTableauSequence(freecellState.tableau[colIndex], rowIndex) || [];
+            },
+            getSource: (el) => {
+                if (el.dataset.freecell !== undefined) {
+                    return { type: 'freecell', index: parseInt(el.dataset.freecell, 10) };
+                }
+                return {
+                    type: 'tableau',
+                    index: parseInt(el.dataset.column, 10),
+                    startIndex: parseInt(el.dataset.index, 10)
+                };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            findDropTarget: (x, y) => {
+                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                    {
+                        selector: '.freecell-slot',
+                        resolve: (el) => ({ type: 'freecell', index: parseInt(el.dataset.freecellIndex, 10) })
+                    },
+                    {
+                        selector: '.freecell-foundation',
+                        resolve: (el) => ({ type: 'foundation', index: parseInt(el.dataset.foundationIndex, 10) })
+                    },
+                    {
+                        selector: '.freecell-column',
+                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
+                    }
+                ]);
+                if (directTarget) return directTarget;
+
+                const freeCellIndex = findFreeCellDropTarget(x, y);
+                if (freeCellIndex !== null) return { type: 'freecell', index: freeCellIndex };
+                const foundationIndex = findFoundationDropPile(x, y);
+                if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
+                const columnIndex = findTableauDropColumn(x, y);
+                if (columnIndex !== null) return { type: 'tableau', index: columnIndex };
+                return null;
+            },
+            isValidMove: (source, target) => {
+                freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
+                freecellDragState.source = source;
+
+                let valid = false;
+                if (target.type === 'freecell') {
+                    valid = freecellDragState.draggedCards.length === 1
+                        && !freecellState.freeCells[target.index];
+                } else if (target.type === 'foundation') {
+                    valid = freecellDragState.draggedCards.length === 1
+                        && SolitaireLogic.canPlaceOnFoundation(
+                            freecellDragState.draggedCards[0],
+                            freecellState.foundations[target.index]
+                        );
+                } else if (target.type === 'tableau') {
+                    if (freecellDragState.draggedCards.length > 0) {
+                        const targetPile = freecellState.tableau[target.index];
+                        if (targetPile.length === 0) {
+                            valid = true;
+                        } else {
+                            const topCard = targetPile[targetPile.length - 1];
+                            valid = !topCard.hidden
+                                && SolitaireLogic.canPlaceOnTableau(freecellDragState.draggedCards[0], topCard);
+                        }
+                    }
+                }
+
+                freecellDragState.draggedCards = [];
+                freecellDragState.source = null;
+                return valid;
+            },
+            executeMove: (source, target) => {
+                freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
+                freecellDragState.source = source;
+                freecellDragState.draggedElements = freecellDragState.mobileController.selectedData.elements;
+
+                let targetEl = null;
+                if (target.type === 'tableau') {
+                    targetEl = document.getElementById(`freecell-column-${target.index}`);
+                } else if (target.type === 'foundation') {
+                    targetEl = document.getElementById(`freecell-foundation-${target.index}`);
+                } else if (target.type === 'freecell') {
+                    targetEl = document.getElementById(`freecell-cell-${target.index}`);
+                }
+
+                if (targetEl) {
+                    const rect = targetEl.getBoundingClientRect();
+                    finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                } else {
+                    resetDragState();
+                    updateUI();
+                }
+            }
+        });
+
+        if (CommonUtils.isMobile() && freecellDragState.mobileController) {
+            const table = document.getElementById('table');
+            if (table) {
+                table.addEventListener('pointerdown', (e) => {
+                    freecellDragState.mobileController.handlePointerDown(e);
+                });
+            }
+            document.addEventListener('pointermove', (e) => {
+                freecellDragState.mobileController.handlePointerMove(e);
+            });
+            document.addEventListener('pointerup', (e) => {
+                freecellDragState.mobileController.handlePointerUp(e);
+            });
+            document.addEventListener('pointercancel', (e) => {
+                freecellDragState.mobileController.handlePointerCancel(e);
+            });
+        }
+    }
+
     freecellState.tableau = Array.from({ length: 8 }, () => []);
     freecellState.freeCells = Array(4).fill(null);
     freecellState.foundations = [[], [], [], []];
@@ -111,7 +241,9 @@ function updateTableau() {
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 
-            cardEl.addEventListener('pointerdown', handlePointerDown);
+            if (!CommonUtils.isMobile() || !freecellDragState.mobileController) {
+                cardEl.addEventListener('pointerdown', handlePointerDown);
+            }
             cardEl.style.cursor = 'pointer';
 
             columnEl.appendChild(cardEl);
@@ -135,7 +267,9 @@ function updateFreeCells() {
         if (card) {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.dataset.freecell = index;
-            cardEl.addEventListener('pointerdown', handlePointerDown);
+            if (!CommonUtils.isMobile() || !freecellDragState.mobileController) {
+                cardEl.addEventListener('pointerdown', handlePointerDown);
+            }
             cardEl.style.cursor = 'pointer';
             slot.appendChild(cardEl);
         } else {
@@ -267,6 +401,10 @@ function undoFreecellToFoundationMove(payload) {
 
 function handlePointerDown(e) {
     if (e.button !== 0) return;
+    if (CommonUtils.isMobile() && freecellDragState.mobileController) {
+        if (freecellDragState.mobileController.handlePointerDown(e)) return;
+    }
+
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 

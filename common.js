@@ -439,7 +439,7 @@ const CommonUtils = {
         const container = options.container
             || (options.containerId ? document.getElementById(options.containerId) : null)
             || document.getElementById('table')
-            || document.getElementById('solitaire-table');
+            || document.getElementById('klondike-table');
         if (!container) return;
 
         const existing = container.querySelector('.table-toast');
@@ -474,6 +474,15 @@ const CommonUtils = {
     getScoreDisplay: function (score) {
         if (score > 21) return 'BUST (' + score + ')';
         return score.toString();
+    },
+
+    /**
+     * Mobile detection utility.
+     */
+    isMobile: function () {
+        return window.matchMedia('(max-width: 768px)').matches ||
+            navigator.maxTouchPoints > 0 ||
+            'ontouchstart' in window;
     }
 };
 

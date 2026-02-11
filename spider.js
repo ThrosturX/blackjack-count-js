@@ -35,7 +35,8 @@ const spiderDragState = {
     pointerOffsetY: 0,
     isDragging: false,
     pendingDrag: null,
-    activePointerId: null
+    activePointerId: null,
+    mobileController: null
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,6 +47,110 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initSpiderGame() {
+    if (!spiderDragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
+        spiderDragState.mobileController = new MobileSolitaireController({
+            isMovable: (el) => {
+                const col = parseInt(el.dataset.column, 10);
+                const index = parseInt(el.dataset.index, 10);
+                const column = spiderState.tableau[col];
+                const sequence = column.slice(index);
+                if (!sequence.length || sequence.some(c => c.hidden)) return false;
+                for (let i = 0; i < sequence.length - 1; i++) {
+                    if (sequence[i].rank !== sequence[i + 1].rank + 1) return false;
+                }
+                return true;
+            },
+            getSequence: (el) => {
+                const col = parseInt(el.dataset.column, 10);
+                const index = parseInt(el.dataset.index, 10);
+                return spiderState.tableau[col].slice(index);
+            },
+            getSource: (el) => {
+                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+            },
+            getElements: (el) => collectDraggedElements(el),
+            findDropTarget: (x, y) => {
+                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                    {
+                        selector: '.spider-column',
+                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
+                    }
+                ]);
+                if (directTarget) return directTarget;
+
+                const colIndex = findTableauDropColumn(x, y);
+                if (colIndex !== null) return { type: 'tableau', index: colIndex };
+                return null;
+            },
+            isValidMove: (source, target) => {
+                spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
+                if (!spiderDragState.draggedCards.length) {
+                    spiderDragState.draggedCards = [];
+                    return false;
+                }
+
+                if (target.type !== 'tableau') {
+                    spiderDragState.draggedCards = [];
+                    return false;
+                }
+
+                if (source.index === target.index) {
+                    spiderDragState.draggedCards = [];
+                    return false;
+                }
+
+                const movingCard = spiderDragState.draggedCards[0];
+                const targetPile = spiderState.tableau[target.index];
+                let valid = false;
+                if (targetPile.length === 0) {
+                    valid = true;
+                } else {
+                    const topCard = targetPile[targetPile.length - 1];
+                    valid = !topCard.hidden && topCard.rank === movingCard.rank + 1;
+                }
+
+                spiderDragState.draggedCards = [];
+                return valid;
+            },
+            executeMove: (source, target) => {
+                spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
+                spiderDragState.draggedElements = spiderDragState.mobileController.selectedData.elements;
+                spiderDragState.source = source;
+
+                let targetEl = null;
+                if (target.type === 'tableau') {
+                    targetEl = document.getElementById(`spider-column-${target.index}`);
+                }
+
+                if (targetEl) {
+                    const rect = targetEl.getBoundingClientRect();
+                    finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                } else {
+                    resetDragState();
+                    updateUI();
+                }
+            }
+        });
+
+        if (CommonUtils.isMobile() && spiderDragState.mobileController) {
+            const table = document.getElementById('table');
+            if (table) {
+                table.addEventListener('pointerdown', (e) => {
+                    spiderDragState.mobileController.handlePointerDown(e);
+                });
+            }
+            document.addEventListener('pointermove', (e) => {
+                spiderDragState.mobileController.handlePointerMove(e);
+            });
+            document.addEventListener('pointerup', (e) => {
+                spiderDragState.mobileController.handlePointerUp(e);
+            });
+            document.addEventListener('pointercancel', (e) => {
+                spiderDragState.mobileController.handlePointerCancel(e);
+            });
+        }
+    }
+
     spiderState.tableau = Array.from({ length: 10 }, () => []);
     spiderState.stock = [];
     spiderState.foundations = [];
@@ -120,7 +225,9 @@ function updateTableau() {
             cardEl.dataset.index = rowIndex;
 
             if (!card.hidden) {
-                cardEl.addEventListener('pointerdown', handlePointerDown);
+                if (!CommonUtils.isMobile() || !spiderDragState.mobileController) {
+                    cardEl.addEventListener('pointerdown', handlePointerDown);
+                }
                 cardEl.style.cursor = 'pointer';
             }
 
@@ -271,6 +378,10 @@ function getStockStackRotation(index, rowsLeft) {
 
 function handlePointerDown(e) {
     if (e.button !== 0) return;
+    if (CommonUtils.isMobile() && spiderDragState.mobileController) {
+        if (spiderDragState.mobileController.handlePointerDown(e)) return;
+    }
+
     const cardEl = e.target.closest('.card');
     if (!cardEl) return;
 
