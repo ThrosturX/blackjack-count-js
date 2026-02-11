@@ -1354,11 +1354,11 @@ input:checked+.slider:before {
 }
 
 /* ========================================
-   SOLITAIRE-SPECIFIC STYLES
+   KLONDIKE-SPECIFIC STYLES
    ======================================== */
 
-/* Solitaire Table Layout */
-#solitaire-table {
+/* Klondike Table Layout */
+#klondike-table {
     position: relative;
     width: 95vw;
     max-width: 1400px;
@@ -1985,9 +1985,9 @@ input:checked+.slider:before {
     animation: card-cascade 2s ease-in forwards;
 }
 
-/* Responsive adjustments for Solitaire */
+/* Responsive adjustments for Klondike */
 @media (max-width: 1200px) {
-    #solitaire-table {
+    #klondike-table {
         padding: 20px;
     }
 
@@ -2008,7 +2008,7 @@ input:checked+.slider:before {
 }
 
 @media (max-width: 900px) {
-    #solitaire-table {
+    #klondike-table {
         padding: 15px;
     }
 
@@ -2164,8 +2164,8 @@ input:checked+.slider:before {
         font-size: 1rem;
     }
 
-    /* 8. Fix Solitaire Layout if used */
-    #solitaire-table {
+    /* 8. Fix Klondike Layout if used */
+    #klondike-table {
         height: auto;
         min-height: 100vh;
         border-width: 0;
@@ -2242,7 +2242,7 @@ body {
 }
 
 /* 2. Set the requested min-width to prevent column squishing/wrapping */
-#solitaire-table,
+#klondike-table,
 #table.freecell-layout,
 #table.spider-layout,
 #table.tabletop-layout {
@@ -2251,8 +2251,8 @@ body {
     overflow-x: auto;
 }
 
-/* 3. Specific fix for Klondike (Solitaire) columns */
-#solitaire-table {
+/* 3. Specific fix for Klondike columns */
+#klondike-table {
     min-width: 1100px; /* Adjust based on your 138vw observation */
 }
 
@@ -2281,7 +2281,7 @@ body[class*="-game-page"] {
 }
 
 /* 2. Fix the Table Container */
-#solitaire-table, .game-table-layout {
+#klondike-table, .game-table-layout {
     display: flex !important;
     flex-direction: column !important;
     align-items: center;

@@ -1,9 +1,9 @@
 /* ========================================
-   SOLITAIRE-SPECIFIC STYLES
+   KLONDIKE-SPECIFIC STYLES
    ======================================== */
 
-/* Solitaire Table Layout */
-#solitaire-table {
+/* Klondike Table Layout */
+#klondike-table {
     position: relative;
     width: 95vw;
     max-width: 1400px;
@@ -164,9 +164,9 @@
     animation: card-cascade 2s ease-in forwards;
 }
 
-/* Responsive adjustments for Solitaire */
+/* Responsive adjustments for Klondike */
 @media (max-width: 1200px) {
-    #solitaire-table {
+    #klondike-table {
         padding: 20px;
     }
 
@@ -182,7 +182,7 @@
 /* --- KLONDIKE-SPECIFIC STABILITY OVERRIDE --- */
 
 /* 1. Fix the Table Container for proper scrolling */
-#solitaire-table {
+#klondike-table {
     min-width: 600px; /* Prevent columns from wrapping/squishing */
     width: max-content; /* Grow to fit all content */
     overflow-x: auto; /* Enable horizontal scrolling */

@@ -439,7 +439,7 @@ const CommonUtils = {
         const container = options.container
             || (options.containerId ? document.getElementById(options.containerId) : null)
             || document.getElementById('table')
-            || document.getElementById('solitaire-table');
+            || document.getElementById('klondike-table');
         if (!container) return;
 
         const existing = container.querySelector('.table-toast');

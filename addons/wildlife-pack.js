@@ -14,7 +14,7 @@
         ]
     });
 
-    const getTableElement = () => document.getElementById('table') || document.getElementById('solitaire-table');
+    const getTableElement = () => document.getElementById('table') || document.getElementById('klondike-table');
     let creature = null;
     let orca = null;
     let swimTimer = null;

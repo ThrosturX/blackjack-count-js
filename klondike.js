@@ -1,11 +1,11 @@
 /**
- * Solitaire (Klondike) Game Controller
+ * Klondike Solitaire Game Controller
  * Manages game state, UI updates, and user interactions
  */
 
 const DEFAULT_VARIANT_ID = 'classic';
-const SOLITAIRE_VARIANT_ORDER = ['classic', 'vegas', 'open-towers'];
-const SOLITAIRE_VARIANTS = {
+const KLONDIKE_VARIANT_ORDER = ['classic', 'vegas', 'open-towers'];
+const KLONDIKE_VARIANTS = {
     classic: {
         id: 'classic',
         label: 'Classic Klondike',
@@ -60,7 +60,7 @@ const gameState = {
     drawCount: 3,
     isGameWon: false,
     variantId: DEFAULT_VARIANT_ID,
-    variantConfig: SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID]
+    variantConfig: KLONDIKE_VARIANTS[DEFAULT_VARIANT_ID]
 };
 
 // Drag state / UI tuning
@@ -99,7 +99,7 @@ const soundFiles = {
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(soundFiles);
     setupEventListeners();
-    CommonUtils.initCardScaleControls('solitaire-card-scale', 'solitaire-card-scale-value');
+    CommonUtils.initCardScaleControls('klondike-card-scale', 'klondike-card-scale-value');
     initGame();
 });
 
@@ -193,7 +193,7 @@ function initGame() {
         });
 
         if (CommonUtils.isMobile() && dragState.mobileController) {
-            const table = document.getElementById('solitaire-table');
+            const table = document.getElementById('klondike-table');
             table.addEventListener('pointerdown', (e) => {
                 dragState.mobileController.handlePointerDown(e);
             });
@@ -980,7 +980,7 @@ function showHint() {
     if (autoMoves.length > 0) {
         CommonUtils.showTableToast(
             `Hint: Move ${autoMoves[0].card.val}${autoMoves[0].card.suit} to foundation!`,
-            { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+            { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
         );
         return;
     }
@@ -996,7 +996,7 @@ function showHint() {
                     const move = validMoves[0];
                     CommonUtils.showTableToast(
                         `Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`,
-                        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+                        { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
                     );
                     return;
                 }
@@ -1012,7 +1012,7 @@ function showHint() {
             const move = validMoves[0];
             CommonUtils.showTableToast(
                 `Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`,
-                { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+                { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
             );
             return;
         }
@@ -1020,7 +1020,7 @@ function showHint() {
 
     CommonUtils.showTableToast(
         'Hint: Try drawing from the stock or recycling the waste pile!',
-        { variant: 'warn', duration: 2200, containerId: 'solitaire-table' }
+        { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
     );
 }
 
@@ -1374,12 +1374,12 @@ function dealSolvableGame() {
         dealDeck(deck);
         if (isDealLikelySolvable(gameState)) {
             if (attempt > 1) {
-                console.debug(`Solitaire: solvable deal found after ${attempt} attempts.`);
+                console.debug(`Klondike: solvable deal found after ${attempt} attempts.`);
             }
             return;
         }
     }
-    console.warn(`Solitaire: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
+    console.warn(`Klondike: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
 }
 
 function dealDeck(deck) {
@@ -1587,7 +1587,7 @@ function applySimulationWasteToTableauMove(state, options) {
 }
 
 function getActiveVariantConfig() {
-    return SOLITAIRE_VARIANTS[gameState.variantId] || SOLITAIRE_VARIANTS[DEFAULT_VARIANT_ID];
+    return KLONDIKE_VARIANTS[gameState.variantId] || KLONDIKE_VARIANTS[DEFAULT_VARIANT_ID];
 }
 
 function getVariantOptions() {
@@ -1629,8 +1629,8 @@ function populateVariantSelect() {
     if (!select) return;
 
     select.innerHTML = '';
-    SOLITAIRE_VARIANT_ORDER.forEach(variantId => {
-        const variant = SOLITAIRE_VARIANTS[variantId];
+    KLONDIKE_VARIANT_ORDER.forEach(variantId => {
+        const variant = KLONDIKE_VARIANTS[variantId];
         if (!variant) return;
         const option = document.createElement('option');
         option.value = variant.id;
@@ -1646,7 +1646,7 @@ function populateVariantSelect() {
 }
 
 function handleVariantChange(variantId) {
-    if (!SOLITAIRE_VARIANTS[variantId]) return;
+    if (!KLONDIKE_VARIANTS[variantId]) return;
     gameState.variantId = variantId;
     const select = document.getElementById('variant-select');
     if (select) {

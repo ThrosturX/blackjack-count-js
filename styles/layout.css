@@ -246,8 +246,8 @@
         font-size: 1rem;
     }
 
-    /* 8. Fix Solitaire Layout if used */
-    #solitaire-table {
+    /* 8. Fix Klondike Layout if used */
+    #klondike-table {
         height: auto;
         min-height: 40vh;
         border-width: 0;
@@ -274,7 +274,7 @@ body {
 }
 
 /* 2. Set the requested min-width to prevent column squishing/wrapping */
-#solitaire-table,
+#klondike-table,
 #table.freecell-layout,
 #table.spider-layout,
 #table.tabletop-layout {
