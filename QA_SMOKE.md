@@ -21,7 +21,7 @@
 - FreeCell: drag/drop works on desktop and touch, and mobile panning works while a card is selected.
 - Spider: drag/drop works on desktop and touch, mobile panning works while a card is selected, and suit-mode options behave correctly.
 - Pyramid: Draw 1/Draw 3 both work, and pyramid+waste layout is usable in portrait and landscape.
-- Table Top: new deal and target controls work, and pile/foundation/deck configuration is applied correctly.
+- Table Top Sandbox: new deal and target controls work, and pile/foundation/deck configuration is applied correctly.
 
 ## Persistence Checks (Solitaire)
 - State is restored after reload.

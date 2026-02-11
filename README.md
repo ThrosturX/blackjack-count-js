@@ -29,7 +29,7 @@ The project is designed to run from both static hosting and `file://`.
 - Spider: 4-Suit, 2-Suit, and 1-Suit modes.
 - Pyramid: Draw 1 / Draw 3.
 - Blackjack: seats (1-9), decks (1-8), configurable table minimum bet.
-- Table Top: configurable deck count, deck groups, center piles, and foundation counts.
+- Table Top Sandbox: configurable deck count, deck groups, center piles, and foundation counts.
 
 ## Shared Architecture
 

@@ -36,7 +36,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Saves flush on interval and page lifecycle events.
 - On win, clear save state.
 
-## Addons Contract
+## Add-ons Contract
 - Primary source: `window.AddonManifest` from `addons/manifest.js`.
 - `addons.js` supports legacy inline JSON manifest tags for compatibility.
 - Network fallback to `addons/manifest.json` should only be attempted when protocol is not `file:`.

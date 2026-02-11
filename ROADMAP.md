@@ -18,7 +18,7 @@ For Card Playing Suite (working name) in repository `bj_table` (subject to renam
 - Add an ad integration boundary (provider-agnostic interface).
 - Implement non-intrusive placement policy and frequency caps.
 - Add entitlement model for paid "Remove Ads".
-- Add catalog model for optional paid addons/skin packs.
+- Add catalog model for optional paid add-ons/skin packs.
 
 ## Phase 4: Store and Content Expansion
 - Add mini-store UX and purchase restoration flow.
