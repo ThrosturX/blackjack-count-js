@@ -25,6 +25,7 @@ const SPIDER_STACK_OFFSET = 24;
 const SPIDER_DROP_PADDING = 40;
 const SPIDER_COMPLETE_BONUS = 100;
 const SPIDER_MAX_HISTORY = 200;
+const SPIDER_MIN_TABLEAU_CARDS = 26;
 
 const spiderDragState = {
     draggedCards: [],
@@ -204,7 +205,32 @@ function updateUI() {
     updateStock();
     updateFoundations();
     updateStats();
+    scheduleTableauSizing();
 }
+
+function getMaxTableauLength() {
+    return spiderState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
+}
+
+function ensureTableauSizing() {
+    const maxCards = Math.max(SPIDER_MIN_TABLEAU_CARDS, getMaxTableauLength());
+    const stackHeight = CommonUtils.getStackHeight(maxCards, SPIDER_STACK_OFFSET);
+    CommonUtils.ensureTableauMinHeight({
+        table: 'table',
+        topRow: 'spider-top-row',
+        stackOffset: SPIDER_STACK_OFFSET,
+        maxCards
+    });
+    const tableauArea = document.getElementById('spider-tableau');
+    if (tableauArea) {
+        tableauArea.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    }
+    document.querySelectorAll('.spider-column').forEach(column => {
+        column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    });
+}
+
+const scheduleTableauSizing = CommonUtils.createRafScheduler(ensureTableauSizing);
 
 function updateTableau() {
     const tableauArea = document.getElementById('spider-tableau');
@@ -793,6 +819,13 @@ function setupSpiderEventListeners() {
         undoBtn.addEventListener('click', undoLastMove);
     }
 
+    document.getElementById('toggle-game').addEventListener('click', () => {
+        const gameArea = document.getElementById('game-area');
+        const btn = document.getElementById('toggle-game');
+        gameArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
     document.getElementById('toggle-settings').addEventListener('click', () => {
         const settingsArea = document.getElementById('settings-area');
         const btn = document.getElementById('toggle-settings');
@@ -873,4 +906,6 @@ function setupSpiderEventListeners() {
         scheduleThemeSync();
     }
     window.addEventListener('addons:changed', scheduleThemeSync);
+    window.addEventListener('resize', scheduleTableauSizing);
+    window.addEventListener('card-scale:changed', scheduleTableauSizing);
 }

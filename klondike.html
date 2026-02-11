@@ -20,6 +20,7 @@
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
         <h1>Klondike Solitaire</h1>
         <div class="header-toggles">
+            <button id="toggle-game" class="btn-toggle active">Game</button>
             <button id="toggle-settings" class="btn-toggle active">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
             <button id="toggle-themes" class="btn-toggle active">Themes</button>
@@ -27,6 +28,12 @@
         </div>
 
         <div class="game-controls">
+            <div class="controls-section" id="game-area">
+                <button id="new-game-btn" class="game-btn">New Game</button>
+                <button id="undo-btn" class="game-btn">Undo</button>
+                <button id="hint-btn" class="game-btn">Hint</button>
+                <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
+            </div>
             <div class="controls-section" id="settings-area">
                 <div class="stats">Draw:
                     <select id="draw-count-select">
@@ -118,14 +125,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Control bar -->
-    <div id="game-controls-bar">
-        <button id="new-game-btn" class="game-btn">New Game</button>
-        <button id="undo-btn" class="game-btn">Undo</button>
-        <button id="hint-btn" class="game-btn">Hint</button>
-        <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
-    </div>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">

@@ -15,3 +15,14 @@
         overflow: auto;
     }
 }
+
+@media screen and (max-width: 900px) {
+    .header-toggles {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .controls-section {
+        white-space: normal;
+    }
+}

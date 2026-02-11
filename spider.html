@@ -19,6 +19,7 @@
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
         <h1>Spider Solitaire</h1>
         <div class="header-toggles">
+            <button id="toggle-game" class="btn-toggle active">Game</button>
             <button id="toggle-settings" class="btn-toggle active">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
             <button id="toggle-themes" class="btn-toggle active">Themes</button>
@@ -26,10 +27,12 @@
         </div>
 
         <div class="game-controls">
-            <div class="controls-section" id="settings-area">
+            <div class="controls-section" id="game-area">
                 <button id="spider-new-game" class="game-btn">New Game</button>
                 <button id="spider-deal" class="game-btn">Deal Row</button>
                 <button id="spider-undo" class="game-btn" disabled>Undo</button>
+            </div>
+            <div class="controls-section" id="settings-area">
                 <label class="stats">Card Scale:
                     <input id="spider-card-scale" type="range" min="0.6" max="2" step="0.05" value="1">
                     <span id="spider-card-scale-value">100%</span>

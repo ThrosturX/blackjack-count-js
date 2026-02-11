@@ -839,6 +839,13 @@ function setupFreeCellEventListeners() {
         undoBtn.addEventListener('click', undoLastMove);
     }
 
+    document.getElementById('toggle-game').addEventListener('click', () => {
+        const gameArea = document.getElementById('game-area');
+        const btn = document.getElementById('toggle-game');
+        gameArea.classList.toggle('collapsed');
+        btn.classList.toggle('active');
+    });
+
     document.getElementById('toggle-settings').addEventListener('click', () => {
         const settingsArea = document.getElementById('settings-area');
         const btn = document.getElementById('toggle-settings');

@@ -60,6 +60,35 @@ const ui = {
     topCardPreview: document.getElementById('top-card-preview'),
 };
 
+const scheduleTableSizing = CommonUtils.createRafScheduler(ensureTableSizing);
+
+function ensureTableSizing() {
+    const tableEl = document.getElementById('table');
+    if (!tableEl || !ui.seats) return;
+
+    const seatsStyle = getComputedStyle(ui.seats);
+    const gap = parseFloat(seatsStyle.columnGap || seatsStyle.gap) || 0;
+    const paddingLeft = parseFloat(seatsStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(seatsStyle.paddingRight) || 0;
+
+    let seatMinWidth = 130;
+    const seatEl = ui.seats.querySelector('.seat');
+    if (seatEl) {
+        const seatStyle = getComputedStyle(seatEl);
+        const minWidth = parseFloat(seatStyle.minWidth);
+        const width = parseFloat(seatStyle.width);
+        if (Number.isFinite(minWidth) && minWidth > 0) {
+            seatMinWidth = minWidth;
+        } else if (Number.isFinite(width) && width > 0) {
+            seatMinWidth = width;
+        }
+    }
+
+    const seatCount = Math.max(1, state.seatCount || 1);
+    const minWidth = paddingLeft + paddingRight + seatMinWidth * seatCount + gap * Math.max(0, seatCount - 1);
+    tableEl.style.minWidth = `${Math.ceil(minWidth)}px`;
+}
+
 /* --- AUDIO HANDLING --- */
 function preloadAudio() {
     const soundFiles = {
@@ -181,6 +210,9 @@ function init() {
             if (peekCard) peekCard.classList.remove('hidden');
         }
     }
+
+    window.addEventListener('resize', scheduleTableSizing);
+    document.addEventListener('card-scale:changed', scheduleTableSizing);
 
     setTimeout(updateShoeVisual, 100);
 }
@@ -1471,6 +1503,7 @@ function renderSeats() {
     for (let i = 0; i < state.seatCount; i++) {
         ui.seats.innerHTML += getSeatHTML(i);
     }
+    scheduleTableSizing();
 }
 
 function render() {

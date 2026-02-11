@@ -12,10 +12,13 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            height: auto;
             background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
             margin: 0;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
         }
 
         .welcome-container {
