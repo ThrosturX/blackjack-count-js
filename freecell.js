@@ -19,6 +19,8 @@ const freecellState = {
     moveHistory: []
 };
 
+let freecellStateManager = null;
+
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
 const MAX_HISTORY = 200;
@@ -41,138 +43,150 @@ document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(freecellSoundFiles);
     setupFreeCellEventListeners();
     CommonUtils.initCardScaleControls('freecell-card-scale', 'freecell-card-scale-value');
-    initFreeCellGame();
+    freecellStateManager = new CommonUtils.StateManager({
+        gameId: 'freecell',
+        getState: getFreecellSaveState,
+        setState: restoreFreecellState,
+        isWon: () => freecellState.isGameWon
+    });
+    const restored = freecellStateManager.load();
+    if (!restored) {
+        initFreeCellGame();
+    }
 });
 
-function initFreeCellGame() {
-    if (!freecellDragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
-        freecellDragState.mobileController = new MobileSolitaireController({
-            isMovable: (el) => {
-                if (el.dataset.freecell !== undefined) {
-                    return !!freecellState.freeCells[parseInt(el.dataset.freecell, 10)];
+function ensureMobileController() {
+    if (freecellDragState.mobileController || typeof MobileSolitaireController === 'undefined') return;
+    freecellDragState.mobileController = new MobileSolitaireController({
+        isMovable: (el) => {
+            if (el.dataset.freecell !== undefined) {
+                return !!freecellState.freeCells[parseInt(el.dataset.freecell, 10)];
+            }
+            const colIndex = parseInt(el.dataset.column, 10);
+            const rowIndex = parseInt(el.dataset.index, 10);
+            const column = freecellState.tableau[colIndex];
+            return getTableauSequence(column, rowIndex) !== null;
+        },
+        getSequence: (el) => {
+            if (el.dataset.freecell !== undefined) {
+                return [freecellState.freeCells[parseInt(el.dataset.freecell, 10)]];
+            }
+            const colIndex = parseInt(el.dataset.column, 10);
+            const rowIndex = parseInt(el.dataset.index, 10);
+            return getTableauSequence(freecellState.tableau[colIndex], rowIndex) || [];
+        },
+        getSource: (el) => {
+            if (el.dataset.freecell !== undefined) {
+                return { type: 'freecell', index: parseInt(el.dataset.freecell, 10) };
+            }
+            return {
+                type: 'tableau',
+                index: parseInt(el.dataset.column, 10),
+                startIndex: parseInt(el.dataset.index, 10)
+            };
+        },
+        getElements: (el) => collectDraggedElements(el),
+        findDropTarget: (x, y) => {
+            const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                {
+                    selector: '.freecell-slot',
+                    resolve: (el) => ({ type: 'freecell', index: parseInt(el.dataset.freecellIndex, 10) })
+                },
+                {
+                    selector: '.freecell-foundation',
+                    resolve: (el) => ({ type: 'foundation', index: parseInt(el.dataset.foundationIndex, 10) })
+                },
+                {
+                    selector: '.freecell-column',
+                    resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
                 }
-                const colIndex = parseInt(el.dataset.column, 10);
-                const rowIndex = parseInt(el.dataset.index, 10);
-                const column = freecellState.tableau[colIndex];
-                return getTableauSequence(column, rowIndex) !== null;
-            },
-            getSequence: (el) => {
-                if (el.dataset.freecell !== undefined) {
-                    return [freecellState.freeCells[parseInt(el.dataset.freecell, 10)]];
-                }
-                const colIndex = parseInt(el.dataset.column, 10);
-                const rowIndex = parseInt(el.dataset.index, 10);
-                return getTableauSequence(freecellState.tableau[colIndex], rowIndex) || [];
-            },
-            getSource: (el) => {
-                if (el.dataset.freecell !== undefined) {
-                    return { type: 'freecell', index: parseInt(el.dataset.freecell, 10) };
-                }
-                return {
-                    type: 'tableau',
-                    index: parseInt(el.dataset.column, 10),
-                    startIndex: parseInt(el.dataset.index, 10)
-                };
-            },
-            getElements: (el) => collectDraggedElements(el),
-            findDropTarget: (x, y) => {
-                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
-                    {
-                        selector: '.freecell-slot',
-                        resolve: (el) => ({ type: 'freecell', index: parseInt(el.dataset.freecellIndex, 10) })
-                    },
-                    {
-                        selector: '.freecell-foundation',
-                        resolve: (el) => ({ type: 'foundation', index: parseInt(el.dataset.foundationIndex, 10) })
-                    },
-                    {
-                        selector: '.freecell-column',
-                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
+            ]);
+            if (directTarget) return directTarget;
+
+            const freeCellIndex = findFreeCellDropTarget(x, y);
+            if (freeCellIndex !== null) return { type: 'freecell', index: freeCellIndex };
+            const foundationIndex = findFoundationDropPile(x, y);
+            if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
+            const columnIndex = findTableauDropColumn(x, y);
+            if (columnIndex !== null) return { type: 'tableau', index: columnIndex };
+            return null;
+        },
+        isValidMove: (source, target) => {
+            freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
+            freecellDragState.source = source;
+
+            let valid = false;
+            if (target.type === 'freecell') {
+                valid = freecellDragState.draggedCards.length === 1
+                    && !freecellState.freeCells[target.index];
+            } else if (target.type === 'foundation') {
+                valid = freecellDragState.draggedCards.length === 1
+                    && SolitaireLogic.canPlaceOnFoundation(
+                        freecellDragState.draggedCards[0],
+                        freecellState.foundations[target.index]
+                    );
+            } else if (target.type === 'tableau') {
+                if (freecellDragState.draggedCards.length > 0) {
+                    const targetPile = freecellState.tableau[target.index];
+                    if (targetPile.length === 0) {
+                        valid = true;
+                    } else {
+                        const topCard = targetPile[targetPile.length - 1];
+                        valid = !topCard.hidden
+                            && SolitaireLogic.canPlaceOnTableau(freecellDragState.draggedCards[0], topCard);
                     }
-                ]);
-                if (directTarget) return directTarget;
-
-                const freeCellIndex = findFreeCellDropTarget(x, y);
-                if (freeCellIndex !== null) return { type: 'freecell', index: freeCellIndex };
-                const foundationIndex = findFoundationDropPile(x, y);
-                if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
-                const columnIndex = findTableauDropColumn(x, y);
-                if (columnIndex !== null) return { type: 'tableau', index: columnIndex };
-                return null;
-            },
-            isValidMove: (source, target) => {
-                freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
-                freecellDragState.source = source;
-
-                let valid = false;
-                if (target.type === 'freecell') {
-                    valid = freecellDragState.draggedCards.length === 1
-                        && !freecellState.freeCells[target.index];
-                } else if (target.type === 'foundation') {
-                    valid = freecellDragState.draggedCards.length === 1
-                        && SolitaireLogic.canPlaceOnFoundation(
-                            freecellDragState.draggedCards[0],
-                            freecellState.foundations[target.index]
-                        );
-                } else if (target.type === 'tableau') {
-                    if (freecellDragState.draggedCards.length > 0) {
-                        const targetPile = freecellState.tableau[target.index];
-                        if (targetPile.length === 0) {
-                            valid = true;
-                        } else {
-                            const topCard = targetPile[targetPile.length - 1];
-                            valid = !topCard.hidden
-                                && SolitaireLogic.canPlaceOnTableau(freecellDragState.draggedCards[0], topCard);
-                        }
-                    }
-                }
-
-                freecellDragState.draggedCards = [];
-                freecellDragState.source = null;
-                return valid;
-            },
-            executeMove: (source, target) => {
-                freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
-                freecellDragState.source = source;
-                freecellDragState.draggedElements = freecellDragState.mobileController.selectedData.elements;
-
-                let targetEl = null;
-                if (target.type === 'tableau') {
-                    targetEl = document.getElementById(`freecell-column-${target.index}`);
-                } else if (target.type === 'foundation') {
-                    targetEl = document.getElementById(`freecell-foundation-${target.index}`);
-                } else if (target.type === 'freecell') {
-                    targetEl = document.getElementById(`freecell-cell-${target.index}`);
-                }
-
-                if (targetEl) {
-                    const rect = targetEl.getBoundingClientRect();
-                    finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
-                } else {
-                    resetDragState();
-                    updateUI();
                 }
             }
-        });
 
-        if (CommonUtils.isMobile() && freecellDragState.mobileController) {
-            const table = document.getElementById('table');
-            if (table) {
-                table.addEventListener('pointerdown', (e) => {
-                    freecellDragState.mobileController.handlePointerDown(e);
-                });
+            freecellDragState.draggedCards = [];
+            freecellDragState.source = null;
+            return valid;
+        },
+        executeMove: (source, target) => {
+            freecellDragState.draggedCards = freecellDragState.mobileController.selectedData.cards;
+            freecellDragState.source = source;
+            freecellDragState.draggedElements = freecellDragState.mobileController.selectedData.elements;
+
+            let targetEl = null;
+            if (target.type === 'tableau') {
+                targetEl = document.getElementById(`freecell-column-${target.index}`);
+            } else if (target.type === 'foundation') {
+                targetEl = document.getElementById(`freecell-foundation-${target.index}`);
+            } else if (target.type === 'freecell') {
+                targetEl = document.getElementById(`freecell-cell-${target.index}`);
             }
-            document.addEventListener('pointermove', (e) => {
-                freecellDragState.mobileController.handlePointerMove(e);
-            });
-            document.addEventListener('pointerup', (e) => {
-                freecellDragState.mobileController.handlePointerUp(e);
-            });
-            document.addEventListener('pointercancel', (e) => {
-                freecellDragState.mobileController.handlePointerCancel(e);
+
+            if (targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            } else {
+                resetDragState();
+                updateUI();
+            }
+        }
+    });
+
+    if (CommonUtils.isMobile() && freecellDragState.mobileController) {
+        const table = document.getElementById('table');
+        if (table) {
+            table.addEventListener('pointerdown', (e) => {
+                freecellDragState.mobileController.handlePointerDown(e);
             });
         }
+        document.addEventListener('pointermove', (e) => {
+            freecellDragState.mobileController.handlePointerMove(e);
+        });
+        document.addEventListener('pointerup', (e) => {
+            freecellDragState.mobileController.handlePointerUp(e);
+        });
+        document.addEventListener('pointercancel', (e) => {
+            freecellDragState.mobileController.handlePointerCancel(e);
+        });
     }
+}
+
+function initFreeCellGame() {
+    ensureMobileController();
 
     freecellState.tableau = Array.from({ length: 8 }, () => []);
     freecellState.freeCells = Array(4).fill(null);
@@ -192,6 +206,9 @@ function initFreeCellGame() {
     updateUI();
     updateUndoButtonState();
     CommonUtils.playSound('shuffle');
+    if (freecellStateManager) {
+        freecellStateManager.markDirty();
+    }
 }
 
 function startTimer() {
@@ -201,6 +218,47 @@ function startTimer() {
         const seconds = elapsed % 60;
         document.getElementById('freecell-time').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }, 1000);
+}
+
+function getElapsedSeconds(startTime) {
+    if (!Number.isFinite(startTime)) return 0;
+    return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+}
+
+function getFreecellSaveState() {
+    return {
+        tableau: freecellState.tableau,
+        freeCells: freecellState.freeCells,
+        foundations: freecellState.foundations,
+        score: freecellState.score,
+        moves: freecellState.moves,
+        moveHistory: freecellState.moveHistory,
+        elapsedSeconds: getElapsedSeconds(freecellState.startTime),
+        isGameWon: freecellState.isGameWon
+    };
+}
+
+function restoreFreecellState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    ensureMobileController();
+
+    freecellState.tableau = saved.tableau || Array.from({ length: 8 }, () => []);
+    freecellState.freeCells = saved.freeCells || Array(4).fill(null);
+    freecellState.foundations = saved.foundations || [[], [], [], []];
+    freecellState.score = Number.isFinite(saved.score) ? saved.score : 0;
+    freecellState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
+    freecellState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    freecellState.isGameWon = false;
+
+    if (freecellState.timerInterval) {
+        clearInterval(freecellState.timerInterval);
+    }
+    const elapsed = Number.isFinite(saved.elapsedSeconds) ? saved.elapsedSeconds : 0;
+    freecellState.startTime = Date.now() - elapsed * 1000;
+    startTimer();
+
+    updateUI();
+    updateUndoButtonState();
 }
 
 function dealFreeCellLayout() {
@@ -245,6 +303,11 @@ function ensureTableauSizing() {
     const columnMinHeight = stackHeight;
     document.querySelectorAll('.freecell-column').forEach(column => {
         column.style.minHeight = `${Math.ceil(columnMinHeight)}px`;
+    });
+    CommonUtils.ensureScrollableWidth({
+        table: 'table',
+        wrapper: 'freecell-scroll',
+        contentSelectors: ['#freecell-top-row', '#freecell-tableau']
     });
 }
 
@@ -340,6 +403,9 @@ function recordMove(moveEntry) {
         freecellState.moveHistory.shift();
     }
     updateUndoButtonState();
+    if (freecellStateManager) {
+        freecellStateManager.markDirty();
+    }
 }
 
 function updateUndoButtonState() {
@@ -380,6 +446,9 @@ function undoLastMove() {
     freecellState.isGameWon = false;
     updateUI();
     updateUndoButtonState();
+    if (freecellStateManager) {
+        freecellStateManager.markDirty();
+    }
 }
 
 function undoTableauToTableauMove(payload) {
@@ -829,6 +898,9 @@ function checkFreeCellWin() {
         clearInterval(freecellState.timerInterval);
         CommonUtils.playSound('win');
         CommonUtils.showTableToast('You solved FreeCell!', { variant: 'win', duration: 2500 });
+        if (freecellStateManager) {
+            freecellStateManager.clear();
+        }
     }
 }
 
@@ -838,42 +910,6 @@ function setupFreeCellEventListeners() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
     }
-
-    document.getElementById('toggle-game').addEventListener('click', () => {
-        const gameArea = document.getElementById('game-area');
-        const btn = document.getElementById('toggle-game');
-        gameArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-settings').addEventListener('click', () => {
-        const settingsArea = document.getElementById('settings-area');
-        const btn = document.getElementById('toggle-settings');
-        settingsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    const addonsArea = document.getElementById('addons-area');
-    const addonsBtn = document.getElementById('toggle-addons');
-    addonsBtn.addEventListener('click', () => {
-        addonsArea.classList.toggle('collapsed');
-        addonsBtn.classList.toggle('active');
-    });
-    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
-
-    document.getElementById('toggle-themes').addEventListener('click', () => {
-        const themeArea = document.getElementById('theme-area');
-        const btn = document.getElementById('toggle-themes');
-        themeArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-stats').addEventListener('click', () => {
-        const statsArea = document.getElementById('stats-area');
-        const btn = document.getElementById('toggle-stats');
-        statsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');

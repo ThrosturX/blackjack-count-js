@@ -6,7 +6,6 @@
     position: relative;
     width: 95vw;
     max-width: 1200px;
-    min-width: 700px;
     height: 80vh;
     max-height: 80vh;
     margin-top: 20px;
@@ -65,6 +64,12 @@
     min-height: calc(var(--card-h) * 2);
 }
 
+@media (max-width: 900px) {
+    #pyramid-area {
+        transform: translate(12px, -10px);
+    }
+}
+
 .pyramid-card {
     touch-action: manipulation;
 }
@@ -79,16 +84,6 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
-/* Mobile horizontal scroll fix for Pyramid */
-@media (max-width: 900px) {
-    #table.pyramid-layout {
-        width: max-content !important;
-        min-width: 480px;
-        overflow-x: auto;
-        margin: 0 auto;
-    }
-
-    #pyramid-top-row {
-        justify-content: flex-start !important;
-    }
+#table.pyramid-layout.scroll-active #pyramid-top-row {
+    justify-content: flex-start;
 }

@@ -142,6 +142,47 @@ const CommonUtils = {
         };
     },
 
+    ensureScrollableWidth: function (options = {}) {
+        const tableEl = typeof options.table === 'string'
+            ? document.getElementById(options.table)
+            : options.table;
+        if (!tableEl) return false;
+
+        const wrapperEl = typeof options.wrapper === 'string'
+            ? document.getElementById(options.wrapper)
+            : options.wrapper || tableEl.parentElement;
+        if (!wrapperEl) return false;
+
+        const contentSelectors = Array.isArray(options.contentSelectors) ? options.contentSelectors : [];
+        let requiredWidth = Number.isFinite(options.requiredWidth) ? options.requiredWidth : 0;
+        if (!requiredWidth) {
+            let contentWidth = 0;
+            contentSelectors.forEach(selector => {
+                const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+                if (!el) return;
+                contentWidth = Math.max(contentWidth, el.scrollWidth || 0);
+            });
+
+            if (!contentWidth) {
+                contentWidth = tableEl.scrollWidth || 0;
+            }
+
+            const tableStyles = getComputedStyle(tableEl);
+            const paddingLeft = parseFloat(tableStyles.paddingLeft) || 0;
+            const paddingRight = parseFloat(tableStyles.paddingRight) || 0;
+            const extra = Number.isFinite(options.extra) ? options.extra : 0;
+            requiredWidth = Math.ceil(contentWidth + paddingLeft + paddingRight + extra);
+        }
+
+        const wrapperWidth = wrapperEl.getBoundingClientRect().width || 0;
+        const needsScroll = requiredWidth > wrapperWidth + 1;
+
+        tableEl.style.minWidth = needsScroll ? `${requiredWidth}px` : '';
+        tableEl.classList.toggle('scroll-active', needsScroll);
+        wrapperEl.classList.toggle('scroll-active', needsScroll);
+        return needsScroll;
+    },
+
     /**
      * Applies deterministic wear variables based on suit/value.
      * @param {HTMLElement} cardEl
@@ -548,6 +589,124 @@ const CommonUtils = {
             'ontouchstart' in window;
     }
 };
+
+class StateManager {
+    constructor(options = {}) {
+        this.gameId = options.gameId || 'game';
+        this.getState = typeof options.getState === 'function' ? options.getState : null;
+        this.setState = typeof options.setState === 'function' ? options.setState : null;
+        this.isWon = typeof options.isWon === 'function' ? options.isWon : null;
+        this.minIntervalMs = Number.isFinite(options.minIntervalMs) ? options.minIntervalMs : 2000;
+        this.maxIntervalMs = Number.isFinite(options.maxIntervalMs) ? options.maxIntervalMs : 10000;
+        this.key = `bj_table.save.${this.gameId}`;
+        this.lastSave = 0;
+        this.dirty = false;
+        this.saveTimer = null;
+        this.flushTimer = setInterval(() => this.flushIfDirty(), this.maxIntervalMs);
+        if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+            window.addEventListener('pagehide', () => this.saveNow());
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    this.saveNow();
+                }
+            });
+        }
+    }
+
+    load() {
+        if (!this.setState) return false;
+        let raw = null;
+        try {
+            raw = localStorage.getItem(this.key);
+        } catch (err) {
+            return false;
+        }
+        if (!raw) return false;
+        try {
+            const payload = JSON.parse(raw);
+            if (!payload || !payload.state || typeof payload.state !== 'object') return false;
+            if (payload.state.isGameWon) {
+                this.clear();
+                return false;
+            }
+            this.setState(payload.state);
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    markDirty() {
+        this.dirty = true;
+        const now = Date.now();
+        const elapsed = now - this.lastSave;
+        if (elapsed >= this.minIntervalMs) {
+            this.saveNow();
+            return;
+        }
+        this.scheduleSave(this.minIntervalMs - elapsed);
+    }
+
+    scheduleSave(delay) {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
+        this.saveTimer = setTimeout(() => this.saveNow(), Math.max(0, delay));
+    }
+
+    flushIfDirty() {
+        if (!this.dirty) return;
+        const now = Date.now();
+        if (now - this.lastSave >= this.minIntervalMs) {
+            this.saveNow();
+        }
+    }
+
+    saveNow() {
+        if (!this.dirty || !this.getState) return;
+        if (this.isWon && this.isWon()) {
+            this.clear();
+            return;
+        }
+        const state = this.getState();
+        if (!state || typeof state !== 'object') return;
+        try {
+            const payload = {
+                version: 1,
+                updatedAt: Date.now(),
+                state
+            };
+            localStorage.setItem(this.key, JSON.stringify(payload));
+            this.lastSave = Date.now();
+            this.dirty = false;
+        } catch (err) {
+            // Ignore storage failures.
+        }
+    }
+
+    clear() {
+        try {
+            localStorage.removeItem(this.key);
+        } catch (err) {
+            // Ignore storage failures.
+        }
+        this.dirty = false;
+        this.lastSave = Date.now();
+    }
+
+    destroy() {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (this.flushTimer) {
+            clearInterval(this.flushTimer);
+            this.flushTimer = null;
+        }
+    }
+}
+
+CommonUtils.StateManager = StateManager;
 
 // Export for Node.js environments
 if (typeof module !== 'undefined' && module.exports) {

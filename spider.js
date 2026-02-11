@@ -20,6 +20,8 @@ const spiderState = {
     moveHistory: []
 };
 
+let spiderStateManager = null;
+
 const SPIDER_CARD_HEIGHT = 100;
 const SPIDER_STACK_OFFSET = 24;
 const SPIDER_DROP_PADDING = 40;
@@ -44,113 +46,125 @@ document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(spiderSoundFiles);
     setupSpiderEventListeners();
     CommonUtils.initCardScaleControls('spider-card-scale', 'spider-card-scale-value');
-    initSpiderGame();
+    spiderStateManager = new CommonUtils.StateManager({
+        gameId: 'spider',
+        getState: getSpiderSaveState,
+        setState: restoreSpiderState,
+        isWon: () => spiderState.isGameWon
+    });
+    const restored = spiderStateManager.load();
+    if (!restored) {
+        initSpiderGame();
+    }
 });
 
-function initSpiderGame() {
-    if (!spiderDragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
-        spiderDragState.mobileController = new MobileSolitaireController({
-            isMovable: (el) => {
-                const col = parseInt(el.dataset.column, 10);
-                const index = parseInt(el.dataset.index, 10);
-                const column = spiderState.tableau[col];
-                const sequence = column.slice(index);
-                if (!sequence.length || sequence.some(c => c.hidden)) return false;
-                for (let i = 0; i < sequence.length - 1; i++) {
-                    if (sequence[i].rank !== sequence[i + 1].rank + 1) return false;
+function ensureMobileController() {
+    if (spiderDragState.mobileController || typeof MobileSolitaireController === 'undefined') return;
+    spiderDragState.mobileController = new MobileSolitaireController({
+        isMovable: (el) => {
+            const col = parseInt(el.dataset.column, 10);
+            const index = parseInt(el.dataset.index, 10);
+            const column = spiderState.tableau[col];
+            const sequence = column.slice(index);
+            if (!sequence.length || sequence.some(c => c.hidden)) return false;
+            for (let i = 0; i < sequence.length - 1; i++) {
+                if (sequence[i].rank !== sequence[i + 1].rank + 1) return false;
+            }
+            return true;
+        },
+        getSequence: (el) => {
+            const col = parseInt(el.dataset.column, 10);
+            const index = parseInt(el.dataset.index, 10);
+            return spiderState.tableau[col].slice(index);
+        },
+        getSource: (el) => {
+            return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+        },
+        getElements: (el) => collectDraggedElements(el),
+        findDropTarget: (x, y) => {
+            const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                {
+                    selector: '.spider-column',
+                    resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
                 }
-                return true;
-            },
-            getSequence: (el) => {
-                const col = parseInt(el.dataset.column, 10);
-                const index = parseInt(el.dataset.index, 10);
-                return spiderState.tableau[col].slice(index);
-            },
-            getSource: (el) => {
-                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
-            },
-            getElements: (el) => collectDraggedElements(el),
-            findDropTarget: (x, y) => {
-                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
-                    {
-                        selector: '.spider-column',
-                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
-                    }
-                ]);
-                if (directTarget) return directTarget;
+            ]);
+            if (directTarget) return directTarget;
 
-                const colIndex = findTableauDropColumn(x, y);
-                if (colIndex !== null) return { type: 'tableau', index: colIndex };
-                return null;
-            },
-            isValidMove: (source, target) => {
-                spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
-                if (!spiderDragState.draggedCards.length) {
-                    spiderDragState.draggedCards = [];
-                    return false;
-                }
-
-                if (target.type !== 'tableau') {
-                    spiderDragState.draggedCards = [];
-                    return false;
-                }
-
-                if (source.index === target.index) {
-                    spiderDragState.draggedCards = [];
-                    return false;
-                }
-
-                const movingCard = spiderDragState.draggedCards[0];
-                const targetPile = spiderState.tableau[target.index];
-                let valid = false;
-                if (targetPile.length === 0) {
-                    valid = true;
-                } else {
-                    const topCard = targetPile[targetPile.length - 1];
-                    valid = !topCard.hidden && topCard.rank === movingCard.rank + 1;
-                }
-
+            const colIndex = findTableauDropColumn(x, y);
+            if (colIndex !== null) return { type: 'tableau', index: colIndex };
+            return null;
+        },
+        isValidMove: (source, target) => {
+            spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
+            if (!spiderDragState.draggedCards.length) {
                 spiderDragState.draggedCards = [];
-                return valid;
-            },
-            executeMove: (source, target) => {
-                spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
-                spiderDragState.draggedElements = spiderDragState.mobileController.selectedData.elements;
-                spiderDragState.source = source;
-
-                let targetEl = null;
-                if (target.type === 'tableau') {
-                    targetEl = document.getElementById(`spider-column-${target.index}`);
-                }
-
-                if (targetEl) {
-                    const rect = targetEl.getBoundingClientRect();
-                    finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
-                } else {
-                    resetDragState();
-                    updateUI();
-                }
+                return false;
             }
-        });
 
-        if (CommonUtils.isMobile() && spiderDragState.mobileController) {
-            const table = document.getElementById('table');
-            if (table) {
-                table.addEventListener('pointerdown', (e) => {
-                    spiderDragState.mobileController.handlePointerDown(e);
-                });
+            if (target.type !== 'tableau') {
+                spiderDragState.draggedCards = [];
+                return false;
             }
-            document.addEventListener('pointermove', (e) => {
-                spiderDragState.mobileController.handlePointerMove(e);
-            });
-            document.addEventListener('pointerup', (e) => {
-                spiderDragState.mobileController.handlePointerUp(e);
-            });
-            document.addEventListener('pointercancel', (e) => {
-                spiderDragState.mobileController.handlePointerCancel(e);
+
+            if (source.index === target.index) {
+                spiderDragState.draggedCards = [];
+                return false;
+            }
+
+            const movingCard = spiderDragState.draggedCards[0];
+            const targetPile = spiderState.tableau[target.index];
+            let valid = false;
+            if (targetPile.length === 0) {
+                valid = true;
+            } else {
+                const topCard = targetPile[targetPile.length - 1];
+                valid = !topCard.hidden && topCard.rank === movingCard.rank + 1;
+            }
+
+            spiderDragState.draggedCards = [];
+            return valid;
+        },
+        executeMove: (source, target) => {
+            spiderDragState.draggedCards = spiderDragState.mobileController.selectedData.cards;
+            spiderDragState.draggedElements = spiderDragState.mobileController.selectedData.elements;
+            spiderDragState.source = source;
+
+            let targetEl = null;
+            if (target.type === 'tableau') {
+                targetEl = document.getElementById(`spider-column-${target.index}`);
+            }
+
+            if (targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                finishDrag(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            } else {
+                resetDragState();
+                updateUI();
+            }
+        }
+    });
+
+    if (CommonUtils.isMobile() && spiderDragState.mobileController) {
+        const table = document.getElementById('table');
+        if (table) {
+            table.addEventListener('pointerdown', (e) => {
+                spiderDragState.mobileController.handlePointerDown(e);
             });
         }
+        document.addEventListener('pointermove', (e) => {
+            spiderDragState.mobileController.handlePointerMove(e);
+        });
+        document.addEventListener('pointerup', (e) => {
+            spiderDragState.mobileController.handlePointerUp(e);
+        });
+        document.addEventListener('pointercancel', (e) => {
+            spiderDragState.mobileController.handlePointerCancel(e);
+        });
     }
+}
+
+function initSpiderGame() {
+    ensureMobileController();
 
     spiderState.tableau = Array.from({ length: 10 }, () => []);
     spiderState.stock = [];
@@ -170,6 +184,9 @@ function initSpiderGame() {
     updateUI();
     updateUndoButtonState();
     CommonUtils.playSound('shuffle');
+    if (spiderStateManager) {
+        spiderStateManager.markDirty();
+    }
 }
 
 function startTimer() {
@@ -182,6 +199,48 @@ function startTimer() {
             timeEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     }, 1000);
+}
+
+function getElapsedSeconds(startTime) {
+    if (!Number.isFinite(startTime)) return 0;
+    return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+}
+
+function getSpiderSaveState() {
+    return {
+        tableau: spiderState.tableau,
+        stock: spiderState.stock,
+        foundations: spiderState.foundations,
+        score: spiderState.score,
+        moves: spiderState.moves,
+        moveHistory: spiderState.moveHistory,
+        elapsedSeconds: getElapsedSeconds(spiderState.startTime),
+        isGameWon: spiderState.isGameWon
+    };
+}
+
+function restoreSpiderState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    ensureMobileController();
+
+    spiderState.tableau = saved.tableau || Array.from({ length: 10 }, () => []);
+    spiderState.stock = saved.stock || [];
+    spiderState.foundations = saved.foundations || [];
+    spiderState.score = Number.isFinite(saved.score) ? saved.score : 0;
+    spiderState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
+    spiderState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    spiderState.isGameWon = false;
+    spiderState.isDealing = false;
+
+    if (spiderState.timerInterval) {
+        clearInterval(spiderState.timerInterval);
+    }
+    const elapsed = Number.isFinite(saved.elapsedSeconds) ? saved.elapsedSeconds : 0;
+    spiderState.startTime = Date.now() - elapsed * 1000;
+    startTimer();
+
+    updateUI();
+    updateUndoButtonState();
 }
 
 function dealSpiderLayout() {
@@ -227,6 +286,11 @@ function ensureTableauSizing() {
     }
     document.querySelectorAll('.spider-column').forEach(column => {
         column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    });
+    CommonUtils.ensureScrollableWidth({
+        table: 'table',
+        wrapper: 'spider-scroll',
+        contentSelectors: ['#spider-top-row', '#spider-tableau']
     });
 }
 
@@ -329,6 +393,9 @@ function recordMove(moveEntry) {
         spiderState.moveHistory.shift();
     }
     updateUndoButtonState();
+    if (spiderStateManager) {
+        spiderStateManager.markDirty();
+    }
 }
 
 function updateUndoButtonState() {
@@ -357,6 +424,9 @@ function undoLastMove() {
     spiderState.isGameWon = false;
     updateUI();
     updateUndoButtonState();
+    if (spiderStateManager) {
+        spiderStateManager.markDirty();
+    }
 }
 
 function undoTableauToTableauMove(payload) {
@@ -743,6 +813,9 @@ function checkWinCondition() {
         clearInterval(spiderState.timerInterval);
         CommonUtils.playSound('win');
         CommonUtils.showTableToast('You solved Spider Solitaire!', { variant: 'win', duration: 2500 });
+        if (spiderStateManager) {
+            spiderStateManager.clear();
+        }
     }
 }
 
@@ -818,42 +891,6 @@ function setupSpiderEventListeners() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
     }
-
-    document.getElementById('toggle-game').addEventListener('click', () => {
-        const gameArea = document.getElementById('game-area');
-        const btn = document.getElementById('toggle-game');
-        gameArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-settings').addEventListener('click', () => {
-        const settingsArea = document.getElementById('settings-area');
-        const btn = document.getElementById('toggle-settings');
-        settingsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    const addonsArea = document.getElementById('addons-area');
-    const addonsBtn = document.getElementById('toggle-addons');
-    addonsBtn.addEventListener('click', () => {
-        addonsArea.classList.toggle('collapsed');
-        addonsBtn.classList.toggle('active');
-    });
-    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
-
-    document.getElementById('toggle-themes').addEventListener('click', () => {
-        const themeArea = document.getElementById('theme-area');
-        const btn = document.getElementById('toggle-themes');
-        themeArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-stats').addEventListener('click', () => {
-        const statsArea = document.getElementById('stats-area');
-        const btn = document.getElementById('toggle-stats');
-        statsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');

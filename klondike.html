@@ -21,10 +21,10 @@
         <h1>Klondike Solitaire</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
-            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-themes" class="btn-toggle active">Themes</button>
-            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
         <div class="game-controls">
@@ -34,7 +34,7 @@
                 <button id="hint-btn" class="game-btn">Hint</button>
                 <button id="auto-complete-btn" class="game-btn">Auto Complete</button>
             </div>
-            <div class="controls-section" id="settings-area">
+            <div class="controls-section collapsed" id="settings-area">
                 <div class="stats">Draw:
                     <select id="draw-count-select">
                         <option value="1">Draw 1</option>
@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="theme-area">
+            <div class="controls-section collapsed" id="theme-area">
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
@@ -68,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="stats-area">
+            <div class="controls-section collapsed" id="stats-area">
                 <div class="stats">Score: <span id="score-display">0</span></div>
                 <div class="stats">Moves: <span id="moves-display">0</span></div>
                 <div class="stats">Time: <span id="time-display">0:00</span></div>
@@ -76,7 +76,8 @@
         </div>
     </header>
 
-    <main id="klondike-table">
+    <div class="table-scroll" id="klondike-scroll">
+        <main id="klondike-table">
         <!-- Top row: Stock/Waste and Foundations -->
         <div id="top-row">
             <div id="stock-waste-area">
@@ -124,7 +125,8 @@
                 <button id="new-game-from-win" class="game-btn">New Game</button>
             </div>
         </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">
@@ -216,6 +218,7 @@
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="solitaire-logic.js"></script>
     <script src="shared/ui-helpers.js"></script>
     <script src="shared/mobile-controller.js"></script>

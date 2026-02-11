@@ -20,10 +20,10 @@
         <h1>Table Top</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
-            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-themes" class="btn-toggle active">Themes</button>
-            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
         <div class="game-controls">
@@ -36,7 +36,7 @@
                 <div id="tabletop-deal-target-hint" class="stats subtle deal-target-hint"></div>
             </div>
 
-            <div class="controls-section" id="settings-area">
+            <div class="controls-section collapsed" id="settings-area">
                 <label class="stats">Decks:
                     <select id="tabletop-deck-count">
                         <option value="1" selected>1</option>
@@ -97,7 +97,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="theme-area">
+            <div class="controls-section collapsed" id="theme-area">
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
@@ -106,7 +106,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="stats-area">
+            <div class="controls-section collapsed" id="stats-area">
                 <div class="stats">Deck: <span id="tabletop-deck-remaining">0</span></div>
                 <div class="stats" id="tabletop-pile-count-stat">Piles: <span id="tabletop-pile-count-display">0</span></div>
                 <div class="stats">Foundations: <span id="tabletop-foundation-count-display">0</span></div>
@@ -115,14 +115,16 @@
         </div>
     </header>
 
-    <main id="table" class="tabletop-layout">
-        <div id="tabletop-top-row">
-            <div id="tabletop-deck-area" class="tabletop-zone tabletop-zone--decks" aria-label="Decks"></div>
-            <div id="tabletop-pile-area" class="tabletop-zone tabletop-zone--piles" aria-label="Center Piles"></div>
-            <div id="tabletop-foundation-area" class="tabletop-zone tabletop-zone--waste" aria-label="Foundations"></div>
-        </div>
-        <div id="tabletop-tableau" aria-label="Tableau"></div>
-    </main>
+    <div class="table-scroll" id="tabletop-scroll">
+        <main id="table" class="tabletop-layout">
+            <div id="tabletop-top-row">
+                <div id="tabletop-deck-area" class="tabletop-zone tabletop-zone--decks" aria-label="Decks"></div>
+                <div id="tabletop-pile-area" class="tabletop-zone tabletop-zone--piles" aria-label="Center Piles"></div>
+                <div id="tabletop-foundation-area" class="tabletop-zone tabletop-zone--waste" aria-label="Foundations"></div>
+            </div>
+            <div id="tabletop-tableau" aria-label="Tableau"></div>
+        </main>
+    </div>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">
@@ -214,6 +216,7 @@
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="shared/ui-helpers.js"></script>
     <script src="tabletop.js"></script>
 </body>

@@ -20,10 +20,10 @@
         <h1>Spider Solitaire</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
-            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-themes" class="btn-toggle active">Themes</button>
-            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
         <div class="game-controls">
@@ -32,7 +32,7 @@
                 <button id="spider-deal" class="game-btn">Deal Row</button>
                 <button id="spider-undo" class="game-btn" disabled>Undo</button>
             </div>
-            <div class="controls-section" id="settings-area">
+            <div class="controls-section collapsed" id="settings-area">
                 <label class="stats">Card Scale:
                     <input id="spider-card-scale" type="range" min="0.6" max="2" step="0.05" value="1">
                     <span id="spider-card-scale-value">100%</span>
@@ -47,7 +47,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="theme-area">
+            <div class="controls-section collapsed" id="theme-area">
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
@@ -56,7 +56,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="stats-area">
+            <div class="controls-section collapsed" id="stats-area">
                 <div class="stats">Moves: <span id="spider-moves">0</span></div>
                 <div class="stats">Time: <span id="spider-time">0:00</span></div>
                 <div class="stats">Score: <span id="spider-score">0</span></div>
@@ -64,13 +64,15 @@
         </div>
     </header>
 
-    <main id="table" class="spider-layout">
-        <div id="spider-top-row">
-            <div id="spider-stock" class="pile"></div>
-            <div id="spider-foundations"></div>
-        </div>
-        <div id="spider-tableau"></div>
-    </main>
+    <div class="table-scroll" id="spider-scroll">
+        <main id="table" class="spider-layout">
+            <div id="spider-top-row">
+                <div id="spider-stock" class="pile"></div>
+                <div id="spider-foundations"></div>
+            </div>
+            <div id="spider-tableau"></div>
+        </main>
+    </div>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">
@@ -162,6 +164,7 @@
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="shared/ui-helpers.js"></script>
     <script src="shared/mobile-controller.js"></script>
     <script src="spider.js"></script>

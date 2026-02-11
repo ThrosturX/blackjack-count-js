@@ -18,6 +18,13 @@
     transition: background 0.5s, border-color 0.5s;
 }
 
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
 #seats {
     display: flex;
     justify-content: center;

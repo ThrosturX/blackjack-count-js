@@ -63,6 +63,8 @@ const gameState = {
     variantConfig: KLONDIKE_VARIANTS[DEFAULT_VARIANT_ID]
 };
 
+let klondikeStateManager = null;
+
 // Drag state / UI tuning
 const DRAG_MOVE_THRESHOLD = 6;
 const CARD_HEIGHT = 100;
@@ -101,126 +103,140 @@ document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(soundFiles);
     setupEventListeners();
     CommonUtils.initCardScaleControls('klondike-card-scale', 'klondike-card-scale-value');
-    initGame();
+    klondikeStateManager = new CommonUtils.StateManager({
+        gameId: 'klondike',
+        getState: getKlondikeSaveState,
+        setState: restoreKlondikeState,
+        isWon: () => gameState.isGameWon
+    });
+    const restored = klondikeStateManager.load();
+    if (!restored) {
+        initGame();
+    }
 });
+
+/**
+ * Ensure mobile controller bindings are ready.
+ */
+function ensureMobileController() {
+    if (dragState.mobileController || typeof MobileSolitaireController === 'undefined') return;
+    dragState.mobileController = new MobileSolitaireController({
+        isMovable: (el) => {
+            if (el.dataset.waste) return true;
+            if (el.dataset.foundation !== undefined) return true;
+            const cardIndex = parseInt(el.dataset.index, 10);
+            const col = parseInt(el.dataset.column, 10);
+            const column = gameState.tableau[col];
+            const card = column ? column[cardIndex] : null;
+            return card && !card.hidden;
+        },
+        getSequence: (el) => {
+            if (el.dataset.waste) {
+                return [gameState.waste[gameState.waste.length - 1]];
+            } else if (el.dataset.foundation !== undefined) {
+                const idx = parseInt(el.dataset.foundation, 10);
+                const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
+                return card ? [card] : [];
+            } else {
+                const col = parseInt(el.dataset.column, 10);
+                const index = parseInt(el.dataset.index, 10);
+                return gameState.tableau[col].slice(index);
+            }
+        },
+        getSource: (el) => {
+            if (el.dataset.waste) return { type: 'waste' };
+            if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
+            return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
+        },
+        getElements: (el) => collectDraggedElements(el),
+        findDropTarget: (x, y) => {
+            const directTarget = UIHelpers.getTargetFromPoint(x, y, [
+                {
+                    selector: '.foundation-pile',
+                    resolve: (el) => ({ type: 'foundation', index: parseInt(el.id.split('-')[1], 10) })
+                },
+                {
+                    selector: '.tableau-column',
+                    resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[1], 10) })
+                }
+            ]);
+            if (directTarget) return directTarget;
+
+            const colIndex = findTableauDropColumn(x, y);
+            if (colIndex !== null) return { type: 'tableau', index: colIndex };
+            const foundationIndex = findFoundationDropPile(x, y);
+            if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
+            return null;
+        },
+        isValidMove: (source, target) => {
+            // Setup temporary drag state for validity checks
+            dragState.draggedCards = dragState.mobileController.selectedData.cards;
+            dragState.sourcePile = source.type;
+            dragState.sourceIndex = source.index;
+
+            let valid = false;
+            if (target.type === 'tableau') {
+                valid = canDropOnTableau(target.index);
+            } else if (target.type === 'foundation') {
+                valid = canDropOnFoundation(target.index);
+            }
+
+            // Cleanup temp state
+            dragState.draggedCards = [];
+            dragState.sourcePile = null;
+            dragState.sourceIndex = null;
+            return valid;
+        },
+        executeMove: (source, target) => {
+            // Setup drag state for finishDrag with necessary info
+            dragState.draggedCards = dragState.mobileController.selectedData.cards;
+            dragState.sourcePile = source.type;
+            dragState.sourceIndex = source.index;
+
+            let targetEl = null;
+            if (target.type === 'tableau') {
+                targetEl = document.getElementById(`tableau-${target.index}`);
+            } else if (target.type === 'foundation') {
+                targetEl = document.getElementById(`foundation-${target.index}`);
+            }
+
+            if (targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                // Simulate a drop point near the center of the target element
+                const clientX = rect.left + rect.width / 2;
+                const clientY = rect.top + rect.height / 2;
+
+                finishDrag(clientX, clientY);
+            } else {
+                // If for some reason the target element is not found, just reset and update UI
+                resetDragState(); // Ensure drag state is clean
+                updateUI();
+            }
+        }
+    });
+
+    if (CommonUtils.isMobile() && dragState.mobileController) {
+        const table = document.getElementById('klondike-table');
+        table.addEventListener('pointerdown', (e) => {
+            dragState.mobileController.handlePointerDown(e);
+        });
+        document.addEventListener('pointermove', (e) => {
+            dragState.mobileController.handlePointerMove(e);
+        });
+        document.addEventListener('pointerup', (e) => {
+            dragState.mobileController.handlePointerUp(e);
+        });
+        document.addEventListener('pointercancel', (e) => {
+            dragState.mobileController.handlePointerCancel(e);
+        });
+    }
+}
 
 /**
  * Initialize a new game
  */
 function initGame() {
-    // Initialize mobile controller if not already done
-    if (!dragState.mobileController && typeof MobileSolitaireController !== 'undefined') {
-        dragState.mobileController = new MobileSolitaireController({
-            isMovable: (el) => {
-                if (el.dataset.waste) return true;
-                if (el.dataset.foundation !== undefined) return true;
-                const cardIndex = parseInt(el.dataset.index, 10);
-                const col = parseInt(el.dataset.column, 10);
-                const column = gameState.tableau[col];
-                const card = column ? column[cardIndex] : null;
-                return card && !card.hidden;
-            },
-            getSequence: (el) => {
-                if (el.dataset.waste) {
-                    return [gameState.waste[gameState.waste.length - 1]];
-                } else if (el.dataset.foundation !== undefined) {
-                    const idx = parseInt(el.dataset.foundation, 10);
-                    const card = gameState.foundations[idx][gameState.foundations[idx].length - 1];
-                    return card ? [card] : [];
-                } else {
-                    const col = parseInt(el.dataset.column, 10);
-                    const index = parseInt(el.dataset.index, 10);
-                    return gameState.tableau[col].slice(index);
-                }
-            },
-            getSource: (el) => {
-                if (el.dataset.waste) return { type: 'waste' };
-                if (el.dataset.foundation !== undefined) return { type: 'foundation', index: parseInt(el.dataset.foundation, 10) };
-                return { type: 'tableau', index: parseInt(el.dataset.column, 10) };
-            },
-            getElements: (el) => collectDraggedElements(el),
-            findDropTarget: (x, y) => {
-                const directTarget = UIHelpers.getTargetFromPoint(x, y, [
-                    {
-                        selector: '.foundation-pile',
-                        resolve: (el) => ({ type: 'foundation', index: parseInt(el.id.split('-')[1], 10) })
-                    },
-                    {
-                        selector: '.tableau-column',
-                        resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[1], 10) })
-                    }
-                ]);
-                if (directTarget) return directTarget;
-
-                const colIndex = findTableauDropColumn(x, y);
-                if (colIndex !== null) return { type: 'tableau', index: colIndex };
-                const foundationIndex = findFoundationDropPile(x, y);
-                if (foundationIndex !== null) return { type: 'foundation', index: foundationIndex };
-                return null;
-            },
-            isValidMove: (source, target) => {
-                // Setup temporary drag state for validity checks
-                dragState.draggedCards = dragState.mobileController.selectedData.cards;
-                dragState.sourcePile = source.type;
-                dragState.sourceIndex = source.index;
-
-                let valid = false;
-                if (target.type === 'tableau') {
-                    valid = canDropOnTableau(target.index);
-                } else if (target.type === 'foundation') {
-                    valid = canDropOnFoundation(target.index);
-                }
-
-                // Cleanup temp state
-                dragState.draggedCards = [];
-                dragState.sourcePile = null;
-                dragState.sourceIndex = null;
-                return valid;
-            },
-            executeMove: (source, target) => {
-                // Setup drag state for finishDrag with necessary info
-                dragState.draggedCards = dragState.mobileController.selectedData.cards;
-                dragState.sourcePile = source.type;
-                dragState.sourceIndex = source.index;
-
-                let targetEl = null;
-                if (target.type === 'tableau') {
-                    targetEl = document.getElementById(`tableau-${target.index}`);
-                } else if (target.type === 'foundation') {
-                    targetEl = document.getElementById(`foundation-${target.index}`);
-                }
-
-                if (targetEl) {
-                    const rect = targetEl.getBoundingClientRect();
-                    // Simulate a drop point near the center of the target element
-                    const clientX = rect.left + rect.width / 2;
-                    const clientY = rect.top + rect.height / 2;
-
-                    finishDrag(clientX, clientY);
-                } else {
-                    // If for some reason the target element is not found, just reset and update UI
-                    resetDragState(); // Ensure drag state is clean
-                    updateUI();
-                }
-            }
-        });
-
-        if (CommonUtils.isMobile() && dragState.mobileController) {
-            const table = document.getElementById('klondike-table');
-            table.addEventListener('pointerdown', (e) => {
-                dragState.mobileController.handlePointerDown(e);
-            });
-            document.addEventListener('pointermove', (e) => {
-                dragState.mobileController.handlePointerMove(e);
-            });
-            document.addEventListener('pointerup', (e) => {
-                dragState.mobileController.handlePointerUp(e);
-            });
-            document.addEventListener('pointercancel', (e) => {
-                dragState.mobileController.handlePointerCancel(e);
-            });
-        }
-    }
+    ensureMobileController();
 
     // Reset state
     gameState.tableau = [[], [], [], [], [], [], []];
@@ -252,6 +268,9 @@ function initGame() {
     updateUndoButtonState();
 
     CommonUtils.playSound('shuffle');
+    if (klondikeStateManager) {
+        klondikeStateManager.markDirty();
+    }
 }
 
 /**
@@ -265,6 +284,74 @@ function startTimer() {
         document.getElementById('time-display').textContent =
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }, 1000);
+}
+
+function getElapsedSeconds(startTime) {
+    if (!Number.isFinite(startTime)) return 0;
+    return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+}
+
+function getKlondikeSaveState() {
+    return {
+        tableau: gameState.tableau,
+        foundations: gameState.foundations,
+        stock: gameState.stock,
+        waste: gameState.waste,
+        score: gameState.score,
+        moves: gameState.moves,
+        moveHistory: gameState.moveHistory,
+        drawCount: gameState.drawCount,
+        variantId: gameState.variantId,
+        elapsedSeconds: getElapsedSeconds(gameState.startTime),
+        isGameWon: gameState.isGameWon
+    };
+}
+
+function syncVariantUI() {
+    const variant = getActiveVariantConfig();
+    gameState.variantConfig = variant;
+
+    const drawSelect = document.getElementById('draw-count-select');
+    if (drawSelect) {
+        drawSelect.value = gameState.drawCount.toString();
+        drawSelect.disabled = !!variant.lockDrawCount;
+    }
+    const variantSelect = document.getElementById('variant-select');
+    if (variantSelect) {
+        variantSelect.value = gameState.variantId;
+    }
+    updateVariantDescription(variant.description);
+}
+
+function restoreKlondikeState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    ensureMobileController();
+
+    gameState.tableau = saved.tableau || [[], [], [], [], [], [], []];
+    gameState.foundations = saved.foundations || [[], [], [], []];
+    gameState.stock = saved.stock || [];
+    gameState.waste = saved.waste || [];
+    gameState.score = Number.isFinite(saved.score) ? saved.score : 0;
+    gameState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
+    gameState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    gameState.isGameWon = false;
+
+    gameState.variantId = saved.variantId || DEFAULT_VARIANT_ID;
+    const variant = getActiveVariantConfig();
+    const savedDraw = Number.isFinite(saved.drawCount) ? saved.drawCount : variant.drawCount;
+    gameState.drawCount = variant.lockDrawCount ? variant.drawCount : savedDraw;
+    syncVariantUI();
+
+    if (gameState.timerInterval) {
+        clearInterval(gameState.timerInterval);
+    }
+    const elapsed = Number.isFinite(saved.elapsedSeconds) ? saved.elapsedSeconds : 0;
+    gameState.startTime = Date.now() - elapsed * 1000;
+    startTimer();
+
+    updateUI();
+    hideWinOverlay();
+    updateUndoButtonState();
 }
 
 /**
@@ -298,6 +385,11 @@ function ensureTableauSizing() {
     }
     document.querySelectorAll('.tableau-column').forEach(column => {
         column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+    });
+    CommonUtils.ensureScrollableWidth({
+        table: 'klondike-table',
+        wrapper: 'klondike-scroll',
+        contentSelectors: ['#top-row', '#tableau-area']
     });
 }
 
@@ -951,6 +1043,9 @@ function checkWinCondition() {
         clearInterval(gameState.timerInterval);
         showWinOverlay();
         CommonUtils.playSound('win');
+        if (klondikeStateManager) {
+            klondikeStateManager.clear();
+        }
     }
 }
 
@@ -1083,43 +1178,6 @@ function setupEventListeners() {
     document.getElementById('hint-btn').addEventListener('click', showHint);
     document.getElementById('auto-complete-btn').addEventListener('click', autoComplete);
 
-    // Settings toggles
-    document.getElementById('toggle-game').addEventListener('click', () => {
-        const gameArea = document.getElementById('game-area');
-        const btn = document.getElementById('toggle-game');
-        gameArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-settings').addEventListener('click', () => {
-        const settingsArea = document.getElementById('settings-area');
-        const btn = document.getElementById('toggle-settings');
-        settingsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-themes').addEventListener('click', () => {
-        const themeArea = document.getElementById('theme-area');
-        const btn = document.getElementById('toggle-themes');
-        themeArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    const addonsArea = document.getElementById('addons-area');
-    const addonsBtn = document.getElementById('toggle-addons');
-    addonsBtn.addEventListener('click', () => {
-        addonsArea.classList.toggle('collapsed');
-        addonsBtn.classList.toggle('active');
-    });
-    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
-
-    document.getElementById('toggle-stats').addEventListener('click', () => {
-        const statsArea = document.getElementById('stats-area');
-        const btn = document.getElementById('toggle-stats');
-        statsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
         if (!select) return;
@@ -1162,6 +1220,9 @@ function setupEventListeners() {
     // Draw count
     document.getElementById('draw-count-select').addEventListener('change', (e) => {
         gameState.drawCount = parseInt(e.target.value);
+        if (klondikeStateManager) {
+            klondikeStateManager.markDirty();
+        }
     });
 
     populateVariantSelect();
@@ -1309,6 +1370,9 @@ function recordMove(moveEntry) {
         gameState.moveHistory.shift();
     }
     updateUndoButtonState();
+    if (klondikeStateManager) {
+        klondikeStateManager.markDirty();
+    }
 }
 
 function updateUndoButtonState() {
@@ -1357,6 +1421,9 @@ function undoLastMove() {
     hideWinOverlay();
     updateUI();
     updateUndoButtonState();
+    if (klondikeStateManager) {
+        klondikeStateManager.markDirty();
+    }
 }
 
 function undoDrawMove(payload) {

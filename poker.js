@@ -41,6 +41,39 @@ const ui = {
     cardStack: document.getElementById('card-stack')
 };
 
+const scheduleTableSizing = CommonUtils.createRafScheduler(ensureTableSizing);
+
+function ensureTableSizing() {
+    const tableEl = document.getElementById('table');
+    if (!tableEl || !ui.seats) return;
+
+    const seatsStyle = getComputedStyle(ui.seats);
+    const gap = parseFloat(seatsStyle.columnGap || seatsStyle.gap) || 0;
+    const paddingLeft = parseFloat(seatsStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(seatsStyle.paddingRight) || 0;
+
+    let seatMinWidth = 130;
+    const seatEl = ui.seats.querySelector('.seat');
+    if (seatEl) {
+        const seatStyle = getComputedStyle(seatEl);
+        const minWidth = parseFloat(seatStyle.minWidth);
+        const width = parseFloat(seatStyle.width);
+        if (Number.isFinite(minWidth) && minWidth > 0) {
+            seatMinWidth = minWidth;
+        } else if (Number.isFinite(width) && width > 0) {
+            seatMinWidth = width;
+        }
+    }
+
+    const seatCount = Math.max(1, state.seatCount || 1);
+    const minWidth = paddingLeft + paddingRight + seatMinWidth * seatCount + gap * Math.max(0, seatCount - 1);
+    CommonUtils.ensureScrollableWidth({
+        table: tableEl,
+        wrapper: 'poker-scroll',
+        requiredWidth: Math.ceil(minWidth)
+    });
+}
+
 function init() {
     state.players = Array(state.seatCount).fill(null);
     CommonUtils.preloadAudio({
@@ -70,38 +103,11 @@ function init() {
         });
     }
 
-    if (ui.toggleSettings) {
-        ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
-    }
-    if (ui.toggleThemes) {
-        ui.toggleThemes.addEventListener('click', () => toggleControlsArea('themes'));
-    }
-    if (ui.toggleAddons) {
-        ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
-        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
-    }
-    if (ui.toggleStats) {
-        ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
-    }
+    window.addEventListener('resize', scheduleTableSizing);
+    window.addEventListener('card-scale:changed', scheduleTableSizing);
 
     renderSeats();
     setTimeout(updateShoeVisual, 100);
-}
-
-function toggleControlsArea(type) {
-    if (type === 'settings') {
-        const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
-        ui.toggleSettings.classList.toggle('active', !isCollapsed);
-    } else if (type === 'themes') {
-        const isCollapsed = ui.themeArea.classList.toggle('collapsed');
-        ui.toggleThemes.classList.toggle('active', !isCollapsed);
-    } else if (type === 'addons') {
-        const isCollapsed = ui.addonsArea.classList.toggle('collapsed');
-        ui.toggleAddons.classList.toggle('active', !isCollapsed);
-    } else if (type === 'stats') {
-        const isCollapsed = ui.statsArea.classList.toggle('collapsed');
-        ui.toggleStats.classList.toggle('active', !isCollapsed);
-    }
 }
 
 function updateDeckStyle() {
@@ -450,6 +456,7 @@ function renderSeats() {
     for (let i = 0; i < state.seatCount; i++) {
         ui.seats.innerHTML += getSeatHTML(i);
     }
+    scheduleTableSizing();
 }
 
 function renderSeat(idx) {

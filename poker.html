@@ -20,14 +20,14 @@
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
         <h1>Texas Hold'em Poker</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-themes" class="btn-toggle active">Themes</button>
-            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
         </div>
 
         <div class="game-controls">
-            <div class="controls-section" id="settings-area">
+            <div class="controls-section collapsed" id="settings-area">
                 <div class="stats">Seats:
                     <select id="seat-select">
                         <option value="2">2 (Heads up)</option>
@@ -47,7 +47,7 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="theme-area">
+            <div class="controls-section collapsed" id="theme-area">
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
@@ -56,14 +56,15 @@
                 </div>
             </div>
 
-            <div class="controls-section" id="stats-area">
+            <div class="controls-section collapsed" id="stats-area">
                 <div class="stats">Hand: <span id="game-phase-text">Wait</span></div>
                 <div class="stats">Pot: <span id="pot-total">$0</span></div>
             </div>
         </div>
     </header>
 
-    <main id="table">
+    <div class="table-scroll" id="poker-scroll">
+        <main id="table">
         <!-- Center Overlay for Timer & Results -->
         <div id="center-overlay">
             <div id="overlay-main" class="overlay-text"></div>
@@ -91,7 +92,8 @@
         <div id="seats">
             <!-- Seats injected by JS -->
         </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
     <script id="addons-manifest" type="application/json">
@@ -183,6 +185,7 @@
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="poker-logic.js"></script>
     <script src="poker.js"></script>
 </body>

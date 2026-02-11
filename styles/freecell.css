@@ -61,7 +61,6 @@
     position: relative;
     width: 95vw;
     max-width: 1000px;
-    min-width: 700px;
     margin-top: 20px;
     background: var(--table-bg);
     border-radius: 40px;
@@ -85,18 +84,7 @@
     flex-wrap: wrap;
 }
 
-/* Mobile horizontal scroll fix for FreeCell */
-@media (max-width: 900px) {
-    #table.freecell-layout {
-        width: max-content !important;
-        min-width: 400px;
-        overflow-x: auto;
-        margin: 0 auto;               /* keeps it centered but scrollable */
-    }
-
-    #freecell-top-row,
-    #freecell-tableau {
-        justify-content: flex-start !important;   /* stop centering */
-    }
+#table.freecell-layout.scroll-active #freecell-top-row,
+#table.freecell-layout.scroll-active #freecell-tableau {
+    justify-content: flex-start;
 }
-

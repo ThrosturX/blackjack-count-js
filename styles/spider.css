@@ -6,7 +6,6 @@
     position: relative;
     width: 95vw;
     max-width: 1000px;
-    min-width: 700px;
     height: 80vh;
     max-height: 80vh;
     margin-top: 20px;
@@ -93,22 +92,12 @@
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Mobile horizontal scroll fix for Spider */
-@media (max-width: 900px) {
-    #table.spider-layout {
-        width: max-content !important;
-        min-width: 480px;
-        overflow-x: auto;
-        margin: 0 auto;
-    }
+#table.spider-layout.scroll-active #spider-top-row {
+    justify-content: flex-start;
+    gap: 24px;
+}
 
-    #spider-top-row {
-        justify-content: flex-start !important;
-        gap: 24px;
-    }
-
-    #spider-foundations,
-    #spider-tableau {
-        justify-content: flex-start !important;
-    }
+#table.spider-layout.scroll-active #spider-foundations,
+#table.spider-layout.scroll-active #spider-tableau {
+    justify-content: flex-start;
 }

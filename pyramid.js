@@ -24,9 +24,21 @@ const pyramidState = {
     moveHistory: []
 };
 
+let pyramidStateManager = null;
+
 const selectionState = {
     selected: []
 };
+
+function ensurePyramidSizing() {
+    CommonUtils.ensureScrollableWidth({
+        table: 'table',
+        wrapper: 'pyramid-scroll',
+        contentSelectors: ['#pyramid-top-row', '#pyramid-area']
+    });
+}
+
+const schedulePyramidSizing = CommonUtils.createRafScheduler(ensurePyramidSizing);
 
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(pyramidSoundFiles);
@@ -39,8 +51,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', () => updateUI());
+    window.addEventListener('card-scale:changed', schedulePyramidSizing);
 
-    initPyramidGame();
+    pyramidStateManager = new CommonUtils.StateManager({
+        gameId: 'pyramid',
+        getState: getPyramidSaveState,
+        setState: restorePyramidState,
+        isWon: () => pyramidState.isGameWon
+    });
+    const restored = pyramidStateManager.load();
+    if (!restored) {
+        initPyramidGame();
+    }
 });
 
 function initPyramidGame() {
@@ -64,6 +86,9 @@ function initPyramidGame() {
     updateUI();
     updateUndoButtonState();
     CommonUtils.playSound('shuffle');
+    if (pyramidStateManager) {
+        pyramidStateManager.markDirty();
+    }
 }
 
 function startTimer() {
@@ -76,6 +101,46 @@ function startTimer() {
             timeEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     }, 1000);
+}
+
+function getElapsedSeconds(startTime) {
+    if (!Number.isFinite(startTime)) return 0;
+    return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+}
+
+function getPyramidSaveState() {
+    return {
+        pyramid: pyramidState.pyramid,
+        stock: pyramidState.stock,
+        waste: pyramidState.waste,
+        score: pyramidState.score,
+        moves: pyramidState.moves,
+        moveHistory: pyramidState.moveHistory,
+        elapsedSeconds: getElapsedSeconds(pyramidState.startTime),
+        isGameWon: pyramidState.isGameWon
+    };
+}
+
+function restorePyramidState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    pyramidState.pyramid = saved.pyramid || [];
+    pyramidState.stock = saved.stock || [];
+    pyramidState.waste = saved.waste || [];
+    pyramidState.score = Number.isFinite(saved.score) ? saved.score : 0;
+    pyramidState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
+    pyramidState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    pyramidState.isGameWon = false;
+
+    clearSelection();
+    if (pyramidState.timerInterval) {
+        clearInterval(pyramidState.timerInterval);
+    }
+    const elapsed = Number.isFinite(saved.elapsedSeconds) ? saved.elapsedSeconds : 0;
+    pyramidState.startTime = Date.now() - elapsed * 1000;
+    startTimer();
+
+    updateUI();
+    updateUndoButtonState();
 }
 
 function dealPyramid() {
@@ -104,6 +169,7 @@ function updateUI() {
     updateWaste();
     updatePyramid();
     updateStats();
+    schedulePyramidSizing();
 }
 
 function updateStock() {
@@ -370,6 +436,9 @@ function checkWinCondition() {
     clearInterval(pyramidState.timerInterval);
     CommonUtils.playSound('win');
     CommonUtils.showTableToast('You solved Pyramid!', { variant: 'win', duration: 2500 });
+    if (pyramidStateManager) {
+        pyramidStateManager.clear();
+    }
 }
 
 function recordMove(entry) {
@@ -378,6 +447,9 @@ function recordMove(entry) {
         pyramidState.moveHistory.shift();
     }
     updateUndoButtonState();
+    if (pyramidStateManager) {
+        pyramidStateManager.markDirty();
+    }
 }
 
 function updateUndoButtonState() {
@@ -428,6 +500,9 @@ function undoLastMove() {
 
     updateUI();
     updateUndoButtonState();
+    if (pyramidStateManager) {
+        pyramidStateManager.markDirty();
+    }
 }
 
 function getPyramidMetrics() {
@@ -456,42 +531,6 @@ function setupPyramidEventListeners() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
     }
-
-    document.getElementById('toggle-game').addEventListener('click', () => {
-        const gameArea = document.getElementById('game-area');
-        const btn = document.getElementById('toggle-game');
-        gameArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-settings').addEventListener('click', () => {
-        const settingsArea = document.getElementById('settings-area');
-        const btn = document.getElementById('toggle-settings');
-        settingsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    const addonsArea = document.getElementById('addons-area');
-    const addonsBtn = document.getElementById('toggle-addons');
-    addonsBtn.addEventListener('click', () => {
-        addonsArea.classList.toggle('collapsed');
-        addonsBtn.classList.toggle('active');
-    });
-    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
-
-    document.getElementById('toggle-themes').addEventListener('click', () => {
-        const themeArea = document.getElementById('theme-area');
-        const btn = document.getElementById('toggle-themes');
-        themeArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-stats').addEventListener('click', () => {
-        const statsArea = document.getElementById('stats-area');
-        const btn = document.getElementById('toggle-stats');
-        statsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');

@@ -68,6 +68,16 @@ const tabletopSoundFiles = {
     shuffle: ['shuffle.wav']
 };
 
+const scheduleTabletopSizing = CommonUtils.createRafScheduler(ensureTabletopSizing);
+
+function ensureTabletopSizing() {
+    CommonUtils.ensureScrollableWidth({
+        table: 'table',
+        wrapper: 'tabletop-scroll',
+        contentSelectors: ['#tabletop-top-row', '#tabletop-tableau']
+    });
+}
+
 let nextTabletopCardId = 1;
 let stackMenuEl = null;
 let currentScale = 1;
@@ -80,6 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabletopEventListeners();
     initCardScale();
     initTabletop();
+    window.addEventListener('resize', scheduleTabletopSizing);
+    window.addEventListener('card-scale:changed', scheduleTabletopSizing);
 });
 
 function setupTabletopEventListeners() {
@@ -156,42 +168,6 @@ function setupTabletopEventListeners() {
     if (groupSelect) groupSelect.addEventListener('change', onConfigChange);
     if (pileSelect) pileSelect.addEventListener('change', onConfigChange);
     if (foundationSelect) foundationSelect.addEventListener('change', onConfigChange);
-
-    document.getElementById('toggle-settings').addEventListener('click', () => {
-        const settingsArea = document.getElementById('settings-area');
-        const btn = document.getElementById('toggle-settings');
-        settingsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-game').addEventListener('click', () => {
-        const gameArea = document.getElementById('game-area');
-        const btn = document.getElementById('toggle-game');
-        gameArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    const addonsArea = document.getElementById('addons-area');
-    const addonsBtn = document.getElementById('toggle-addons');
-    addonsBtn.addEventListener('click', () => {
-        addonsArea.classList.toggle('collapsed');
-        addonsBtn.classList.toggle('active');
-    });
-    addonsBtn.classList.toggle('active', !addonsArea.classList.contains('collapsed'));
-
-    document.getElementById('toggle-themes').addEventListener('click', () => {
-        const themeArea = document.getElementById('theme-area');
-        const btn = document.getElementById('toggle-themes');
-        themeArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
-
-    document.getElementById('toggle-stats').addEventListener('click', () => {
-        const statsArea = document.getElementById('stats-area');
-        const btn = document.getElementById('toggle-stats');
-        statsArea.classList.toggle('collapsed');
-        btn.classList.toggle('active');
-    });
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
@@ -398,6 +374,7 @@ function updateTabletopUI() {
     renderTableau();
     updateTabletopStats();
     updateDealTargetDisplay();
+    scheduleTabletopSizing();
 }
 
 function renderStackAreas() {

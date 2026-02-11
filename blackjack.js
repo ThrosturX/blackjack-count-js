@@ -86,7 +86,11 @@ function ensureTableSizing() {
 
     const seatCount = Math.max(1, state.seatCount || 1);
     const minWidth = paddingLeft + paddingRight + seatMinWidth * seatCount + gap * Math.max(0, seatCount - 1);
-    tableEl.style.minWidth = `${Math.ceil(minWidth)}px`;
+    CommonUtils.ensureScrollableWidth({
+        table: tableEl,
+        wrapper: 'blackjack-scroll',
+        requiredWidth: Math.ceil(minWidth)
+    });
 }
 
 /* --- AUDIO HANDLING --- */
@@ -182,24 +186,6 @@ function init() {
         window.CountingUI = { refresh: populateCountingSystems };
     }
 
-    // Initialize independent toggles
-    if (ui.toggleSettings) {
-        ui.toggleSettings.addEventListener('click', () => toggleControlsArea('settings'));
-        ui.toggleSettings.classList.add('active'); // Default open
-    }
-    if (ui.toggleThemes) {
-        ui.toggleThemes.addEventListener('click', () => toggleControlsArea('themes'));
-        ui.toggleThemes.classList.add('active'); // Default open
-    }
-    if (ui.toggleAddons) {
-        ui.toggleAddons.addEventListener('click', () => toggleControlsArea('addons'));
-        ui.toggleAddons.classList.toggle('active', !ui.addonsArea.classList.contains('collapsed'));
-    }
-    if (ui.toggleStats) {
-        ui.toggleStats.addEventListener('click', () => toggleControlsArea('stats'));
-        ui.toggleStats.classList.add('active'); // Default open
-    }
-
     if (ui.topCardPreview) {
         ui.topCardPreview.onmouseup = () => {
             const peekCard = ui.topCardPreview.children[0];
@@ -215,22 +201,6 @@ function init() {
     document.addEventListener('card-scale:changed', scheduleTableSizing);
 
     setTimeout(updateShoeVisual, 100);
-}
-
-function toggleControlsArea(type) {
-    if (type === 'settings') {
-        const isCollapsed = ui.settingsArea.classList.toggle('collapsed');
-        ui.toggleSettings.classList.toggle('active', !isCollapsed);
-    } else if (type === 'themes') {
-        const isCollapsed = ui.themeArea.classList.toggle('collapsed');
-        ui.toggleThemes.classList.toggle('active', !isCollapsed);
-    } else if (type === 'addons') {
-        const isCollapsed = ui.addonsArea.classList.toggle('collapsed');
-        ui.toggleAddons.classList.toggle('active', !isCollapsed);
-    } else if (type === 'stats') {
-        const isCollapsed = ui.statsArea.classList.toggle('collapsed');
-        ui.toggleStats.classList.toggle('active', !isCollapsed);
-    }
 }
 
 function updateDeckStyle() {
@@ -1765,20 +1735,6 @@ const handleFirstInteraction = (event) => {
     window.removeEventListener('keydown', handleFirstInteraction);
     window.removeEventListener('touchstart', handleFirstInteraction);
 
-    if (event && event.type === 'click') {
-        const toggle = event.target && event.target.closest ? event.target.closest('.btn-toggle') : null;
-        if (toggle) {
-            if (toggle.id === 'toggle-settings') {
-                toggleControlsArea('settings');
-            } else if (toggle.id === 'toggle-themes') {
-                toggleControlsArea('themes');
-            } else if (toggle.id === 'toggle-addons') {
-                toggleControlsArea('addons');
-            } else if (toggle.id === 'toggle-stats') {
-                toggleControlsArea('stats');
-            }
-        }
-    }
 };
 
 window.addEventListener('click', handleFirstInteraction);
