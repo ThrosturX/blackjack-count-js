@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pyramid Solitaire</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/card.css">
+    <link rel="stylesheet" href="styles/pyramid.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="themes.css">
+</head>
+
+<body>
+    <header>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <h1>Pyramid Solitaire</h1>
+        <div class="header-toggles">
+            <button id="toggle-settings" class="btn-toggle active">Settings</button>
+            <button id="toggle-addons" class="btn-toggle">Addons</button>
+            <button id="toggle-themes" class="btn-toggle active">Themes</button>
+            <button id="toggle-stats" class="btn-toggle active">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="settings-area">
+                <button id="pyramid-new-game" class="game-btn">New Game</button>
+                <button id="pyramid-undo" class="game-btn" disabled>Undo</button>
+                <label class="stats">Card Scale:
+                    <input id="pyramid-card-scale" type="range" min="0.6" max="2" step="0.05" value="1">
+                    <span id="pyramid-card-scale-value">100%</span>
+                </label>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                    <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                </div>
+            </div>
+
+            <div class="controls-section" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section" id="stats-area">
+                <div class="stats">Moves: <span id="pyramid-moves">0</span></div>
+                <div class="stats">Time: <span id="pyramid-time">0:00</span></div>
+                <div class="stats">Score: <span id="pyramid-score">0</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main id="table" class="pyramid-layout">
+        <div id="pyramid-top-row">
+            <div id="pyramid-stock" class="pyramid-pile"></div>
+            <div id="pyramid-waste" class="pyramid-pile"></div>
+        </div>
+        <div id="pyramid-area"></div>
+    </main>
+
+    <!-- Addon Manifest (Cordoned for local file:// testing) -->
+    <script id="addons-manifest" type="application/json">
+    {
+        "addons": [
+            {
+                "id": "default-themes",
+                "label": "Default Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["addons/default-themes-pack.js"],
+                "styles": ["addons/default-themes.css"]
+            },
+            {
+                "id": "basic-themes",
+                "label": "Basic Themes",
+                "description": "Adds extra table and deck styles.",
+                "scripts": ["addons/basic-themes-pack.js"],
+                "styles": ["addons/basic-themes.css"]
+            },
+            {
+                "id": "cyberpunk-themes",
+                "label": "Cyberpunk Themes",
+                "description": "Adds cyberpunk table and deck styles.",
+                "scripts": ["addons/cyberpunk-pack.js"],
+                "styles": ["addons/cyberpunk-pack.css"]
+            },
+            {
+                "id": "dark-elegance-themes",
+                "label": "Dark Elegance",
+                "description": "Adds dark elegance table and deck styles.",
+                "scripts": ["addons/dark-elegance-pack.js"],
+                "styles": ["addons/dark-elegance-pack.css"]
+            },
+            {
+                "id": "luxe-collection",
+                "label": "Luxe Collection",
+                "description": "Adds luxe table and deck styles.",
+                "scripts": ["addons/luxe-pack.js"],
+                "styles": ["addons/luxe-pack.css"]
+            },
+            {
+                "id": "wildlife-themes",
+                "label": "Wildlife",
+                "description": "Adds wildlife-inspired table and deck styles.",
+                "scripts": ["addons/wildlife-pack.js"],
+                "styles": ["addons/wildlife-pack.css"]
+            },
+            {
+                "id": "ghostly-themes",
+                "label": "Ghostly",
+                "description": "Adds ghostly table and deck styles.",
+                "scripts": ["addons/ghostly-pack.js"],
+                "styles": ["addons/ghostly-pack.css"]
+            },
+            {
+                "id": "premium-themes",
+                "label": "Premium Themes",
+                "description": "Adds premium table and deck styles.",
+                "scripts": ["addons/themes-pack.js"],
+                "styles": ["addons/premium-themes.css"]
+            },
+            {
+                "id": "premium-effects",
+                "label": "Special Effects",
+                "description": "Adds visual effects and polish.",
+                "styles": ["addons/premium-effects.css"]
+            },
+            {
+                "id": "classic-faces",
+                "label": "Classic Faces",
+                "description": "Displays classic pip layouts on numbered cards and custom icons for face cards.",
+                "scripts": ["addons/classic-face-art.js", "addons/classic-faces.js"],
+                "styles": ["addons/classic-faces.css"]
+            },
+            {
+                "id": "worn-cards",
+                "label": "Worn Cards",
+                "description": "Adds worn card edges, faded inks, and scuffed textures.",
+                "scripts": ["addons/worn-cards.js"],
+                "styles": ["addons/worn-cards.css"]
+            }
+        ]
+    }
+    </script>
+    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+
+    <script src="assets.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="shared/ui-helpers.js"></script>
+    <script src="pyramid.js"></script>
+</body>
+
+</html>
