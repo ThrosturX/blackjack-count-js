@@ -4,21 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Casino Poker (Hold'em)</title>
+    <title>Pyramid Solitaire</title>
     <link rel="stylesheet" href="styles/core.css">
     <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
-    <link rel="stylesheet" href="styles/poker.css">
+    <link rel="stylesheet" href="styles/pyramid.css">
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="themes.css">
     <link rel="stylesheet" href="styles/mobile.css">
 </head>
 
 <body>
-
     <header>
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
-        <h1>Texas Hold'em Poker</h1>
+        <h1>Pyramid Solitaire</h1>
         <div class="header-toggles">
             <button id="toggle-settings" class="btn-toggle active">Settings</button>
             <button id="toggle-addons" class="btn-toggle">Addons</button>
@@ -28,15 +27,12 @@
 
         <div class="game-controls">
             <div class="controls-section" id="settings-area">
-                <div class="stats">Seats:
-                    <select id="seat-select">
-                        <option value="2">2 (Heads up)</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5" selected>5</option>
-                        <option value="6">6</option>
-                    </select>
-                </div>
+                <button id="pyramid-new-game" class="game-btn">New Game</button>
+                <button id="pyramid-undo" class="game-btn" disabled>Undo</button>
+                <label class="stats">Card Scale:
+                    <input id="pyramid-card-scale" type="range" min="0.6" max="2" step="0.05" value="1">
+                    <span id="pyramid-card-scale-value">100%</span>
+                </label>
             </div>
 
             <div class="controls-section collapsed" id="addons-area">
@@ -51,46 +47,25 @@
                 <div class="stats">Table:
                     <select id="table-style-select"></select>
                 </div>
-                <div class="stats">Style:
+                <div class="stats">Deck:
                     <select id="deck-style-select"></select>
                 </div>
             </div>
 
             <div class="controls-section" id="stats-area">
-                <div class="stats">Hand: <span id="game-phase-text">Wait</span></div>
-                <div class="stats">Pot: <span id="pot-total">$0</span></div>
+                <div class="stats">Moves: <span id="pyramid-moves">0</span></div>
+                <div class="stats">Time: <span id="pyramid-time">0:00</span></div>
+                <div class="stats">Score: <span id="pyramid-score">0</span></div>
             </div>
         </div>
     </header>
 
-    <main id="table">
-        <!-- Center Overlay for Timer & Results -->
-        <div id="center-overlay">
-            <div id="overlay-main" class="overlay-text"></div>
-            <div id="overlay-sub" class="overlay-sub"></div>
+    <main id="table" class="pyramid-layout">
+        <div id="pyramid-top-row">
+            <div id="pyramid-stock" class="pyramid-pile"></div>
+            <div id="pyramid-waste" class="pyramid-pile"></div>
         </div>
-
-        <!-- Visual Shoe (Bottom Side) -->
-        <div class="shoe-container">
-            <div class="shoe-body">
-                <div class="card-stack" id="card-stack"></div>
-                <div class="shoe-lip"></div>
-            </div>
-            <div class="shoe-base"></div>
-        </div>
-
-        <!-- Community Cards Section -->
-        <div id="dealer-area" style="top: 15%;">
-            <div class="pot-display" id="pot-display">Pot: $0</div>
-            <div class="community-cards" id="community-cards">
-                <!-- Flop, Turn, River Cards -->
-            </div>
-        </div>
-
-        <!-- Players Section -->
-        <div id="seats">
-            <!-- Seats injected by JS -->
-        </div>
+        <div id="pyramid-area"></div>
     </main>
 
     <!-- Addon Manifest (Cordoned for local file:// testing) -->
@@ -183,8 +158,8 @@
     <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
-    <script src="poker-logic.js"></script>
-    <script src="poker.js"></script>
+    <script src="shared/ui-helpers.js"></script>
+    <script src="pyramid.js"></script>
 </body>
 
 </html>

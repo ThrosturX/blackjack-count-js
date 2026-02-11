@@ -2070,12 +2070,6 @@ input:checked+.slider:before {
         padding-top: 10px;
     }
 
-    /* 3. Hide the 3D Shoe & Header Toggles to save space */
-    .shoe-container {
-        display: none;
-        /* It takes up too much room on mobile */
-    }
-
     /* Simplify the header */
     header {
         padding: 5px;
@@ -2245,6 +2239,7 @@ body {
 #klondike-table,
 #table.freecell-layout,
 #table.spider-layout,
+#table.pyramid-layout,
 #table.tabletop-layout {
     min-width: 1000px; /* Safe minimum for most games */
     width: max-content; /* Grows to fit content */
