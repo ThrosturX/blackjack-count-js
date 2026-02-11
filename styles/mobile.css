@@ -1,0 +1,32 @@
+/* ========================================
+   MOBILE OVERRIDES (Loaded Last)
+   ======================================== */
+
+@media screen and (max-width: 600px) {
+    /* Hide the 3D shoe on phones to save space */
+    .shoe-container {
+        display: none !important;
+    }
+}
+
+@media screen and (max-height: 600px) and (orientation: landscape) {
+    /* Landscape tune-ups for compact heights */
+    body {
+        overflow: auto;
+    }
+
+    #klondike-table {
+        height: auto;
+        min-height: 120vh;
+    }
+
+    #table.freecell-layout {
+        height: auto;
+        max-height: none;
+        min-height: 140vh;
+    }
+
+    .freecell-column {
+        min-height: 100vh;
+    }
+}
