@@ -152,12 +152,6 @@
         padding-top: 10px;
     }
 
-    /* 3. Hide the 3D Shoe & Header Toggles to save space */
-    .shoe-container {
-        display: none;
-        /* It takes up too much room on mobile */
-    }
-
     /* Simplify the header */
     header {
         padding: 5px;
@@ -264,6 +258,13 @@
     }
 }
 
+@media screen and (max-width: 600px) {
+    /* Hide the 3D Shoe on phones to save space */
+    .shoe-container {
+        display: none !important;
+    }
+}
+
 /* --- THE MASTER FIX: Enable Scrolling & Prevent Column Wrapping --- */
 
 /* 1. Unlock the page scrollbars */
@@ -277,6 +278,7 @@ body {
 #klondike-table,
 #table.freecell-layout,
 #table.spider-layout,
+#table.pyramid-layout,
 #table.tabletop-layout {
     min-width: 1000px; /* Safe minimum for most games */
     width: max-content; /* Grows to fit content */
