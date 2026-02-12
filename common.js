@@ -5,10 +5,36 @@
 (() => {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
-        const key = 'bj_table.card_scale';
-        const stored = parseFloat(localStorage.getItem(key));
+        const page = window.location && window.location.pathname
+            ? window.location.pathname.split('/').pop()
+            : '';
+        const pageScaleInputs = {
+            'blackjack.html': 'blackjack-card-scale',
+            'klondike.html': 'klondike-card-scale',
+            'freecell.html': 'freecell-card-scale',
+            'spider.html': 'spider-card-scale',
+            'pyramid.html': 'pyramid-card-scale',
+            'tabletop.html': 'tabletop-card-scale'
+        };
+        const keys = [];
+        if (pageScaleInputs[page]) {
+            keys.push(`bj_table.${pageScaleInputs[page]}`);
+        }
+        if (page === 'tabletop.html') {
+            keys.push('bj_table.card_scale');
+        }
+
+        let stored = NaN;
+        for (const key of keys) {
+            const parsed = parseFloat(localStorage.getItem(key));
+            if (Number.isFinite(parsed)) {
+                stored = parsed;
+                break;
+            }
+        }
         if (Number.isFinite(stored)) {
             document.documentElement.style.setProperty('--card-scale', stored);
+            document.documentElement.style.setProperty('--ui-scale', stored);
         }
     } catch (err) {
         // Ignore storage failures.
@@ -17,29 +43,67 @@
 
 const CommonUtils = {
     audioAssets: {},
+    burnProfileCache: new Map(),
     cardScaleGameId: null, // save card scaling on a per-game basis transparently
 
+    getScaleStorageValue: function (keyCandidates) {
+        if (!Array.isArray(keyCandidates)) return NaN;
+        for (const key of keyCandidates) {
+            if (!key) continue;
+            try {
+                const parsed = parseFloat(localStorage.getItem(key));
+                if (Number.isFinite(parsed)) return parsed;
+            } catch (err) {
+                // Ignore storage failures.
+            }
+        }
+        return NaN;
+    },
+
     /**
-     * Initializes a shared card scale slider.
+     * Initializes a shared table scale slider.
      * @param {string} inputId
      * @param {string} outputId
+     * @param {Object} options
      */
-    initCardScaleControls: function (inputId, outputId) {
-        cardScaleGameId = inputId;
+    initCardScaleControls: function (inputId, outputId, options = {}) {
+        this.cardScaleGameId = inputId;
         const input = document.getElementById(inputId);
         const output = document.getElementById(outputId);
         if (!input) return;
-        let stored = NaN;
-        try {
-            stored = parseFloat(localStorage.getItem(`bj_table.${inputId}`));
-        } catch (err) {
-            stored = NaN;
-        }
+        const min = this.clampNumber(
+            parseFloat(options.min !== undefined ? options.min : input.min),
+            0.25,
+            5,
+            0.5
+        );
+        const max = this.clampNumber(
+            parseFloat(options.max !== undefined ? options.max : input.max),
+            min,
+            5,
+            2
+        );
+        const storageKey = options.storageKey || `bj_table.${this.cardScaleGameId}`;
+        const legacyStorageKeys = Array.isArray(options.legacyStorageKeys) ? options.legacyStorageKeys : [];
+        const stored = this.getScaleStorageValue([storageKey, ...legacyStorageKeys]);
         const initial = Number.isFinite(stored) ? stored : parseFloat(input.value);
-        this.applyCardScale(initial, output, input);
+        this.applyCardScale(initial, output, input, {
+            min,
+            max,
+            storageKey,
+            onChange: options.onChange,
+            applyUiScale: options.applyUiScale !== false,
+            initial: true
+        });
         input.addEventListener('input', () => {
             const value = parseFloat(input.value);
-            this.applyCardScale(value, output, input);
+            this.applyCardScale(value, output, input, {
+                min,
+                max,
+                storageKey,
+                onChange: options.onChange,
+                applyUiScale: options.applyUiScale !== false
+            });
         });
     },
 
@@ -48,32 +112,51 @@ const CommonUtils = {
      * @param {number} value
      * @param {HTMLElement} outputEl
      * @param {HTMLInputElement} inputEl
+     * @param {Object} options
      */
-    applyCardScale: function (value, outputEl, inputEl) {
-        const scale = this.clampNumber(value, 0.6, 3, 1);
+    applyCardScale: function (value, outputEl, inputEl, options = {}) {
+        const min = this.clampNumber(parseFloat(options.min), 0.25, 5, 0.5);
+        const max = this.clampNumber(parseFloat(options.max), min, 5, 2);
+        const scale = this.clampNumber(value, min, max, 1);
+        const storageKey = options.storageKey || `bj_table.${this.cardScaleGameId}`;
+        const applyUiScale = options.applyUiScale !== false;
+        const current = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
+        const previousScale = parseFloat(current) || 1;
         let prev = null;
         try {
-            prev = localStorage.getItem(`bj_table.${cardScaleGameId}`);
+            prev = localStorage.getItem(storageKey);
         } catch (err) {
             // Ignore storage failures.
         }
-        if (prev !== scale || !prev && scale !== 1) {
+        if (prev !== String(scale) || (!prev && scale !== 1)) {
             try {
-                localStorage.setItem(`bj_table.${cardScaleGameId}`, scale);
+                localStorage.setItem(storageKey, String(scale));
             } catch (err) {
                 // Ignore storage failures.
             }
         }
         document.documentElement.style.setProperty('--card-scale', scale);
+        if (applyUiScale) {
+            document.documentElement.style.setProperty('--ui-scale', scale);
+        }
         if (outputEl) outputEl.textContent = `${Math.round(scale * 100)}%`;
         if (inputEl && String(inputEl.value) !== String(scale)) inputEl.value = scale;
         try {
-            localStorage.setItem(`bj_table.${cardScaleGameId}`, String(scale));
+            localStorage.setItem(storageKey, String(scale));
         } catch (err) {
             // Ignore storage failures.
         }
+        if (typeof options.onChange === 'function') {
+            options.onChange({
+                scale,
+                previousScale,
+                initial: options.initial === true
+            });
+        }
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-            window.dispatchEvent(new CustomEvent('card-scale:changed', { detail: { scale } }));
+            const detail = { scale, previousScale, initial: options.initial === true };
+            window.dispatchEvent(new CustomEvent('card-scale:changed', { detail }));
+            window.dispatchEvent(new CustomEvent('ui-scale:changed', { detail }));
         }
     },
 
@@ -156,6 +239,11 @@ const CommonUtils = {
         const contentSelectors = Array.isArray(options.contentSelectors) ? options.contentSelectors : [];
         let requiredWidth = Number.isFinite(options.requiredWidth) ? options.requiredWidth : 0;
         if (!requiredWidth) {
+            // Clear prior sizing constraints during measurement to avoid positive feedback loops
+            // where previous minWidth inflates future width calculations.
+            const previousMinWidth = tableEl.style.minWidth;
+            tableEl.style.minWidth = '';
+
             let contentWidth = 0;
             contentSelectors.forEach(selector => {
                 const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
@@ -163,23 +251,42 @@ const CommonUtils = {
                 contentWidth = Math.max(contentWidth, el.scrollWidth || 0);
             });
 
+            // Use the table's own scroll width only as a fallback. Premium visual
+            // pseudo-elements can expand table scrollWidth without real content overflow.
             if (!contentWidth) {
                 contentWidth = tableEl.scrollWidth || 0;
             }
 
-            const tableStyles = getComputedStyle(tableEl);
-            const paddingLeft = parseFloat(tableStyles.paddingLeft) || 0;
-            const paddingRight = parseFloat(tableStyles.paddingRight) || 0;
+            let tableChrome = 0;
+            const includeTableChrome = options.includeTableChrome !== false;
+            if (includeTableChrome && contentWidth) {
+                const tableStyles = getComputedStyle(tableEl);
+                tableChrome =
+                    (parseFloat(tableStyles.paddingLeft) || 0) +
+                    (parseFloat(tableStyles.paddingRight) || 0) +
+                    (parseFloat(tableStyles.borderLeftWidth) || 0) +
+                    (parseFloat(tableStyles.borderRightWidth) || 0);
+            }
+
             const extra = Number.isFinite(options.extra) ? options.extra : 0;
-            requiredWidth = Math.ceil(contentWidth + paddingLeft + paddingRight + extra);
+            requiredWidth = Math.ceil(contentWidth + tableChrome + extra);
+
+            tableEl.style.minWidth = previousMinWidth;
         }
 
         const wrapperWidth = wrapperEl.getBoundingClientRect().width || 0;
-        const needsScroll = requiredWidth > wrapperWidth + 1;
+        const enterTolerance = Number.isFinite(options.enterTolerance) ? options.enterTolerance : 6;
+        const exitTolerance = Number.isFinite(options.exitTolerance)
+            ? options.exitTolerance
+            : Math.max(2, Math.floor(enterTolerance / 2));
+        const wasScrollable = wrapperEl.classList.contains('scroll-active') || tableEl.classList.contains('scroll-active');
+        const threshold = wasScrollable ? exitTolerance : enterTolerance;
+        const needsScroll = requiredWidth > wrapperWidth + threshold;
 
         tableEl.style.minWidth = needsScroll ? `${requiredWidth}px` : '';
         tableEl.classList.toggle('scroll-active', needsScroll);
         wrapperEl.classList.toggle('scroll-active', needsScroll);
+        wrapperEl.style.overflowX = needsScroll ? 'auto' : 'hidden';
         return needsScroll;
     },
 
@@ -307,6 +414,123 @@ const CommonUtils = {
     },
 
     /**
+     * Returns true when a plain object looks like a serialized card.
+     * @param {*} value
+     * @returns {boolean}
+     */
+    isCardLike: function (value) {
+        return !!(value
+            && typeof value === 'object'
+            && typeof value.suit === 'string'
+            && typeof value.val === 'string');
+    },
+
+    /**
+     * Rebuilds a serialized card into a runtime Card instance.
+     * @param {Object} cardData
+     * @returns {Object}
+     */
+    reviveCardObject: function (cardData) {
+        if (!this.isCardLike(cardData)) return cardData;
+
+        if (typeof Card === 'function') {
+            const revived = new Card(cardData.suit, cardData.val);
+            revived.hidden = !!cardData.hidden;
+            revived.isSplitCard = !!cardData.isSplitCard;
+            if (Number.isFinite(cardData.rotation)) {
+                revived.rotation = cardData.rotation;
+            }
+            Object.keys(cardData).forEach((key) => {
+                if (key === 'suit' || key === 'val' || key === 'hidden' || key === 'isSplitCard' || key === 'rotation') return;
+                revived[key] = cardData[key];
+            });
+            return revived;
+        }
+
+        return {
+            ...cardData,
+            rank: cardData.val === 'A' ? 1
+                : cardData.val === 'J' ? 11
+                    : cardData.val === 'Q' ? 12
+                        : cardData.val === 'K' ? 13
+                            : parseInt(cardData.val, 10),
+            color: (cardData.suit === '♥' || cardData.suit === '♦') ? 'red' : 'black'
+        };
+    },
+
+    /**
+     * Recursively revives serialized cards inside saved state payloads.
+     * @param {*} value
+     * @returns {*}
+     */
+    hydrateSavedValue: function (value) {
+        if (Array.isArray(value)) {
+            return value.map((entry) => this.hydrateSavedValue(entry));
+        }
+        if (!value || typeof value !== 'object') {
+            return value;
+        }
+        if (this.isCardLike(value)) {
+            return this.reviveCardObject(value);
+        }
+        const hydrated = {};
+        Object.entries(value).forEach(([key, entry]) => {
+            hydrated[key] = this.hydrateSavedValue(entry);
+        });
+        return hydrated;
+    },
+
+    getCardIdentityHash: function (card) {
+        const identity = `${card && card.val ? card.val : ''}${card && card.suit ? card.suit : ''}:${Number.isFinite(card && card.rotation) ? card.rotation : ''}`;
+        let hash = 0;
+        for (let i = 0; i < identity.length; i++) {
+            hash = (hash * 31 + identity.charCodeAt(i)) >>> 0;
+        }
+        return hash || 1;
+    },
+
+    isCinderfallDeckActive: function () {
+        return typeof document !== 'undefined'
+            && !!document.body
+            && document.body.classList.contains('deck-cinderfall');
+    },
+
+    getDeterministicBurnProfile: function (card) {
+        if (!card) return null;
+        const hash = this.getCardIdentityHash(card);
+        const cached = this.burnProfileCache.get(hash);
+        if (cached) return cached;
+
+        let state = hash;
+        const rand = () => {
+            state = (1664525 * state + 1013904223) >>> 0;
+            return state / 4294967296;
+        };
+        const roll = rand();
+        let profile = 'none';
+        if (roll < 0.4) profile = 'none';
+        else if (roll < 0.58) profile = 'lite-a';
+        else if (roll < 0.74) profile = 'lite-b';
+        else if (roll < 0.88) profile = 'lite-c';
+        else if (roll < 0.97) profile = 'mid-a';
+        else if (roll < 0.995) profile = 'mid-b';
+        else profile = 'heavy';
+
+        const profileData = {
+            profile,
+            // Negative delays keep animations phase-shifted but immediately visible on render.
+            glowDelay: `-${(rand() * 2.35).toFixed(3)}s`,
+            emberDelay: `-${(rand() * 2.2).toFixed(3)}s`,
+            smokeDuration: `${(7.2 + rand() * 2.4).toFixed(3)}s`,
+            smokeLeft: `-${(2 + rand() * 5).toFixed(2)}px`,
+            smokeRight: `${(2 + rand() * 5).toFixed(2)}px`,
+            smokeMid: `${(-2 + rand() * 4).toFixed(2)}px`
+        };
+        this.burnProfileCache.set(hash, profileData);
+        return profileData;
+    },
+
+    /**
      * Preloads audio assets.
      * @param {Object} soundFiles - Mapping of sound types to arrays of filenames.
      */
@@ -382,6 +606,16 @@ const CommonUtils = {
         div.dataset.val = card.val;
         div.dataset.rank = card.rank;
         div.dataset.color = card.color;
+        if (!card.hidden && this.isCinderfallDeckActive()) {
+            const burnProfile = this.getDeterministicBurnProfile(card);
+            div.dataset.burnProfile = burnProfile.profile;
+            div.style.setProperty('--cinderfall-glow-delay', burnProfile.glowDelay);
+            div.style.setProperty('--cinderfall-ember-delay', burnProfile.emberDelay);
+            div.style.setProperty('--cinderfall-smoke-duration', burnProfile.smokeDuration);
+            div.style.setProperty('--cinderfall-smoke-left', burnProfile.smokeLeft);
+            div.style.setProperty('--cinderfall-smoke-right', burnProfile.smokeRight);
+            div.style.setProperty('--cinderfall-smoke-mid', burnProfile.smokeMid);
+        }
         // if we can give it a random rotation, let's do that
         if (card.rotation !== undefined) {
             div.style.transform = `rotate(${card.rotation}deg) scale(var(--card-scale))`;
@@ -629,7 +863,10 @@ class StateManager {
                 this.clear();
                 return false;
             }
-            this.setState(payload.state);
+            const hydratedState = typeof CommonUtils.hydrateSavedValue === 'function'
+                ? CommonUtils.hydrateSavedValue(payload.state)
+                : payload.state;
+            this.setState(hydratedState);
             return true;
         } catch (err) {
             return false;

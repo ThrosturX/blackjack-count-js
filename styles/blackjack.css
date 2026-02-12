@@ -1,4 +1,242 @@
+/* Blackjack-only scaling controls */
+
+#blackjack-scroll #table {
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1400px * var(--ui-scale));
+    min-height: calc(400px * var(--ui-scale));
+    border-width: calc(12px * var(--ui-scale));
+    border-radius: calc(100px * var(--ui-scale));
+    margin-top: calc(20px * var(--ui-scale));
+}
+
+#blackjack-scroll #dealer-area {
+    --dealer-center-shift: 0px;
+    top: calc(20px * var(--ui-scale));
+    margin-bottom: calc(40px * var(--ui-scale));
+}
+
+#blackjack-scroll #dealer-score,
+#blackjack-scroll #dealer-cards {
+    transform: translateX(var(--dealer-center-shift));
+    transition: transform 180ms ease;
+}
+
+#blackjack-scroll #seats {
+    --blackjack-seat-min-width: calc(166px * var(--ui-scale));
+    --blackjack-seat-min-height: calc(280px * var(--ui-scale));
+    align-items: stretch;
+    justify-content: center;
+    gap: calc(8px * var(--ui-scale));
+    padding-right: calc(80px * var(--ui-scale));
+    padding-bottom: calc(20px * var(--ui-scale));
+    margin-top: calc(40px * var(--ui-scale));
+}
+
+#blackjack-scroll,
+#blackjack-scroll #table,
+#blackjack-scroll #seats {
+    overflow-anchor: none;
+}
+
+#blackjack-scroll .seat {
+    width: var(--blackjack-seat-min-width);
+    min-width: var(--blackjack-seat-min-width);
+    max-width: var(--blackjack-seat-min-width);
+    flex: 0 0 var(--blackjack-seat-min-width);
+    min-height: var(--blackjack-seat-min-height);
+    height: var(--blackjack-seat-min-height);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: calc(6px * var(--ui-scale));
+    border-radius: calc(12px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale));
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+#blackjack-scroll .bet-input {
+    min-width: 0;
+    width: 100%;
+    font-size: calc(0.68rem * var(--ui-scale));
+    padding: calc(4px * var(--ui-scale));
+}
+
+#blackjack-scroll .btn-bet {
+    min-width: 0;
+    width: 100%;
+    height: calc(28px * var(--ui-scale));
+    padding: calc(4px * var(--ui-scale));
+    font-size: calc(0.64rem * var(--ui-scale));
+}
+
+#blackjack-scroll .btn-clear {
+    min-width: 0;
+    width: 100%;
+    height: calc(28px * var(--ui-scale));
+    padding: calc(4px * var(--ui-scale));
+    font-size: calc(0.64rem * var(--ui-scale));
+}
+
+#blackjack-scroll .player-hand-area {
+    padding-top: calc(20px * var(--ui-scale));
+    min-height: calc(136px * var(--ui-scale));
+    gap: calc(4px * var(--ui-scale));
+    overflow: visible;
+}
+
+#blackjack-scroll .seat-main-cards {
+    position: relative;
+    transform: none;
+}
+
+#blackjack-scroll .seat-controls {
+    width: 100%;
+    min-height: calc(80px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: calc(4px * var(--ui-scale));
+}
+
+#blackjack-scroll .seat-empty-label {
+    color: #aaa;
+}
+
+#blackjack-scroll .seat-info {
+    gap: 4px;
+    min-width: 0;
+    font-size: calc(0.72rem * var(--ui-scale));
+}
+
+#blackjack-scroll .seat-info > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#blackjack-scroll .toggle-label {
+    font-size: calc(0.54rem * var(--ui-scale));
+}
+
+#blackjack-scroll .bet-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
+    gap: 4px;
+    align-items: center;
+}
+
+#blackjack-scroll .controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 0;
+    width: 100%;
+}
+
+#blackjack-scroll .action-btn {
+    width: 100%;
+}
+
+#blackjack-scroll .toggle-container {
+    margin-bottom: 2px;
+}
+
+#settings-area label.stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#blackjack-card-scale {
+    width: 160px;
+    accent-color: var(--gold);
+}
+
+.pace-setting {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: 620px;
+}
+
+.pace-mode {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    border: 1px solid #555;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.pace-mode-btn {
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #bbb;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: none;
+}
+
+.pace-mode-btn:hover {
+    color: #f2d681;
+    background: rgba(242, 201, 76, 0.12);
+}
+
+.pace-mode-btn.active {
+    color: #111;
+    background: var(--gold);
+}
+
+@media screen and (max-width: 900px) {
+    #blackjack-scroll #table {
+        width: calc(100vw * var(--ui-scale));
+        max-width: none;
+        border-width: 0;
+        border-radius: 0;
+        margin-top: 0;
+    }
+
+    #blackjack-scroll #seats {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 140px;
+        gap: calc(10px * var(--ui-scale));
+    }
+
+    #blackjack-scroll .seat {
+        width: var(--blackjack-seat-min-width);
+        min-width: var(--blackjack-seat-min-width);
+        max-width: var(--blackjack-seat-min-width);
+        flex: 0 0 var(--blackjack-seat-min-width);
+        min-height: var(--blackjack-seat-min-height);
+        height: var(--blackjack-seat-min-height);
+    }
+
+    #blackjack-scroll .seat-controls {
+        min-height: calc(76px * var(--ui-scale));
+    }
+}
+
+@media screen and (max-width: 600px) and (orientation: portrait) {
+    #blackjack-scroll #seats {
+        gap: calc(8px * var(--ui-scale));
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+}
+
 /* --- Visual Shoe (Positioned next to dealer) --- */
+body.blackjack-hide-shoe-fit .shoe-container {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .shoe-container {
     position: absolute;
     top: 20px;
@@ -10,6 +248,7 @@
     align-items: center;
     z-index: 20;
     pointer-events: none;
+    transition: opacity 180ms ease, visibility 180ms ease;
 }
 
 /* --- Realistic Deck Shoe (Horizontal) --- */
@@ -60,17 +299,15 @@
     border-radius: 6px;
     opacity: 0;
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .top-card-preview-card {
     position: absolute;
-    /*
-    width: 49px;
-    height: 69px;
-    */
-    transform: scale(0.8) !important;
-    top: -14px;
+    top: -4px;
     left: -11px;
+    transform: scale(0.68) !important;
+    transform-origin: top left;
 }
 
 /* Lip and base */
@@ -117,11 +354,17 @@
     display: flex;
     gap: 4px;
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 4px;
+    scrollbar-width: thin;
 }
 
 .mini-hand {
-    flex: 1;
+    flex: 0 0 calc(84px * var(--ui-scale));
+    min-width: calc(84px * var(--ui-scale));
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -135,14 +378,14 @@
 }
 
 .mini-hand .cards {
-    height: 45px;
+    height: 54px;
 }
 
 .mini-hand .card {
-    width: 25px;
-    height: 38px;
-    margin-left: -15px;
-    font-size: 0.5rem;
+    width: 30px;
+    height: 44px;
+    margin-left: -17px;
+    font-size: 0.58rem;
 }
 
 .mini-hand .suit-center {

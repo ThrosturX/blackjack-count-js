@@ -55,8 +55,11 @@
 - Verify save/load behavior for solitaire games and clear saved state on win.
 - Verify header menu collapse/expand behavior and default open state.
 - Verify operation from `file://` with no CORS/module-loading failures.
-- If behavior/layout changes substantially, ask: "Would you like me to add this to `QA_SMOKE.md`?"
-- If behavior/layout changes substantially, ask: "Would you like me to update the relevant project docs/files now?"
+- Run the full checklist when gameplay, shared systems, persistence, input handling, or cross-game layout behavior changes.
+- For isolated add-on/theme/effect visual polish that does not change gameplay or interaction behavior, full smoke testing is optional and `QA_SMOKE.md` updates are not required by default.
+- For isolated rendering-only adjustments (CSS/layout/markup) that do not change gameplay rules, persistence, shared systems, or input handling, targeted visual validation is sufficient and full logic test runs are optional.
+- Ask to update `QA_SMOKE.md` only when the checklist itself should change due to behavior-impacting work.
+- Ask to update related project docs/files when those docs are made stale by non-trivial behavior or architecture changes.
 
 ## Documentation Files
 - `AGENTS.md`: operating constraints, shared systems map, UX rules, and turn hygiene.

@@ -1,13 +1,13 @@
 #table {
     position: relative;
-    width: 95vw;
-    max-width: 1400px;
-    min-height: 400px;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1400px * var(--ui-scale));
+    min-height: calc(400px * var(--ui-scale));
     max-height: 70vh;
-    margin-top: 20px;
+    margin-top: calc(20px * var(--ui-scale));
     background: var(--table-bg);
-    border-radius: 100px;
-    border: 12px solid var(--table-border);
+    border-radius: calc(100px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
     box-shadow: var(--table-shadow);
     display: flex;
     flex-direction: column;
@@ -23,37 +23,38 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
 }
 
 .table-scroll.scroll-active {
     justify-content: flex-start;
+    overflow-x: auto;
 }
 
 #seats {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    padding-bottom: 20px;
+    gap: calc(8px * var(--ui-scale));
+    padding-bottom: calc(20px * var(--ui-scale));
     width: 100%;
     z-index: 5;
-    padding-right: 80px;
+    padding-right: calc(80px * var(--ui-scale));
     flex: 0 0 auto;
-    margin-top: 40px;
+    margin-top: calc(40px * var(--ui-scale));
 }
 
 .seat {
     width: 16%;
-    min-width: 130px;
-    height: 280px;
+    min-width: calc(130px * var(--ui-scale));
+    height: calc(280px * var(--ui-scale));
     background: rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
+    border-radius: calc(12px * var(--ui-scale));
     border: 2px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: calc(8px * var(--ui-scale));
     position: relative;
     transition: border-color 0.3s, opacity 0.3s;
 }
@@ -65,20 +66,20 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: 30px;
+    padding-top: calc(30px * var(--ui-scale));
     position: relative;
 }
 
 #dealer-area {
     position: relative;
-    top: 20px;
+    top: calc(20px * var(--ui-scale));
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     z-index: 5;
     flex: 0 0 auto;
-    margin-bottom: 40px;
+    margin-bottom: calc(40px * var(--ui-scale));
 }
 
 .game-controls {
@@ -112,6 +113,13 @@
     white-space: normal;
 }
 
+#addons-area .stats {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
 .controls-section.collapsed {
     max-height: 0;
     opacity: 0;
@@ -137,36 +145,23 @@
     margin-left: auto;
 }
 
-/* --- MOBILE RESPONSIVE OVERRIDES --- */
-/* (Added from style.css refactoring) */
+/* Mobile responsive overrides */
 
 @media screen and (max-width: 900px) {
-
-    /* 1a. Previously: Resize the Cards globally */
-    /* 1b. TODO: scale everything down uniformly */
-    :root {
-        /* placeholder */
-    }
-
-    /* 2. Fix the Table Container */
     #table {
-        width: 100vw;
+        width: calc(100vw * var(--ui-scale));
         height: 110%;
-        /* Use full screen height */
         max-width: 100%;
         border-width: 0;
-        /* Remove thick borders to save space */
         border-radius: 0;
         margin-top: 0;
         box-shadow: none;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        /* Stack dealer at top */
         padding-top: 10px;
     }
 
-    /* Simplify the header */
     header {
         padding: 6px 10px;
         justify-content: flex-start;
@@ -177,43 +172,31 @@
         text-align: left;
     }
 
-    /* 4. Fix the Dealer Area */
     #dealer-area {
         margin-top: 10px;
         margin-bottom: 10px;
         transform: scale(0.9);
-        /* Slightly shrink dealer area */
     }
 
-    /* 5. Make Seats Scrollable Horizontal */
-    /* Instead of squishing 5 seats, we let the user swipe side-to-side */
     #seats {
         width: 100%;
         overflow-x: auto;
-        /* Enables horizontal scrolling */
         justify-content: flex-start;
-        /* Aligns seats to start so scrolling works */
         padding-left: 10px;
         padding-right: 10px;
         padding-bottom: 140px;
-        /* Extra padding at bottom for sticky controls */
-        gap: 10px;
-        /* Smooth scrolling for iOS */
+        gap: calc(10px * var(--ui-scale));
         -webkit-overflow-scrolling: touch;
     }
 
     .seat {
-        min-width: 110px;
-        /* Force minimum width so seat isn't tiny */
-        width: 110px;
+        min-width: calc(110px * var(--ui-scale));
+        width: calc(110px * var(--ui-scale));
         height: auto;
-        min-height: 180px;
+        min-height: calc(180px * var(--ui-scale));
         flex-shrink: 0;
-        /* Prevent seat from shrinking */
     }
 
-    /* 6. Sticky Action Controls */
-    /* Move buttons to the bottom of the screen so they are easy to tap with thumbs */
     .controls {
         position: fixed;
         bottom: 0;
@@ -227,23 +210,18 @@
         gap: 10px;
     }
 
-    /* Make buttons bigger for touch */
     button {
         padding: 12px 15px;
         font-size: 0.9rem;
         flex: 1;
-        /* Buttons stretch to fill width */
     }
 
-    /* Smaller auxiliary buttons */
     .btn-clear,
     .btn-bet {
         padding: 8px;
         font-size: 0.8rem;
     }
 
-    /* 7. Adjust Strategy Bar */
-    /* Move it up so it doesn't get covered by the sticky controls */
     #strategy-bar {
         bottom: 80px;
         padding: 5px;
@@ -254,53 +232,10 @@
     .hint-text {
         font-size: 1rem;
     }
-
-    /* 8. Fix Klondike Layout if used */
-    #klondike-table {
-        height: auto;
-        min-height: 40vh;
-        border-width: 0;
-        padding: 10px;
-        overflow-x: hidden;
-    }
-
-    #tableau-area {
-        flex-wrap: wrap;
-        /* Allow columns to wrap if needed, or scale */
-        transform: scale(0.85);
-        /* Shrink slightly to fit width */
-        transform-origin: top center;
-    }
 }
 
 @media screen and (max-width: 600px) {
-    /* Hide the 3D Shoe on phones to save space */
     .shoe-container {
         display: none !important;
     }
-}
-
-/* --- THE MASTER FIX: Enable Scrolling & Prevent Column Wrapping --- */
-
-/* 1. Unlock the page scrollbars */
-body {
-    overflow: auto !important;
-    height: auto !important;
-    min-height: 100vh;
-}
-
-/* 2. Set the requested min-width to prevent column squishing/wrapping */
-#klondike-table,
-#table.freecell-layout,
-#table.spider-layout,
-#table.pyramid-layout,
-#table.tabletop-layout {
-    min-width: 1000px; /* Safe minimum for most games */
-    width: max-content; /* Grows to fit content */
-    overflow-x: auto;
-}
-
-/* 5. Ensure horizontal scroll visibility */
-html {
-    overflow-x: auto !important;
 }

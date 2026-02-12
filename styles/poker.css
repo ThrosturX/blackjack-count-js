@@ -43,3 +43,15 @@
     border-color: var(--red);
     box-shadow: 0 0 10px var(--red);
 }
+
+@media screen and (max-height: 560px) and (orientation: landscape) and (min-width: 601px) {
+    #poker-scroll #dealer-area {
+        padding-right: clamp(120px, 20vw, 180px);
+    }
+
+    #poker-scroll .shoe-container {
+        right: 6px;
+        transform: scale(0.85);
+        transform-origin: top right;
+    }
+}

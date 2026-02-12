@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles/card.css">
     <link rel="stylesheet" href="styles/blackjack.css">
     <link rel="stylesheet" href="styles/components.css">
-    <link rel="stylesheet" href="themes.css">
+    <link rel="stylesheet" href="styles/themes.css">
     <link rel="stylesheet" href="styles/mobile.css">
 </head>
 
@@ -20,18 +20,31 @@
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
         <h1>Blackjack</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle">Settings</button>
-            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
-            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-game" class="btn-toggle">Game</button>
             <button id="toggle-stats" class="btn-toggle">Stats</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
         </div>
 
         <div class="game-controls">
-            <div class="controls-section collapsed" id="settings-area">
-                <div class="stats">
-                    <label for="fast-mode-checkbox" class="inline-label">Fast Mode:</label>
-                    <input type="checkbox" id="fast-mode-checkbox">
+            <div class="controls-section collapsed" id="game-area">
+                <div class="stats pace-setting">
+                    <span class="inline-label">Game Pace:</span>
+                    <div class="pace-mode" role="group" aria-label="Game pace">
+                        <button type="button" class="pace-mode-btn" data-pace-level="0">Practice</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="1">Classic</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="2">Quick</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="3">Turbo</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="4">Blitz</button>
+                    </div>
                 </div>
+                <div class="stats">Count:
+                    <select id="count-system-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="settings-area">
                 <div class="stats">Minimum bet:
                     <select id="table-minimum-bet">
                         <option value="5">$5</option>
@@ -69,11 +82,8 @@
                         <option value="8">8</option>
                     </select>
                 </div>
-                <div class="stats">Count:
-                    <select id="count-system-select"></select>
-                </div>
-                <label class="stats" style="display: none;">Card Scale:
-                    <input id="blackjack-card-scale" type="range" min="0.6" max="1.25" step="0.05" value="1">
+                <label class="stats">Table Scale:
+                    <input id="blackjack-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
                     <span id="blackjack-card-scale-value">100%</span>
                 </label>
             </div>

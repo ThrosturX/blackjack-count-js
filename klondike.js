@@ -402,6 +402,7 @@ function updateTableau() {
     for (let col = 0; col < 7; col++) {
         const columnEl = document.getElementById(`tableau-${col}`);
         columnEl.innerHTML = '';
+        const fragment = document.createDocumentFragment();
 
         const cards = gameState.tableau[col];
         cards.forEach((card, index) => {
@@ -424,8 +425,9 @@ function updateTableau() {
                 cardEl.style.cursor = 'pointer';
             }
 
-            columnEl.appendChild(cardEl);
+            fragment.appendChild(cardEl);
         });
+        columnEl.appendChild(fragment);
     }
 }
 

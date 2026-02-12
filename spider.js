@@ -46,6 +46,8 @@ let spiderStateManager = null;
 
 const SPIDER_CARD_HEIGHT = 100;
 const SPIDER_STACK_OFFSET = 24;
+const SPIDER_STACK_X_OFFSET = 2.5;
+const SPIDER_STACK_X_OFFSET_MAX = 18;
 const SPIDER_DROP_PADDING = 40;
 const SPIDER_COMPLETE_BONUS = 100;
 const SPIDER_MAX_HISTORY = 200;
@@ -316,7 +318,8 @@ function ensureTableauSizing() {
     CommonUtils.ensureScrollableWidth({
         table: 'table',
         wrapper: 'spider-scroll',
-        contentSelectors: ['#spider-top-row', '#spider-tableau']
+        contentSelectors: ['#spider-top-row', '#spider-tableau'],
+        extra: 10
     });
 }
 
@@ -336,7 +339,7 @@ function updateTableau() {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
             cardEl.style.top = `${rowIndex * SPIDER_STACK_OFFSET}px`;
-            cardEl.style.left = `${rowIndex * 2.5}px`;
+            cardEl.style.left = `${Math.min(SPIDER_STACK_X_OFFSET_MAX, rowIndex * SPIDER_STACK_X_OFFSET)}px`;
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 

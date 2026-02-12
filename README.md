@@ -54,7 +54,8 @@ Solitaire games currently persist in-progress state with `localStorage` via `Com
 - Horizontal scrolling is enabled only when content actually overflows.
 - Game tables center when there is extra horizontal space.
 - Header controls are responsive and avoid overlap with back button/title/menu toggles.
-- Blackjack shoe is hidden on phones and visible on tablets/desktop.
+- Blackjack shoe is hidden on phones and on larger viewports only when it cannot fit cleanly without overlapping gameplay content; when visible but near center, dealer content shifts slightly to share space.
+- Blackjack table height expands when scaled content would otherwise clip seat controls.
 - Solitaire drag/drop supports mobile panning while a card is selected.
 
 ## Add-ons and Themes
@@ -69,6 +70,10 @@ Current logic tests are plain Node scripts:
 - `node logic.test.js`
 - `node poker-logic.test.js`
 - `node solitaire-logic.test.js`
+
+Guidance:
+- Run logic tests when gameplay rules, persistence, shared systems, or input handling changes.
+- For rendering-only changes (CSS/layout/markup) with no behavior impact, targeted visual checks are usually sufficient.
 
 ## Documentation to Keep Updated
 

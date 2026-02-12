@@ -12,7 +12,6 @@ const TABLETOP_MAX_PILES = 6;
 const TABLETOP_MAX_FOUNDATIONS = 6;
 const TABLETOP_DRAG_THRESHOLD = 5;
 const TABLETOP_SNAP_RADIUS = 120;
-const CARD_SCALE_STORAGE_KEY = 'bj_table.card_scale';
 const DISCARD_RENDER_LIMIT = 12;
 const DECK_VISIBLE_CARDS = 3;
 
@@ -224,40 +223,21 @@ function setupTabletopEventListeners() {
 }
 
 function initCardScale() {
-    const input = document.getElementById('tabletop-card-scale');
-    const output = document.getElementById('tabletop-card-scale-value');
-    if (!input) return;
-    let stored = NaN;
-    try {
-        stored = parseFloat(localStorage.getItem(CARD_SCALE_STORAGE_KEY));
-    } catch (err) {
-        stored = NaN;
-    }
-    const initial = Number.isFinite(stored) ? stored : parseFloat(input.value);
-    applyCardScale(initial, output, input, { adjustTableau: false });
-
-    input.addEventListener('input', () => {
-        const value = parseFloat(input.value);
-        applyCardScale(value, output, input, { adjustTableau: true });
+    CommonUtils.initCardScaleControls('tabletop-card-scale', 'tabletop-card-scale-value', {
+        min: 0.5,
+        max: 2,
+        legacyStorageKeys: ['bj_table.card_scale'],
+        onChange: ({ scale, previousScale, initial }) => {
+            const prevScale = Number.isFinite(previousScale) ? previousScale : scale;
+            currentScale = scale;
+            if (!initial && prevScale !== scale) {
+                adjustTableauPositionsForScale(prevScale, scale);
+                renderStackAreas();
+            }
+        }
     });
-}
-
-function applyCardScale(value, outputEl, inputEl, { adjustTableau = true } = {}) {
-    const scale = clampNumber(value, 0.6, 3, 1);
-    const prevScale = currentScale || scale;
-    currentScale = scale;
-    document.documentElement.style.setProperty('--card-scale', scale);
-    if (outputEl) outputEl.textContent = `${Math.round(scale * 100)}%`;
-    if (inputEl && String(inputEl.value) !== String(scale)) inputEl.value = scale;
-    if (adjustTableau && prevScale !== scale) {
-        adjustTableauPositionsForScale(prevScale, scale);
-        renderStackAreas();
-    }
-    try {
-        localStorage.setItem(CARD_SCALE_STORAGE_KEY, String(scale));
-    } catch (err) {
-        // Ignore storage failures.
-    }
+    const styles = getComputedStyle(document.documentElement);
+    currentScale = parseFloat(styles.getPropertyValue('--card-scale')) || 1;
 }
 
 function clampNumber(value, min, max, fallback) {

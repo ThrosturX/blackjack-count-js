@@ -12,7 +12,8 @@
         deck: [
             ['Obsidian Pearl', 'pearl'],
             ['Solar Flare', 'solar'],
-            ['Crimson Veil', 'crimson-veil']
+            ['Crimson Veil', 'crimson-veil'],
+            ['Cinderfall Relic', 'cinderfall']
         ]
     });
 })();

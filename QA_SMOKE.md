@@ -5,6 +5,9 @@
 - After major UI/layout changes.
 - After touch/drag logic changes.
 - After shared system refactors.
+- After gameplay rule or persistence behavior changes.
+- For rendering-only changes (CSS/layout/markup) that do not affect gameplay, persistence, shared systems, or input handling, run targeted visual checks instead of the full smoke checklist.
+- Not required for isolated add-on visual/effect polish that does not change gameplay or interaction behavior.
 
 ## Global Checks
 - Every page loads with no console errors.
@@ -15,7 +18,7 @@
 - Works from both static hosting and `file://`.
 
 ## Game Checks
-- Blackjack: new round flow works, seat count changes resize table correctly, shoe visibility behavior is correct by device class.
+- Blackjack: new round flow works, seat count changes resize table correctly, shoe visibility hides only when fit/overlap requires it, dealer content shifts slightly when shoe encroaches near center, and sit/seat controls stay reachable at large table scales.
 - Poker: table renders, round progression works, and seat count changes resize table correctly.
 - Klondike: drag/drop works on desktop and touch, mobile panning works while a card is selected, and variant/draw settings apply correctly.
 - FreeCell: drag/drop works on desktop and touch, and mobile panning works while a card is selected.
@@ -29,5 +32,7 @@
 - Save is cleared after a win.
 
 ## Update Policy
-- If substantial behavior changed, ask: "Would you like me to add this to `QA_SMOKE.md`?"
-- If substantial behavior changed, ask: "Would you like me to update the related docs now (`AGENTS.md`, `README.md`, `ARCHITECTURE.md`, `ROADMAP.md`)?"
+- Ask to update this file only when behavior-impacting work changes what should be tested.
+- For isolated add-on/theme/effect visual work, skip the default prompt to update `QA_SMOKE.md`.
+- For rendering-only work with no gameplay/input/state impact, avoid requiring unrelated logic test suites by default.
+- Ask to update related docs when substantial behavior, architecture, or shared-system contracts changed.

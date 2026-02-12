@@ -10,12 +10,13 @@
         body {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
-            min-height: 100vh;
-            height: auto;
+            min-height: 100dvh;
             background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
             margin: 0;
+            padding: 24px 16px 40px;
+            box-sizing: border-box;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
@@ -32,12 +33,14 @@
         }
 
         h1 {
-            font-size: 3rem;
+            font-size: clamp(1.8rem, 8vw, 3rem);
             color: var(--gold);
             margin-bottom: 30px;
             text-transform: uppercase;
-            letter-spacing: 5px;
+            letter-spacing: clamp(1px, 1.3vw, 5px);
             text-shadow: 0 0 10px rgba(242, 201, 76, 0.5);
+            white-space: normal;
+            word-break: break-word;
         }
 
         .game-selection {
@@ -89,6 +92,23 @@
         .card-icon {
             font-size: 3rem;
             margin-bottom: 10px;
+        }
+
+        @media screen and (max-width: 600px) {
+            .welcome-container {
+                width: min(100%, 520px);
+                padding: 24px 16px;
+            }
+
+            .game-selection {
+                gap: 14px;
+            }
+
+            .game-card {
+                width: 100%;
+                max-width: 320px;
+                padding: 20px 16px;
+            }
         }
     </style>
 </head>

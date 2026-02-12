@@ -2,6 +2,58 @@ const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
 const SETTINGS_STORAGE_KEY = 'bj_table.settings';
+const PACE_LEVELS = [
+    {
+        id: 'practice',
+        label: 'Practice',
+        description: 'Slowest pace with the most time to think through decisions.',
+        timerTickMs: 1250,
+        humanBetSeconds: BET_TIME + 4,
+        autoBetSeconds: MIN_TIMER + 2,
+        delayMultiplier: 1.2,
+        minDelay: 240
+    },
+    {
+        id: 'classic',
+        label: 'Classic',
+        description: 'Standard table tempo.',
+        timerTickMs: 1000,
+        humanBetSeconds: BET_TIME,
+        autoBetSeconds: MIN_TIMER,
+        delayMultiplier: 1,
+        minDelay: 180
+    },
+    {
+        id: 'quick',
+        label: 'Quick',
+        description: 'Less think time between actions.',
+        timerTickMs: 720,
+        humanBetSeconds: BET_TIME - 2,
+        autoBetSeconds: Math.max(1, MIN_TIMER - 1),
+        delayMultiplier: 0.74,
+        minDelay: 140
+    },
+    {
+        id: 'turbo',
+        label: 'Turbo',
+        description: 'High-pressure pace for advanced play.',
+        timerTickMs: 500,
+        humanBetSeconds: BET_TIME - 4,
+        autoBetSeconds: 2,
+        delayMultiplier: 0.6,
+        minDelay: 110
+    },
+    {
+        id: 'blitz',
+        label: 'Blitz',
+        description: 'Closest to the old fast mode, with minimal decision windows.',
+        timerTickMs: 320,
+        humanBetSeconds: BET_TIME - 5,
+        autoBetSeconds: 1,
+        delayMultiplier: 0.45,
+        minDelay: 90
+    }
+];
 
 /* --- STATE --- */
 const state = {
@@ -26,11 +78,12 @@ const state = {
     maxBet: 1000,
     casinoProfit: 0,
     playedRounds: 0,
-    fastMode: false
+    paceLevel: 1
 };
 
 const ui = {
     seats: document.getElementById('seats'),
+    dealerArea: document.getElementById('dealer-area'),
     dealerCards: document.getElementById('dealer-cards'),
     dealerScore: document.getElementById('dealer-score'),
     overlay: document.getElementById('center-overlay'),
@@ -50,47 +103,322 @@ const ui = {
     themeArea: document.getElementById('theme-area'),
     addonsArea: document.getElementById('addons-area'),
     statsArea: document.getElementById('stats-area'),
+    gameArea: document.getElementById('game-area'),
+    toggleGame: document.getElementById('toggle-game'),
     toggleSettings: document.getElementById('toggle-settings'),
     toggleThemes: document.getElementById('toggle-themes'),
     toggleAddons: document.getElementById('toggle-addons'),
     toggleStats: document.getElementById('toggle-stats'),
-    fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
+    paceModeButtons: Array.from(document.querySelectorAll('.pace-mode-btn')),
     minBet: document.getElementById('table-minimum-bet'),
     countSystemSelect: document.getElementById('count-system-select'),
     topCardPreview: document.getElementById('top-card-preview'),
 };
 
 const scheduleTableSizing = CommonUtils.createRafScheduler(ensureTableSizing);
+const scheduleShoeFitCheck = CommonUtils.createRafScheduler(updateShoeVisibilityForFit);
+const BASE_SEAT_MIN_WIDTH = 166;
+const ABSOLUTE_SEAT_MIN_WIDTH = 166;
+const BASE_SEAT_MIN_HEIGHT = 280;
+const ABSOLUTE_SEAT_MIN_HEIGHT = 220;
+const SPLIT_HAND_SEAT_WIDTH_STEP = 8;
+const SPLIT_HAND_SEAT_WIDTH_CAP = 24;
+
+function rectsOverlap(a, b, padding = 0) {
+    if (!a || !b) return false;
+    return !(
+        a.right <= b.left + padding ||
+        a.left >= b.right - padding ||
+        a.bottom <= b.top + padding ||
+        a.top >= b.bottom - padding
+    );
+}
+
+function setDealerCenterShift(shiftPx = 0) {
+    if (!ui.dealerArea) return;
+    const value = Number.isFinite(shiftPx) ? Math.round(shiftPx) : 0;
+    ui.dealerArea.style.setProperty('--dealer-center-shift', `${value}px`);
+}
+
+function updateDealerCenterCompensation(tableRect, shoeRect, canFitNeatly) {
+    if (!tableRect || !shoeRect || !canFitNeatly) {
+        setDealerCenterShift(0);
+        return;
+    }
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    const centerX = tableRect.left + (tableRect.width / 2);
+    const desiredCenterClearance = 108 * scale;
+    const encroachment = centerX + desiredCenterClearance - shoeRect.left;
+    const maxShift = 124 * scale;
+    const shift = Math.max(0, Math.min(maxShift, encroachment));
+    // Shoe is on the right side, so shift dealer content to the left.
+    setDealerCenterShift(-shift);
+}
+
+function updateShoeVisibilityForFit() {
+    const tableEl = document.getElementById('table');
+    const shoeEl = document.querySelector('.shoe-container');
+    if (!tableEl || !shoeEl) {
+        setDealerCenterShift(0);
+        return;
+    }
+
+    const shoeStyle = getComputedStyle(shoeEl);
+    if (shoeStyle.display === 'none') {
+        document.body.classList.add('blackjack-hide-shoe-fit');
+        setDealerCenterShift(0);
+        if (ui.topCardPreview) {
+            ui.topCardPreview.style.opacity = 0;
+        }
+        return;
+    }
+
+    const tableRect = tableEl.getBoundingClientRect();
+    const shoeRect = shoeEl.getBoundingClientRect();
+    const seatsRect = ui.seats ? ui.seats.getBoundingClientRect() : null;
+
+    // Apply a provisional dealer shift before overlap checks so shoe/dealer
+    // can share real estate when the shoe drifts toward center.
+    updateDealerCenterCompensation(tableRect, shoeRect, true);
+    const dealerCardsRect = ui.dealerCards ? ui.dealerCards.getBoundingClientRect() : null;
+    const dealerScoreRect = ui.dealerScore ? ui.dealerScore.getBoundingClientRect() : null;
+
+    const inset = 8;
+    const clearGap = 12;
+    const withinTableBounds = (
+        shoeRect.left >= tableRect.left + inset &&
+        shoeRect.right <= tableRect.right - inset &&
+        shoeRect.top >= tableRect.top + inset &&
+        shoeRect.bottom <= tableRect.bottom - inset
+    );
+    const clearsDealer = (
+        !rectsOverlap(shoeRect, dealerCardsRect, clearGap) &&
+        !rectsOverlap(shoeRect, dealerScoreRect, clearGap)
+    );
+    const clearsSeats = !seatsRect || shoeRect.bottom <= seatsRect.top - clearGap;
+
+    const canFitNeatly = withinTableBounds && clearsDealer && clearsSeats;
+    document.body.classList.toggle('blackjack-hide-shoe-fit', !canFitNeatly);
+    if (!canFitNeatly) {
+        setDealerCenterShift(0);
+    }
+
+    if (ui.topCardPreview) {
+        const shouldShowPreview = canFitNeatly && state.shoe.length > 0 && !state.isShuffling;
+        ui.topCardPreview.style.opacity = shouldShowPreview ? 0.92 : 0;
+    }
+}
+
+function loadSettingsSnapshot() {
+    try {
+        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') return null;
+        return data;
+    } catch (err) {
+        return null;
+    }
+}
+
+function persistSettings(updates = {}) {
+    if (window.__settingsResetInProgress) return;
+    try {
+        const current = loadSettingsSnapshot() || { addons: {} };
+        const next = {
+            ...current,
+            ...updates,
+            addons: { ...(current.addons || {}) }
+        };
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    } catch (err) {
+        // Ignore storage failures.
+    }
+}
+
+function normalizePaceLevel(level) {
+    const parsed = parseInt(level, 10);
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.max(0, Math.min(PACE_LEVELS.length - 1, parsed));
+}
+
+function getPaceProfile() {
+    return PACE_LEVELS[normalizePaceLevel(state.paceLevel)] || PACE_LEVELS[1];
+}
+
+function applyPaceLevel(level, options = {}) {
+    const persist = options.persist !== false;
+    state.paceLevel = normalizePaceLevel(level);
+
+    if (ui.paceModeButtons && ui.paceModeButtons.length) {
+        ui.paceModeButtons.forEach(button => {
+            const buttonLevel = normalizePaceLevel(button.dataset.paceLevel);
+            button.classList.toggle('active', buttonLevel === state.paceLevel);
+            button.setAttribute('aria-pressed', buttonLevel === state.paceLevel ? 'true' : 'false');
+        });
+    }
+    if (persist) {
+        persistSettings({ blackjackPaceLevel: state.paceLevel });
+    }
+}
+
+function initPaceControls(storedSettings) {
+    const settings = storedSettings || loadSettingsSnapshot();
+    let nextLevel = 1;
+    if (settings && settings.blackjackPaceLevel !== undefined) {
+        nextLevel = parseInt(settings.blackjackPaceLevel, 10);
+    } else if (settings && typeof settings.fastMode === 'boolean') {
+        nextLevel = settings.fastMode ? 4 : 1;
+    }
+    applyPaceLevel(nextLevel, { persist: false });
+
+    if (!ui.paceModeButtons || !ui.paceModeButtons.length) return;
+    ui.paceModeButtons.forEach(button => {
+        if (button.dataset.boundPace === 'true') return;
+        button.dataset.boundPace = 'true';
+        button.addEventListener('click', () => {
+            applyPaceLevel(button.dataset.paceLevel);
+        });
+    });
+}
+
+function captureViewportState() {
+    const docScroller = document.scrollingElement || document.documentElement;
+    const wrapperEl = document.getElementById('blackjack-scroll');
+    const tableEl = document.getElementById('table');
+    return {
+        pageX: window.scrollX,
+        pageY: window.scrollY,
+        docLeft: docScroller ? docScroller.scrollLeft : 0,
+        docTop: docScroller ? docScroller.scrollTop : 0,
+        wrapperLeft: wrapperEl ? wrapperEl.scrollLeft : 0,
+        wrapperTop: wrapperEl ? wrapperEl.scrollTop : 0,
+        tableLeft: tableEl ? tableEl.scrollLeft : 0,
+        tableTop: tableEl ? tableEl.scrollTop : 0
+    };
+}
+
+function restoreViewportState(snapshot) {
+    if (!snapshot) return;
+    const docScroller = document.scrollingElement || document.documentElement;
+    const wrapperEl = document.getElementById('blackjack-scroll');
+    const tableEl = document.getElementById('table');
+
+    if (docScroller) {
+        docScroller.scrollLeft = snapshot.docLeft;
+        docScroller.scrollTop = snapshot.docTop;
+    }
+    if (wrapperEl) {
+        wrapperEl.scrollLeft = snapshot.wrapperLeft;
+        wrapperEl.scrollTop = snapshot.wrapperTop;
+    }
+    if (tableEl) {
+        tableEl.scrollLeft = snapshot.tableLeft;
+        tableEl.scrollTop = snapshot.tableTop;
+    }
+
+    if (window.scrollX !== snapshot.pageX || window.scrollY !== snapshot.pageY) {
+        window.scrollTo(snapshot.pageX, snapshot.pageY);
+    }
+}
+
+function restoreViewportStateForFrames(snapshot, frameCount = 2) {
+    if (!snapshot) return;
+    let remaining = Math.max(0, frameCount);
+    const tick = () => {
+        restoreViewportState(snapshot);
+        remaining -= 1;
+        if (remaining > 0) {
+            requestAnimationFrame(tick);
+        }
+    };
+    requestAnimationFrame(tick);
+}
 
 function ensureTableSizing() {
     const tableEl = document.getElementById('table');
     if (!tableEl || !ui.seats) return;
+    const viewportSnapshot = captureViewportState();
+    const isCompactViewport = window.matchMedia('(max-width: 900px)').matches;
+
+    tableEl.style.minWidth = '';
+    tableEl.style.minHeight = '';
+    tableEl.style.maxHeight = '';
 
     const seatsStyle = getComputedStyle(ui.seats);
     const gap = parseFloat(seatsStyle.columnGap || seatsStyle.gap) || 0;
     const paddingLeft = parseFloat(seatsStyle.paddingLeft) || 0;
     const paddingRight = parseFloat(seatsStyle.paddingRight) || 0;
 
-    let seatMinWidth = 130;
-    const seatEl = ui.seats.querySelector('.seat');
-    if (seatEl) {
-        const seatStyle = getComputedStyle(seatEl);
-        const minWidth = parseFloat(seatStyle.minWidth);
-        const width = parseFloat(seatStyle.width);
-        if (Number.isFinite(minWidth) && minWidth > 0) {
-            seatMinWidth = minWidth;
-        } else if (Number.isFinite(width) && width > 0) {
-            seatMinWidth = width;
-        }
-    }
+    const seatDimensions = getSeatDimensionsForLayout();
+    const seatMinWidth = seatDimensions.minWidth;
+    const seatMinHeight = seatDimensions.minHeight;
+    ui.seats.style.setProperty('--blackjack-seat-min-width', `${Math.ceil(seatMinWidth)}px`);
+    ui.seats.style.setProperty('--blackjack-seat-min-height', `${Math.ceil(seatMinHeight)}px`);
 
     const seatCount = Math.max(1, state.seatCount || 1);
     const minWidth = paddingLeft + paddingRight + seatMinWidth * seatCount + gap * Math.max(0, seatCount - 1);
+    const requiredWidth = minWidth;
+
+    const tableStyles = getComputedStyle(tableEl);
+    const baseMinHeight = parseFloat(tableStyles.minHeight) || 0;
+    const baseMaxHeight = parseFloat(tableStyles.maxHeight);
+    const paddingBottom = parseFloat(tableStyles.paddingBottom) || 0;
+    const borderBottom = parseFloat(tableStyles.borderBottomWidth) || 0;
+
+    const tableRect = tableEl.getBoundingClientRect();
+    const dealerRect = ui.dealerArea ? ui.dealerArea.getBoundingClientRect() : null;
+    const seatsRect = ui.seats.getBoundingClientRect();
+    let contentBottom = tableRect.top;
+    if (dealerRect) contentBottom = Math.max(contentBottom, dealerRect.bottom);
+    contentBottom = Math.max(contentBottom, seatsRect.bottom);
+    const contentDrivenHeight = Math.ceil(contentBottom - tableRect.top + paddingBottom + borderBottom + 12);
+    const requiredHeight = isCompactViewport
+        ? Math.max(baseMinHeight, contentDrivenHeight)
+        : baseMinHeight;
+
     CommonUtils.ensureScrollableWidth({
         table: tableEl,
         wrapper: 'blackjack-scroll',
-        requiredWidth: Math.ceil(minWidth)
+        requiredWidth: Math.ceil(requiredWidth),
+        enterTolerance: 10,
+        exitTolerance: 4
     });
+
+    tableEl.style.minHeight = `${requiredHeight}px`;
+    const needsTallTable = Number.isFinite(baseMaxHeight) && requiredHeight > baseMaxHeight + 2;
+    tableEl.style.maxHeight = needsTallTable ? 'none' : '';
+    restoreViewportState(viewportSnapshot);
+    restoreViewportStateForFrames(viewportSnapshot, 2);
+    scheduleShoeFitCheck();
+}
+
+function getSeatDimensionsForLayout() {
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    const isCompactViewport = window.matchMedia('(max-width: 900px)').matches;
+    const widthFloor = Math.max(ABSOLUTE_SEAT_MIN_WIDTH, BASE_SEAT_MIN_WIDTH * scale);
+    const heightFloor = Math.max(ABSOLUTE_SEAT_MIN_HEIGHT, BASE_SEAT_MIN_HEIGHT * scale);
+    let seatMinWidth = widthFloor;
+    if (!isCompactViewport) {
+        const maxHandsAtAnySeat = state.players.reduce((maxHands, player) => {
+            if (!player || !Array.isArray(player.hands)) return maxHands;
+            return Math.max(maxHands, player.hands.length || 0);
+        }, 1);
+        if (maxHandsAtAnySeat > 2) {
+            const splitOverflowHands = maxHandsAtAnySeat - 2;
+            const splitBoost = Math.min(
+                SPLIT_HAND_SEAT_WIDTH_CAP * scale,
+                splitOverflowHands * SPLIT_HAND_SEAT_WIDTH_STEP * scale
+            );
+            seatMinWidth += splitBoost;
+        }
+    }
+
+    const seatMinHeight = heightFloor;
+    return {
+        minWidth: seatMinWidth,
+        minHeight: seatMinHeight
+    };
 }
 
 /* --- AUDIO HANDLING --- */
@@ -117,12 +445,20 @@ function playSound(type) {
 
 document.addEventListener('DOMContentLoaded', () => {
     preloadAudio();
-    CommonUtils.initCardScaleControls('blackjack-card-scale', 'blackjack-card-scale-value');
+    CommonUtils.initCardScaleControls('blackjack-card-scale', 'blackjack-card-scale-value', {
+        min: 0.5,
+        max: 2,
+        legacyStorageKeys: ['bj_table.blackjack_ui_scale']
+    });
+    scheduleShoeFitCheck();
+    initPaceControls();
 });
 
 /* --- INITIALIZATION --- */
 function init() {
     state.players = Array(state.seatCount).fill(null);
+    const storedSettings = loadSettingsSnapshot();
+    initPaceControls(storedSettings);
     createShoe();
 
     // Initialize deck style
@@ -138,34 +474,8 @@ function init() {
     }
 
     if (ui.countSystemSelect) {
-        const loadSettings = () => {
-            try {
-                const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-                if (!raw) return null;
-                const data = JSON.parse(raw);
-                if (!data || typeof data !== 'object') return null;
-                return data;
-            } catch (err) {
-                return null;
-            }
-        };
-        const persistSettings = (updates = {}) => {
-            if (window.__settingsResetInProgress) return;
-            try {
-                const current = loadSettings() || { addons: {} };
-                const next = {
-                    ...current,
-                    ...updates,
-                    addons: { ...(current.addons || {}) }
-                };
-                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
-            } catch (err) {
-                // Ignore storage failures.
-            }
-        };
-        const stored = loadSettings();
-        if (stored && stored.countingSystem) {
-            state.countingSystem = stored.countingSystem === 'reko' ? 'ko' : stored.countingSystem;
+        if (storedSettings && storedSettings.countingSystem) {
+            state.countingSystem = storedSettings.countingSystem === 'reko' ? 'ko' : storedSettings.countingSystem;
         }
         const initCounting = () => {
             populateCountingSystems();
@@ -187,20 +497,39 @@ function init() {
     }
 
     if (ui.topCardPreview) {
-        ui.topCardPreview.onmouseup = () => {
-            const peekCard = ui.topCardPreview.children[0];
-            if (peekCard) peekCard.classList.add('hidden');
-        }
-        ui.topCardPreview.onmousedown = () => {
-            const peekCard = ui.topCardPreview.children[0];
-            if (peekCard) peekCard.classList.remove('hidden');
-        }
+        let lockedOpen = false;
+        const getPeekCard = () => ui.topCardPreview.querySelector('.top-card-preview-card');
+        const setPeekVisible = (visible) => {
+            const peekCard = getPeekCard();
+            if (!peekCard) return;
+            peekCard.classList.toggle('hidden', !visible);
+        };
+
+        ui.topCardPreview.addEventListener('pointerdown', () => {
+            setPeekVisible(true);
+        });
+        ui.topCardPreview.addEventListener('pointerup', () => {
+            if (!lockedOpen) setPeekVisible(false);
+        });
+        ui.topCardPreview.addEventListener('pointerleave', () => {
+            if (!lockedOpen) setPeekVisible(false);
+        });
+        ui.topCardPreview.addEventListener('click', () => {
+            lockedOpen = !lockedOpen;
+            setPeekVisible(lockedOpen);
+        });
     }
 
     window.addEventListener('resize', scheduleTableSizing);
-    document.addEventListener('card-scale:changed', scheduleTableSizing);
+    window.addEventListener('ui-scale:changed', () => {
+        scheduleTableSizing();
+        updateShoeVisual();
+    });
 
-    setTimeout(updateShoeVisual, 100);
+    setTimeout(() => {
+        updateShoeVisual();
+        scheduleTableSizing();
+    }, 100);
 }
 
 function updateDeckStyle() {
@@ -352,10 +681,6 @@ function applyCount(card) {
     updateStats();
 }
 
-ui.fastModeCheckbox.addEventListener('change', (event) => {
-    state.fastMode = event.target.checked;
-});
-
 function createShoe(msg) {
     // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
     if (state.isShuffling) return;
@@ -444,6 +769,7 @@ function updateStats() {
 function updateShoeVisual() {
     const cardStack = document.getElementById('card-stack');
     CommonUtils.updateShoeVisual(cardStack, state.shoe, state.isShuffling, state.deckCount, state.totalInitialCards);
+    scheduleShoeFitCheck();
 }
 
 function animateCardDraw(toDealer = true, seatIndex = null) {
@@ -670,8 +996,9 @@ function toggleAuto(idx, type) {
 }
 
 function startTimer() {
+    const pace = getPaceProfile();
     const hasHumanSittingUnbet = state.players.some(p => p && !p.autoPlay);
-    state.timerVal = hasHumanSittingUnbet ? BET_TIME : MIN_TIMER;
+    state.timerVal = hasHumanSittingUnbet ? pace.humanBetSeconds : pace.autoBetSeconds;
 
     ui.overlayMain.className = 'overlay-text msg-timer';
     ui.overlayMain.textContent = state.timerVal;
@@ -687,7 +1014,7 @@ function startTimer() {
             ui.overlay.classList.remove('show');
             dealHands();
         }
-    }, state.fastMode ? 300 : 1000);
+    }, pace.timerTickMs);
 }
 
 /* --- GAME LOGIC --- */
@@ -1234,7 +1561,9 @@ function endRound() {
 /* --- HELPERS --- */
 
 function getDelay(base) {
-    return state.fastMode ? 180 : base;
+    const pace = getPaceProfile();
+    const scaled = Math.round(base * pace.delayMultiplier);
+    return Math.max(pace.minDelay, scaled);
 }
 
 function calcScore(cards, peek = false) {
@@ -1463,17 +1792,24 @@ function standUp(idx) {
 }
 
 function renderSeat(idx) {
+    const viewportSnapshot = captureViewportState();
     const el = document.getElementById(`seat-${idx}`);
     if (!el) return;
     el.outerHTML = getSeatHTML(idx);
+    scheduleTableSizing();
+    restoreViewportState(viewportSnapshot);
+    restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
 function renderSeats() {
+    const viewportSnapshot = captureViewportState();
     ui.seats.innerHTML = '';
     for (let i = 0; i < state.seatCount; i++) {
         ui.seats.innerHTML += getSeatHTML(i);
     }
     scheduleTableSizing();
+    restoreViewportState(viewportSnapshot);
+    restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
 function render() {
@@ -1482,15 +1818,39 @@ function render() {
     updateStats();
 }
 
+function getHandResultOverlayHTML(hand) {
+    if (state.phase !== 'RESOLVING' || !hand || !hand.result) return '';
+
+    let resClass = 'result-push';
+    let contentHTML = '<span class="res-text">PUSH</span>';
+
+    if (hand.result === 'win') {
+        resClass = 'result-win';
+        contentHTML = `<span class="res-profit">+$${hand.profit}</span>`;
+    } else if (hand.result === 'lose') {
+        resClass = 'result-lose';
+        contentHTML = `<span class="res-profit">-$${hand.bet}</span>`;
+    }
+
+    return `
+        <div class="hand-result ${resClass}">
+            ${contentHTML}
+        </div>
+    `;
+}
+
 function getSeatHTML(idx) {
     const p = state.players[idx];
     const isGameActive = (state.phase === 'DEALING' || state.phase === 'PLAYING' || state.phase === 'RESOLVING');
 
     if (!p) {
         return `
-                    <div class="seat" id="seat-${idx}" style="justify-content: flex-end;">
-                        <div style="color:#aaa; margin-bottom:auto;">Empty</div>
-                        <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                    <div class="seat seat-empty" id="seat-${idx}">
+                        <div class="seat-empty-label">Empty</div>
+                        <div class="player-hand-area" aria-hidden="true"></div>
+                        <div class="seat-controls">
+                            <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                        </div>
                     </div>
                 `;
     }
@@ -1609,27 +1969,7 @@ function getSeatHTML(idx) {
                 html += `<div class="split-container">`;
                 p.hands.forEach((h, hIdx) => {
                     const isActive = (isMyTurn && state.splitIndex === hIdx) ? 'active-split' : '';
-
-                    // Result Overlay
-                    let resultHTML = '';
-                    if (state.phase === 'RESOLVING' && h.result) {
-                        let resClass = 'result-push';
-                        let contentHTML = '<span class="res-text">PUSH</span>';
-
-                        if (h.result === 'win') {
-                            resClass = 'result-win';
-                            contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
-                        } else if (h.result === 'lose') {
-                            resClass = 'result-lose';
-                            contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
-                        }
-
-                        resultHTML = `
-                                            <div class="hand-result ${resClass}">
-                                                ${contentHTML}
-                                            </div>
-                                        `;
-                    }
+                    const resultHTML = getHandResultOverlayHTML(h);
 
                     html += `
                                         <div class="mini-hand ${isActive}">
@@ -1644,30 +1984,10 @@ function getSeatHTML(idx) {
                 html += `</div>`;
             } else {
                 const h = p.hands[0];
-
-                // Result Overlay
-                let resultHTML = '';
-                if (state.phase === 'RESOLVING' && h.result) {
-                    let resClass = 'result-push';
-                    let contentHTML = '<span class="res-text">PUSH</span>';
-
-                    if (h.result === 'win') {
-                        resClass = 'result-win';
-                        contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
-                    } else if (h.result === 'lose') {
-                        resClass = 'result-lose';
-                        contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
-                    }
-
-                    resultHTML = `
-                                        <div class="hand-result ${resClass}">
-                                            ${contentHTML}
-                                        </div>
-                                    `;
-                }
+                const resultHTML = getHandResultOverlayHTML(h);
 
                 html = `
-                                    <div class="cards" style="transform: scale(0.8); position: relative;">
+                                    <div class="cards seat-main-cards">
                                         ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
                                         ${resultHTML}
                                     </div>
@@ -1679,7 +1999,9 @@ function getSeatHTML(idx) {
                         ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
                     </div>
 
-                    ${controlsHTML}
+                    <div class="seat-controls">
+                        ${controlsHTML}
+                    </div>
                 </div>
             `;
 }

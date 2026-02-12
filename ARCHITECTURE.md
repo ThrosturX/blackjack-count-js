@@ -26,8 +26,15 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Tables are wrapped in `.table-scroll` containers.
 - Horizontal scrolling is enabled only when required by content width.
 - Tables should center when there is spare width.
+- Blackjack shoe visibility is fit-driven: hide the shoe when it cannot fit cleanly inside the table without overlapping dealer/seat content.
+- Blackjack dealer alignment is fit-aware: when the shoe remains visible but encroaches near center, dealer content may shift slightly off center to preserve usable space.
+- Blackjack table height must grow when scaled content exceeds the default table cap so seat controls remain reachable.
 - Headers should prevent overlap between back button, title, and toggle buttons.
 - Mobile overrides are loaded last (`styles/mobile.css`).
+
+## Test Scope Guidance
+- Gameplay and persistence tests are required when rule logic, save-state behavior, shared systems, or input handling changes.
+- Rendering-only changes (CSS/layout/markup) should default to targeted visual verification; full logic test suites are optional unless behavior contracts changed.
 
 ## Persistence Contract (Solitaire Games)
 - Use `CommonUtils.StateManager`.

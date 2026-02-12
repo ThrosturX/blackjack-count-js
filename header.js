@@ -3,10 +3,10 @@
 
     const CONTROL_MAP = [
         { key: 'game', buttonId: 'toggle-game', areaId: 'game-area' },
+        { key: 'stats', buttonId: 'toggle-stats', areaId: 'stats-area' },
         { key: 'settings', buttonId: 'toggle-settings', areaId: 'settings-area' },
-        { key: 'addons', buttonId: 'toggle-addons', areaId: 'addons-area' },
         { key: 'themes', buttonId: 'toggle-themes', areaId: 'theme-area' },
-        { key: 'stats', buttonId: 'toggle-stats', areaId: 'stats-area' }
+        { key: 'addons', buttonId: 'toggle-addons', areaId: 'addons-area' }
     ];
 
     const controls = new Map();
@@ -37,7 +37,7 @@
     const init = (options = {}) => {
         if (initialized) return;
         initialized = true;
-        const openKeys = new Set(options.openKeys || ['game']);
+        const openKeys = new Set(options.openKeys || ['game', 'stats']);
         CONTROL_MAP.forEach(bindControl);
         controls.forEach(control => {
             const shouldOpen = openKeys.has(control.key);
