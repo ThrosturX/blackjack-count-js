@@ -4,9 +4,10 @@
 
 /* Klondike Table Layout */
 #klondike-table {
+    --table-shell-max-width: 1400px;
     position: relative;
-    width: calc(95vw * var(--ui-scale));
-    max-width: calc(1400px * var(--ui-scale));
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
     height: 80vh;
     margin: 0px auto;
     background: var(--table-bg);

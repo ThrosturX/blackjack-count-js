@@ -63,9 +63,10 @@
 
 #table.freecell-layout {
     --freecell-fan-x: calc(18px * var(--ui-scale));
+    --table-shell-max-width: 1000px;
     position: relative;
-    width: calc(95vw * var(--ui-scale));
-    max-width: calc(1000px * var(--ui-scale));
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
     margin-top: calc(20px * var(--ui-scale));
     background: var(--table-bg);
     border-radius: calc(40px * var(--ui-scale));

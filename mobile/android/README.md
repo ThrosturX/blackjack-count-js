@@ -35,6 +35,12 @@ npm run cap:sync
 npm run android:build:debug
 ```
 
+## Rapid Prototyping Workflow
+
+- For minor web-only changes in `src/` (CSS/layout/content/JS that does not require device validation), skip Android sync/build and validate in browser/`file://` first.
+- Use `npm run cap:sync` when you are ready to test updated web assets on Android.
+- Use `npm run android:build:debug` and install only for Android/device checks, native changes, or when an APK artifact is needed.
+
 Install APK to connected authorized phone:
 
 ```bash

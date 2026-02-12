@@ -27,6 +27,8 @@
 - Prefer plain JS/HTML/CSS and progressive enhancement.
 - Keep performance acceptable on mid-range mobile devices.
 - Preserve save-state compatibility where practical.
+- Runtime web assets must live under `src/` only (`src/styles`, `src/addons`, `src/*.js`, `src/*.html`).
+- Do not reintroduce mirrored root `styles/` or root `addons/` directories; root `index.html` is only a redirect entrypoint.
 
 ## Shared Systems Map
 - `src/common.js`: shared card/deck utilities, card sizing metrics, scroll/min-height helpers, high-score storage helpers, and `StateManager`.
@@ -76,3 +78,5 @@
 - After substantial changes, call out which shared systems were touched.
 - If documentation is now stale, propose the exact file updates before ending the turn.
 - Keep developer workflow scripts in `scripts/` when adding recurring multi-step commands.
+- During rapid prototyping or minor web-only changes, avoid unnecessary Android sync/build/deploy steps by default.
+- Run `cap:sync` / Android build steps when native files changed, Android-specific behavior must be validated, or an APK/installable artifact is explicitly needed.

@@ -9,6 +9,7 @@ No build step is required.
 
 - Open `src/index.html` directly, or
 - Serve statically: `python3 -m http.server` and open `http://localhost:8000/src/`.
+- Runtime web assets are sourced from `src/` (root `index.html` only redirects to `src/index.html`).
 
 The project is designed to run from both static hosting and `file://`.
 
@@ -119,3 +120,9 @@ From repo root:
 - `npm run android:build:debug`: build debug APK.
 - `npm run android:install:connected`: install debug APK to an authorized connected device.
 - `npm run android:rebuild:deploy`: full loop (`npm install`, sync, clean build, deploy).
+
+### Fast Iteration Guidance
+
+- For minor web-only prototyping (HTML/CSS/JS under `src/`) use local browser/file validation first and skip Android sync/build.
+- Run `npm run cap:sync` only when Android assets must be refreshed for device validation.
+- Run `npm run android:build:debug` / install only when native changes are involved or an APK/device retest is required.
