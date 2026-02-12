@@ -25,15 +25,16 @@
 }
 
 #spider-top-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--spider-fan-x, 18px)));
     align-items: flex-start;
-    gap: calc(20px * var(--ui-scale));
-    padding-inline: calc(8px * var(--ui-scale));
-    box-sizing: border-box;
+    gap: var(--spider-tableau-gap, calc(12px * var(--ui-scale)));
+    width: max-content;
+    margin: 0 auto;
 }
 
 #spider-stock {
+    grid-column: 1 / span 2;
     width: var(--scaled-card-w);
     height: var(--scaled-card-h);
     flex: 0 0 auto;
@@ -46,8 +47,9 @@
 
 #spider-foundations {
     display: grid;
-    grid-template-columns: repeat(8, var(--scaled-card-w));
-    gap: calc(12px * var(--ui-scale));
+    grid-column: 3 / span 8;
+    grid-template-columns: repeat(8, calc(var(--scaled-card-w) + var(--spider-fan-x, 18px)));
+    gap: var(--spider-tableau-gap, calc(12px * var(--ui-scale)));
     flex: 0 0 auto;
 }
 
@@ -58,6 +60,7 @@
     border: 2px dashed rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.03);
     position: relative;
+    justify-self: center;
 }
 
 #spider-stock .card,
@@ -77,10 +80,9 @@
 #spider-tableau {
     display: grid;
     grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--spider-fan-x, 18px)));
-    justify-content: center;
     gap: var(--spider-tableau-gap, calc(12px * var(--ui-scale)));
-    padding-inline: calc(8px * var(--ui-scale));
-    box-sizing: border-box;
+    width: max-content;
+    margin: 0 auto;
 }
 
 .spider-column {
@@ -101,11 +103,10 @@
 }
 
 #table.spider-layout.scroll-active #spider-top-row {
-    justify-content: flex-start;
-    gap: calc(24px * var(--ui-scale));
+    margin-inline: 0;
 }
 
 #table.spider-layout.scroll-active #spider-foundations,
 #table.spider-layout.scroll-active #spider-tableau {
-    justify-content: flex-start;
+    margin-inline: 0;
 }

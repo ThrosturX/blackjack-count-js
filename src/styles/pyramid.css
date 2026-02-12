@@ -62,20 +62,8 @@
 #pyramid-area {
     position: relative;
     margin: 0 auto;
+    margin-top: calc(-1 * var(--pyramid-lift, 0px));
     min-height: calc(var(--scaled-card-h) * 2);
-    transform-origin: top center;
-}
-
-@media (max-width: 900px) {
-    #pyramid-area {
-        transform: translate(8px, -8px);
-    }
-}
-
-@media screen and (max-width: 600px) and (orientation: portrait) {
-    #pyramid-area {
-        transform: translate(18px, -16px);
-    }
 }
 
 .pyramid-card {

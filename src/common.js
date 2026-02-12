@@ -184,6 +184,59 @@ const CommonUtils = {
         };
     },
 
+    resolveAdaptiveSpacing: function (options = {}) {
+        const availableWidth = Number.isFinite(options.availableWidth) ? options.availableWidth : 0;
+        const contentWidth = Number.isFinite(options.contentWidth) ? options.contentWidth : 0;
+
+        const gap = {
+            current: Number.isFinite(options.currentGap) ? options.currentGap : 0,
+            base: Number.isFinite(options.baseGap) ? options.baseGap : 0,
+            min: Number.isFinite(options.minGap) ? options.minGap : 0,
+            slots: Number.isFinite(options.gapSlots) ? options.gapSlots : 0
+        };
+
+        const fanEnabled = Number.isFinite(options.currentFan)
+            || Number.isFinite(options.baseFan)
+            || Number.isFinite(options.minFan)
+            || Number.isFinite(options.fanSlots);
+        const fan = {
+            current: Number.isFinite(options.currentFan) ? options.currentFan : 0,
+            base: Number.isFinite(options.baseFan) ? options.baseFan : 0,
+            min: Number.isFinite(options.minFan) ? options.minFan : 0,
+            slots: Number.isFinite(options.fanSlots) ? options.fanSlots : 0
+        };
+
+        const requiredAtBase = contentWidth
+            + Math.max(0, (gap.base - gap.current) * gap.slots)
+            + (fanEnabled ? Math.max(0, (fan.base - fan.current) * fan.slots) : 0);
+        let overflow = Math.max(0, requiredAtBase - availableWidth);
+
+        const gapResult = this.consumeOverflowWithSpacing(
+            overflow,
+            gap.base,
+            gap.min,
+            gap.slots
+        );
+        overflow = gapResult.overflow;
+
+        let fanResult = null;
+        if (fanEnabled) {
+            fanResult = this.consumeOverflowWithSpacing(
+                overflow,
+                fan.base,
+                fan.min,
+                fan.slots
+            );
+            overflow = fanResult.overflow;
+        }
+
+        return {
+            gap: gapResult.value,
+            fan: fanResult ? fanResult.value : null,
+            overflow
+        };
+    },
+
     getHighScoreStore: function () {
         try {
             const raw = localStorage.getItem('bj_table.high_scores');

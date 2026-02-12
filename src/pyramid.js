@@ -44,11 +44,34 @@ const selectionState = {
 };
 
 function ensurePyramidSizing() {
+    applyPyramidLift();
     CommonUtils.ensureScrollableWidth({
         table: 'table',
         wrapper: 'pyramid-scroll',
         contentSelectors: ['#pyramid-top-row', '#pyramid-area']
     });
+}
+
+function applyPyramidLift() {
+    const tableEl = document.getElementById('table');
+    const areaEl = document.getElementById('pyramid-area');
+    if (!tableEl || !areaEl) return;
+
+    const tableStyles = getComputedStyle(tableEl);
+    const rowGap = parseFloat(tableStyles.rowGap || tableStyles.gap) || 0;
+    const scale = CommonUtils.getUiScaleValue();
+    const minClearance = Math.max(6, 8 * scale);
+    const maxLift = Math.max(0, rowGap - minClearance);
+
+    const isPortraitPhone = window.innerWidth <= 600
+        && window.matchMedia('(orientation: portrait)').matches;
+    const desiredFactor = isPortraitPhone
+        ? 0.78
+        : (window.innerWidth <= 900 ? 0.42 : 0);
+    const desiredLift = rowGap * desiredFactor;
+    const lift = Math.min(maxLift, desiredLift);
+
+    areaEl.style.setProperty('--pyramid-lift', `${Math.max(0, Math.round(lift))}px`);
 }
 
 const schedulePyramidSizing = CommonUtils.createRafScheduler(ensurePyramidSizing);

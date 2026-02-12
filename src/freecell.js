@@ -42,6 +42,9 @@ const FREECELL_BASE_TABLEAU_GAP = 12;
 const FREECELL_MIN_TABLEAU_GAP = 4;
 const FREECELL_BASE_FAN_X = 18;
 const FREECELL_MIN_FAN_X = 6;
+const FREECELL_TOP_LABEL = ['F', 'R', 'E', 'E'];
+const FREECELL_BOTTOM_LABEL = ['C', 'E', 'L', 'L'];
+const FREECELL_FOUNDATION_SUITS = ['♥', '♠', '♦', '♣'];
 
 const freecellDragState = {
     draggedCards: [],
@@ -336,29 +339,21 @@ function applyAdaptiveTableauSpacing() {
     const currentGap = parseFloat(styles.columnGap || styles.gap) || baseGap;
     const currentFan = parseFloat(getComputedStyle(tableEl).getPropertyValue('--freecell-fan-x')) || baseFan;
     const availableWidth = wrapperEl.getBoundingClientRect().width || 0;
-    const gapSlots = 7;
-    const fanSlots = 8;
-    const requiredAtBase = tableauEl.scrollWidth
-        + Math.max(0, (baseGap - currentGap) * gapSlots)
-        + Math.max(0, (baseFan - currentFan) * fanSlots);
-    let overflow = Math.max(0, requiredAtBase - availableWidth);
-
-    const gapResult = CommonUtils.consumeOverflowWithSpacing(
-        overflow,
+    const spacing = CommonUtils.resolveAdaptiveSpacing({
+        availableWidth,
+        contentWidth: tableauEl.scrollWidth,
+        currentGap,
         baseGap,
-        FREECELL_MIN_TABLEAU_GAP,
-        gapSlots
-    );
-    overflow = gapResult.overflow;
-    const fanResult = CommonUtils.consumeOverflowWithSpacing(
-        overflow,
+        minGap: FREECELL_MIN_TABLEAU_GAP,
+        gapSlots: 7,
+        currentFan,
         baseFan,
-        FREECELL_MIN_FAN_X,
-        fanSlots
-    );
+        minFan: FREECELL_MIN_FAN_X,
+        fanSlots: 8
+    });
 
-    tableEl.style.setProperty('--freecell-tableau-gap', `${gapResult.value}px`);
-    tableEl.style.setProperty('--freecell-fan-x', `${fanResult.value}px`);
+    tableEl.style.setProperty('--freecell-tableau-gap', `${spacing.gap}px`);
+    tableEl.style.setProperty('--freecell-fan-x', `${spacing.fan}px`);
 }
 
 function ensureTableauSizing() {
@@ -441,7 +436,20 @@ function updateFreeCells() {
             cardEl.style.cursor = 'pointer';
             slot.appendChild(cardEl);
         } else {
-            slot.textContent = '';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'freecell-slot-placeholder';
+
+            const top = document.createElement('span');
+            top.className = 'freecell-slot-letter freecell-slot-letter-top';
+            top.textContent = FREECELL_TOP_LABEL[index] || '';
+
+            const bottom = document.createElement('span');
+            bottom.className = 'freecell-slot-letter freecell-slot-letter-bottom';
+            bottom.textContent = FREECELL_BOTTOM_LABEL[index] || '';
+
+            placeholder.appendChild(top);
+            placeholder.appendChild(bottom);
+            slot.appendChild(placeholder);
         }
 
         freecellArea.appendChild(slot);
@@ -458,12 +466,22 @@ function updateFoundations() {
         foundationEl.className = 'freecell-foundation pile';
         foundationEl.id = `freecell-foundation-${index}`;
         foundationEl.dataset.foundationIndex = index;
+        foundationEl.dataset.suit = FREECELL_FOUNDATION_SUITS[index] || '';
 
         if (pile.length > 0) {
             const topCard = pile[pile.length - 1];
             const cardEl = CommonUtils.createCardEl(topCard);
             cardEl.style.cursor = 'default';
             foundationEl.appendChild(cardEl);
+        } else {
+            const suit = FREECELL_FOUNDATION_SUITS[index] || '';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'freecell-foundation-placeholder';
+            placeholder.textContent = suit;
+            if (suit === '♥' || suit === '♦') {
+                placeholder.classList.add('is-red');
+            }
+            foundationEl.appendChild(placeholder);
         }
 
         foundationArea.appendChild(foundationEl);

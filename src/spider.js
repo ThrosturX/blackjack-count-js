@@ -69,6 +69,7 @@ const SPIDER_BASE_TABLEAU_GAP = 12;
 const SPIDER_MIN_TABLEAU_GAP = 3;
 const SPIDER_BASE_FAN_X = 18;
 const SPIDER_MIN_FAN_X = 4;
+const SPIDER_FAN_PADDING = 2;
 
 const spiderDragState = {
     draggedCards: [],
@@ -326,6 +327,16 @@ function getStackOffsets() {
     };
 }
 
+function getDesiredSpiderFanReserve(baseFan) {
+    const maxCards = Math.max(1, getMaxTableauLength());
+    const offsets = getStackOffsets();
+    const neededFan = Math.min(
+        SPIDER_STACK_X_OFFSET_MAX,
+        Math.max(0, (maxCards - 1) * offsets.x)
+    ) + SPIDER_FAN_PADDING;
+    return CommonUtils.clampNumber(neededFan, SPIDER_MIN_FAN_X, baseFan, baseFan);
+}
+
 function applyAdaptiveTableauSpacing() {
     const tableEl = document.getElementById('table');
     const wrapperEl = document.getElementById('spider-scroll');
@@ -348,29 +359,21 @@ function applyAdaptiveTableauSpacing() {
     const currentGap = parseFloat(styles.columnGap || styles.gap) || baseGap;
     const currentFan = parseFloat(getComputedStyle(tableEl).getPropertyValue('--spider-fan-x')) || baseFan;
     const availableWidth = wrapperEl.getBoundingClientRect().width || 0;
-    const gapSlots = 9;
-    const fanSlots = 10;
-    const requiredAtBase = tableauEl.scrollWidth
-        + Math.max(0, (baseGap - currentGap) * gapSlots)
-        + Math.max(0, (baseFan - currentFan) * fanSlots);
-    let overflow = Math.max(0, requiredAtBase - availableWidth);
-
-    const gapResult = CommonUtils.consumeOverflowWithSpacing(
-        overflow,
+    const spacing = CommonUtils.resolveAdaptiveSpacing({
+        availableWidth,
+        contentWidth: tableauEl.scrollWidth,
+        currentGap,
         baseGap,
-        SPIDER_MIN_TABLEAU_GAP,
-        gapSlots
-    );
-    overflow = gapResult.overflow;
-    const fanResult = CommonUtils.consumeOverflowWithSpacing(
-        overflow,
-        baseFan,
-        SPIDER_MIN_FAN_X,
-        fanSlots
-    );
+        minGap: SPIDER_MIN_TABLEAU_GAP,
+        gapSlots: 9,
+        currentFan,
+        baseFan: getDesiredSpiderFanReserve(baseFan),
+        minFan: SPIDER_MIN_FAN_X,
+        fanSlots: 10
+    });
 
-    tableEl.style.setProperty('--spider-tableau-gap', `${gapResult.value}px`);
-    tableEl.style.setProperty('--spider-fan-x', `${fanResult.value}px`);
+    tableEl.style.setProperty('--spider-tableau-gap', `${spacing.gap}px`);
+    tableEl.style.setProperty('--spider-fan-x', `${spacing.fan}px`);
 }
 
 function ensureTableauSizing() {
