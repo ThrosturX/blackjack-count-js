@@ -27,6 +27,18 @@ const pyramidState = {
 
 let pyramidStateManager = null;
 
+function getPyramidRuleSetKey() {
+    const drawCount = pyramidState.drawCount === 3 ? 3 : 1;
+    return `draw-${drawCount}`;
+}
+
+function syncPyramidHighScore() {
+    const highScoreEl = document.getElementById('pyramid-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('pyramid', getPyramidRuleSetKey(), pyramidState.score);
+    highScoreEl.textContent = highScore;
+}
+
 const selectionState = {
     selected: []
 };
@@ -275,6 +287,7 @@ function updateStats() {
     if (movesEl) movesEl.textContent = pyramidState.moves;
     const scoreEl = document.getElementById('pyramid-score');
     if (scoreEl) scoreEl.textContent = pyramidState.score;
+    syncPyramidHighScore();
 }
 
 function drawFromStock() {
@@ -550,6 +563,7 @@ function setupPyramidEventListeners() {
         drawSelect.addEventListener('change', (event) => {
             const next = parseInt(event.target.value, 10);
             pyramidState.drawCount = next === 3 ? 3 : 1;
+            updateStats();
             if (pyramidStateManager) {
                 pyramidStateManager.markDirty();
             }

@@ -122,19 +122,6 @@ const CommonUtils = {
         const applyUiScale = options.applyUiScale !== false;
         const current = getComputedStyle(document.documentElement).getPropertyValue('--card-scale');
         const previousScale = parseFloat(current) || 1;
-        let prev = null;
-        try {
-            prev = localStorage.getItem(storageKey);
-        } catch (err) {
-            // Ignore storage failures.
-        }
-        if (prev !== String(scale) || (!prev && scale !== 1)) {
-            try {
-                localStorage.setItem(storageKey, String(scale));
-            } catch (err) {
-                // Ignore storage failures.
-            }
-        }
         document.documentElement.style.setProperty('--card-scale', scale);
         if (applyUiScale) {
             document.documentElement.style.setProperty('--ui-scale', scale);
@@ -163,6 +150,53 @@ const CommonUtils = {
     clampNumber: function (value, min, max, fallback) {
         if (!Number.isFinite(value)) return fallback;
         return Math.min(max, Math.max(min, value));
+    },
+
+    getHighScoreStore: function () {
+        try {
+            const raw = localStorage.getItem('bj_table.high_scores');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (err) {
+            return {};
+        }
+    },
+
+    saveHighScoreStore: function (store) {
+        try {
+            localStorage.setItem('bj_table.high_scores', JSON.stringify(store || {}));
+        } catch (err) {
+            // Ignore storage failures.
+        }
+    },
+
+    getHighScore: function (gameId, ruleSetKey = 'default') {
+        if (!gameId) return 0;
+        const store = this.getHighScoreStore();
+        const gameScores = store[gameId];
+        if (!gameScores || typeof gameScores !== 'object') return 0;
+        const score = gameScores[String(ruleSetKey || 'default')];
+        return Number.isFinite(score) ? score : 0;
+    },
+
+    updateHighScore: function (gameId, ruleSetKey = 'default', score = 0) {
+        if (!gameId) return 0;
+        const numericScore = Number.isFinite(score) ? score : 0;
+        const normalizedScore = Math.max(0, Math.floor(numericScore));
+        const normalizedRule = String(ruleSetKey || 'default');
+        const store = this.getHighScoreStore();
+        const gameScores = (store[gameId] && typeof store[gameId] === 'object')
+            ? store[gameId]
+            : {};
+        const currentHigh = Number.isFinite(gameScores[normalizedRule]) ? gameScores[normalizedRule] : 0;
+        const nextHigh = Math.max(currentHigh, normalizedScore);
+        if (nextHigh !== currentHigh) {
+            gameScores[normalizedRule] = nextHigh;
+            store[gameId] = gameScores;
+            this.saveHighScoreStore(store);
+        }
+        return nextHigh;
     },
 
     getCardMetrics: function () {

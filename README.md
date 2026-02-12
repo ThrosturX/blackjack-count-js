@@ -28,7 +28,7 @@ The project is designed to run from both static hosting and `file://`.
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
 - Spider: 4-Suit, 2-Suit, and 1-Suit modes.
 - Pyramid: Draw 1 / Draw 3.
-- Blackjack: seats (1-9), decks (1-8), configurable table minimum bet.
+- Blackjack: seats (1-9), decks (1-8), configurable table minimum bet, and per-seat persona save/load controls.
 - Table Top Sandbox: configurable deck count, deck groups, center piles, and foundation counts.
 
 ## Shared Architecture
@@ -42,12 +42,16 @@ The project is designed to run from both static hosting and `file://`.
 
 ## Persistence
 
-Solitaire games currently persist in-progress state with `localStorage` via `CommonUtils.StateManager`.
+Solitaire games and Blackjack persist state with `localStorage` via `CommonUtils.StateManager`.
 
 - Keys are namespaced as `bj_table.save.<gameId>`.
 - State is marked dirty on moves and saved on interval/page lifecycle events.
 - Winning a game clears that game’s save.
 - Restores happen automatically on page load when a valid save exists.
+- Blackjack restore keeps seated players, balances, and table statistics; the shoe/deal flow restarts from a fresh betting shoe.
+- Blackjack includes a `Reset Statistics` action that zeroes table/player statistics while keeping seated players in place.
+- Blackjack personas are stored separately (`bj_table.blackjack_personas`) so `Reset Statistics` does not remove saved personas.
+- Solitaire high scores are tracked per game and per active ruleset in local storage (`bj_table.high_scores`) and shown in each game’s stats panel.
 
 ## Mobile and Responsive Behavior
 

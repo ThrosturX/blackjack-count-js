@@ -110,6 +110,9 @@
                 <div class="stats">Count: <span id="run-count">0</span></div>
                 <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
                 <div class="stats">Played rounds: <span id="played-rounds">0</span></div>
+                <div class="stats">
+                    <button type="button" id="reset-blackjack-stats" class="btn-toggle btn-mini">Reset Statistics</button>
+                </div>
             </div>
         </div>
     </header>
@@ -164,6 +167,29 @@
         <span class="hint-label">Basic Strategy Hint</span>
         <span id="strategy-text" class="hint-text">Place bets to start</span>
         <span id="count-hint" class="count-hint ch-neutral"></span>
+    </div>
+
+    <div id="persona-save-overlay" class="persona-save-overlay" aria-hidden="true">
+        <div class="persona-save-panel" role="dialog" aria-modal="true" aria-labelledby="persona-save-title">
+            <h3 id="persona-save-title">Save Player</h3>
+            <input id="persona-save-name" type="text" maxlength="24" placeholder="Enter player name" aria-label="Player name">
+            <div class="persona-save-actions">
+                <button type="button" id="persona-save-confirm" class="btn-toggle btn-mini persona-btn persona-accent-btn">Save</button>
+                <button type="button" id="persona-save-cancel" class="btn-toggle btn-mini">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="persona-load-overlay" class="persona-save-overlay" aria-hidden="true">
+        <div class="persona-save-panel" role="dialog" aria-modal="true" aria-labelledby="persona-load-title">
+            <h3 id="persona-load-title">Load Player</h3>
+            <select id="persona-load-select" aria-label="Saved players"></select>
+            <div class="persona-save-actions">
+                <button type="button" id="persona-load-delete" class="btn-toggle btn-mini persona-btn persona-delete-btn persona-danger-text">Delete</button>
+                <button type="button" id="persona-load-confirm" class="btn-toggle btn-mini persona-btn persona-accent-btn">Load</button>
+                <button type="button" id="persona-load-cancel" class="btn-toggle btn-mini">Cancel</button>
+            </div>
+        </div>
     </div>
     <script src="assets.js"></script>
     <script src="addons/manifest.js"></script>

@@ -21,6 +21,17 @@ const freecellState = {
 
 let freecellStateManager = null;
 
+function getFreecellRuleSetKey() {
+    return 'default';
+}
+
+function syncFreecellHighScore() {
+    const highScoreEl = document.getElementById('freecell-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('freecell', getFreecellRuleSetKey(), freecellState.score);
+    highScoreEl.textContent = highScore;
+}
+
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
 const STACK_X_OFFSET = 3;
@@ -398,6 +409,7 @@ function updateFoundations() {
 function updateStats() {
     document.getElementById('freecell-moves').textContent = freecellState.moves;
     document.getElementById('freecell-score').textContent = freecellState.score;
+    syncFreecellHighScore();
 }
 
 function recordMove(moveEntry) {

@@ -113,6 +113,16 @@ const ui = {
     minBet: document.getElementById('table-minimum-bet'),
     countSystemSelect: document.getElementById('count-system-select'),
     topCardPreview: document.getElementById('top-card-preview'),
+    resetStats: document.getElementById('reset-blackjack-stats'),
+    personaSaveOverlay: document.getElementById('persona-save-overlay'),
+    personaSaveName: document.getElementById('persona-save-name'),
+    personaSaveConfirm: document.getElementById('persona-save-confirm'),
+    personaSaveCancel: document.getElementById('persona-save-cancel'),
+    personaLoadOverlay: document.getElementById('persona-load-overlay'),
+    personaLoadSelect: document.getElementById('persona-load-select'),
+    personaLoadDelete: document.getElementById('persona-load-delete'),
+    personaLoadConfirm: document.getElementById('persona-load-confirm'),
+    personaLoadCancel: document.getElementById('persona-load-cancel'),
 };
 
 const scheduleTableSizing = CommonUtils.createRafScheduler(ensureTableSizing);
@@ -123,6 +133,170 @@ const BASE_SEAT_MIN_HEIGHT = 280;
 const ABSOLUTE_SEAT_MIN_HEIGHT = 220;
 const SPLIT_HAND_SEAT_WIDTH_STEP = 8;
 const SPLIT_HAND_SEAT_WIDTH_CAP = 24;
+const BLACKJACK_PERSONAS_STORAGE_KEY = 'bj_table.blackjack_personas';
+const MAX_BLACKJACK_PERSONAS = 9;
+let blackjackStateManager = null;
+let pendingPersonaSaveSeat = null;
+let pendingPersonaLoadSeat = null;
+
+function markSessionDirty() {
+    if (blackjackStateManager) {
+        blackjackStateManager.markDirty();
+    }
+}
+
+function getElapsedRoundsSafe(value) {
+    return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function clampNumber(value, fallback, min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.min(max, Math.max(min, numeric));
+}
+
+function escapeHTML(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function normalizePersonaName(name) {
+    if (typeof name !== 'string') return '';
+    return name.trim().slice(0, 24);
+}
+
+function loadSavedPersonas() {
+    try {
+        const raw = localStorage.getItem(BLACKJACK_PERSONAS_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((persona) => persona && typeof persona === 'object' && normalizePersonaName(persona.name));
+    } catch (err) {
+        return [];
+    }
+}
+
+function saveSavedPersonas(personas) {
+    try {
+        localStorage.setItem(BLACKJACK_PERSONAS_STORAGE_KEY, JSON.stringify(personas));
+    } catch (err) {
+        // Ignore storage failures.
+    }
+}
+
+function getPlayerDisplayName(player, idx) {
+    const personaName = normalizePersonaName(player && player.displayName);
+    return personaName || `Player ${idx + 1}`;
+}
+
+function buildPlayerFromPersona(idx, persona) {
+    return {
+        id: idx,
+        chips: clampNumber(persona.chips, 1000, 0),
+        currentBet: 0,
+        profit: 0,
+        lastBet: clampNumber(persona.lastBet, state.minBet, state.minBet),
+        hands: [],
+        isReady: false,
+        autoPlay: !!persona.autoPlay,
+        autoBet: !!persona.autoBet,
+        pendingStandUp: false,
+        countingBias: clampNumber(persona.countingBias, Math.random(), 0, 1),
+        conservative: !!persona.conservative,
+        displayName: normalizePersonaName(persona.name)
+    };
+}
+
+function sanitizeSavedPlayer(savedPlayer, seatIndex) {
+    if (!savedPlayer || typeof savedPlayer !== 'object') return null;
+    const chips = clampNumber(savedPlayer.chips, 0, 0);
+    return {
+        id: seatIndex,
+        chips,
+        currentBet: 0,
+        profit: clampNumber(savedPlayer.profit, 0),
+        lastBet: clampNumber(savedPlayer.lastBet, state.minBet, state.minBet),
+        hands: [],
+        isReady: false,
+        autoPlay: !!savedPlayer.autoPlay,
+        autoBet: !!savedPlayer.autoBet,
+        pendingStandUp: false,
+        countingBias: clampNumber(savedPlayer.countingBias, Math.random(), 0, 1),
+        conservative: !!savedPlayer.conservative,
+        displayName: normalizePersonaName(savedPlayer.displayName),
+    };
+}
+
+function getBlackjackSaveState() {
+    return {
+        version: 1,
+        seatCount: state.seatCount,
+        deckCount: state.deckCount,
+        minBet: state.minBet,
+        countingSystem: state.countingSystem,
+        paceLevel: state.paceLevel,
+        casinoProfit: state.casinoProfit,
+        playedRounds: state.playedRounds,
+        players: state.players.map((player, idx) => {
+            if (!player) return null;
+            return {
+                id: idx,
+                chips: player.chips,
+                profit: player.profit,
+                lastBet: player.lastBet,
+                autoPlay: player.autoPlay,
+                autoBet: player.autoBet,
+                countingBias: player.countingBias,
+                conservative: player.conservative,
+                displayName: normalizePersonaName(player.displayName)
+            };
+        })
+    };
+}
+
+function applyStateToControls() {
+    if (ui.seatSelect) ui.seatSelect.value = String(state.seatCount);
+    if (ui.deckSelect) ui.deckSelect.value = String(state.deckCount);
+    if (ui.minBet) ui.minBet.value = String(state.minBet);
+    if (ui.countSystemSelect) ui.countSystemSelect.value = state.countingSystem;
+    applyPaceLevel(state.paceLevel, { persist: false });
+}
+
+function restoreBlackjackState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+
+    state.seatCount = clampNumber(saved.seatCount, state.seatCount, 1, 9);
+    state.deckCount = clampNumber(saved.deckCount, state.deckCount, 1, 8);
+    state.minBet = clampNumber(saved.minBet, state.minBet, 1);
+    state.maxBet = calcMaxBet(state.minBet);
+    state.countingSystem = typeof saved.countingSystem === 'string' ? saved.countingSystem : state.countingSystem;
+    state.paceLevel = normalizePaceLevel(saved.paceLevel);
+    state.casinoProfit = clampNumber(saved.casinoProfit, 0);
+    state.playedRounds = getElapsedRoundsSafe(saved.playedRounds);
+
+    const rawPlayers = Array.isArray(saved.players) ? saved.players : [];
+    state.players = Array.from({ length: state.seatCount }, (_, idx) => sanitizeSavedPlayer(rawPlayers[idx], idx));
+
+    state.runningCount = 0;
+    state.sideCounts = {};
+    state.dealer.hand = [];
+    state.phase = 'BETTING';
+    state.turnIndex = -1;
+    state.splitIndex = -1;
+    state.cutCardReached = false;
+    state.tableSettingsChanged = false;
+    state.isShuffling = false;
+    state.timerVal = 0;
+    if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+    }
+}
 
 function rectsOverlap(a, b, padding = 0) {
     if (!a || !b) return false;
@@ -259,6 +433,7 @@ function applyPaceLevel(level, options = {}) {
     }
     if (persist) {
         persistSettings({ blackjackPaceLevel: state.paceLevel });
+        markSessionDirty();
     }
 }
 
@@ -324,6 +499,7 @@ function restoreViewportState(snapshot) {
 
 function restoreViewportStateForFrames(snapshot, frameCount = 2) {
     if (!snapshot) return;
+    restoreViewportState(snapshot);
     let remaining = Math.max(0, frameCount);
     const tick = () => {
         restoreViewportState(snapshot);
@@ -388,7 +564,6 @@ function ensureTableSizing() {
     tableEl.style.minHeight = `${requiredHeight}px`;
     const needsTallTable = Number.isFinite(baseMaxHeight) && requiredHeight > baseMaxHeight + 2;
     tableEl.style.maxHeight = needsTallTable ? 'none' : '';
-    restoreViewportState(viewportSnapshot);
     restoreViewportStateForFrames(viewportSnapshot, 2);
     scheduleShoeFitCheck();
 }
@@ -452,14 +627,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     scheduleShoeFitCheck();
     initPaceControls();
+    blackjackStateManager = new CommonUtils.StateManager({
+        gameId: 'blackjack',
+        getState: getBlackjackSaveState,
+        setState: restoreBlackjackState
+    });
 });
 
 /* --- INITIALIZATION --- */
 function init() {
-    state.players = Array(state.seatCount).fill(null);
     const storedSettings = loadSettingsSnapshot();
     initPaceControls(storedSettings);
+    const restoredSession = blackjackStateManager ? blackjackStateManager.load() : false;
+    if (!restoredSession) {
+        state.players = Array(state.seatCount).fill(null);
+    }
+    applyStateToControls();
     createShoe();
+    updateCasinoProfit();
+    ui.playedRounds.textContent = `${state.playedRounds}`;
+    updateCountHint();
+    if (restoredSession) {
+        CommonUtils.showTableToast('Session restored', {
+            containerId: 'table',
+            duration: 1400
+        });
+    }
 
     // Initialize deck style
     if (ui.deckStyleSelect) {
@@ -486,6 +679,7 @@ function init() {
                 updateStats();
                 updateCountHint();
                 persistSettings({ countingSystem: state.countingSystem });
+                markSessionDirty();
             });
         };
         if (window.AddonLoader && window.AddonLoader.ready) {
@@ -956,6 +1150,7 @@ function placeBetInternal(idx, amt) {
     p.chips -= amt;
     p.isReady = true;
     renderSeat(idx);
+    markSessionDirty();
 }
 
 function clearBet(idx) {
@@ -969,6 +1164,7 @@ function clearBet(idx) {
     p.isReady = false;
 
     updateGameFlow();
+    markSessionDirty();
 }
 
 function toggleAuto(idx, type) {
@@ -993,6 +1189,7 @@ function toggleAuto(idx, type) {
     }
     renderSeat(idx);
     updateGameFlow();
+    markSessionDirty();
 }
 
 function startTimer() {
@@ -1358,6 +1555,7 @@ function playerDouble() {
     ui.overlay.classList.remove('show');
     ui.strategyText.textContent = "";
     renderSeat(state.turnIndex);
+    markSessionDirty();
     setTimeout(nextTurn, getDelay(800));
 }
 
@@ -1409,6 +1607,7 @@ function playerSplit() {
 
     renderSeat(state.turnIndex);
     updateStrategyHint();
+    markSessionDirty();
     if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
 }
 
@@ -1499,6 +1698,7 @@ function resolveRound() {
             }
         });
     });
+    markSessionDirty();
 
     // Update UI
     render();
@@ -1541,6 +1741,7 @@ function finishRound() {
     }
     updateCasinoProfit();
     updatePlayedRounds();
+    markSessionDirty();
 }
 
 function endRound() {
@@ -1556,6 +1757,7 @@ function endRound() {
     updateCountHint();
     updateGameFlow();
     render();
+    markSessionDirty();
 }
 
 /* --- HELPERS --- */
@@ -1690,6 +1892,161 @@ function calcMaxBet(minBet) {
     return Math.round(raw / div) * div;
 }
 
+function resetBlackjackStatistics() {
+    state.casinoProfit = 0;
+    state.playedRounds = 0;
+    state.players.forEach((player) => {
+        if (!player) return;
+        player.profit = 0;
+    });
+    markSessionDirty();
+    render();
+    CommonUtils.showTableToast('Blackjack stats reset', {
+        containerId: 'table',
+        duration: 1500
+    });
+}
+
+function closeSavePersonaOverlay() {
+    pendingPersonaSaveSeat = null;
+    if (!ui.personaSaveOverlay) return;
+    ui.personaSaveOverlay.classList.remove('show');
+    ui.personaSaveOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function closeLoadPersonaOverlay() {
+    pendingPersonaLoadSeat = null;
+    if (!ui.personaLoadOverlay) return;
+    ui.personaLoadOverlay.classList.remove('show');
+    ui.personaLoadOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function confirmSavePlayerPersona() {
+    if (pendingPersonaSaveSeat === null) return;
+    const player = state.players[pendingPersonaSaveSeat];
+    if (!player) {
+        closeSavePersonaOverlay();
+        return;
+    }
+    const name = normalizePersonaName(ui.personaSaveName ? ui.personaSaveName.value : '');
+    if (!name) {
+        CommonUtils.showTableToast('Enter a player name first', {
+            containerId: 'table',
+            duration: 1300
+        });
+        if (ui.personaSaveName) ui.personaSaveName.focus();
+        return;
+    }
+
+    const personas = loadSavedPersonas();
+    const nextPersona = {
+        name,
+        chips: clampNumber(player.chips, 0, 0),
+        lastBet: clampNumber(player.lastBet, state.minBet, state.minBet),
+        autoPlay: !!player.autoPlay,
+        autoBet: !!player.autoBet,
+        countingBias: clampNumber(player.countingBias, 0.5, 0, 1),
+        conservative: !!player.conservative,
+        updatedAt: Date.now()
+    };
+    const sameNameIndex = personas.findIndex((persona) => normalizePersonaName(persona.name).toLowerCase() === name.toLowerCase());
+    if (sameNameIndex >= 0) {
+        personas[sameNameIndex] = nextPersona;
+    } else {
+        personas.push(nextPersona);
+    }
+
+    personas.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    saveSavedPersonas(personas.slice(0, MAX_BLACKJACK_PERSONAS));
+    player.displayName = name;
+    markSessionDirty();
+    renderSeats();
+    closeSavePersonaOverlay();
+    CommonUtils.showTableToast(`Saved player: ${name}`, {
+        containerId: 'table',
+        duration: 1300
+    });
+}
+
+function savePlayerPersona(idx) {
+    const player = state.players[idx];
+    if (!player || !ui.personaSaveOverlay || !ui.personaSaveName) return;
+    pendingPersonaSaveSeat = idx;
+    ui.personaSaveName.value = normalizePersonaName(player.displayName);
+    ui.personaSaveOverlay.classList.add('show');
+    ui.personaSaveOverlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+        ui.personaSaveName.focus();
+        ui.personaSaveName.select();
+    });
+}
+
+function loadPlayerPersona(idx) {
+    if (state.players[idx] || !ui.personaLoadOverlay || !ui.personaLoadSelect) return;
+    const personas = loadSavedPersonas();
+    if (!personas.length) {
+        CommonUtils.showTableToast('No saved players', {
+            containerId: 'table',
+            duration: 1200
+        });
+        return;
+    }
+    pendingPersonaLoadSeat = idx;
+    ui.personaLoadSelect.innerHTML = personas.map((persona) => {
+        const name = normalizePersonaName(persona.name);
+        return `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
+    }).join('');
+    ui.personaLoadOverlay.classList.add('show');
+    ui.personaLoadOverlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => ui.personaLoadSelect.focus());
+}
+
+function confirmLoadPlayerPersona() {
+    if (pendingPersonaLoadSeat === null || state.players[pendingPersonaLoadSeat]) {
+        closeLoadPersonaOverlay();
+        return;
+    }
+    const selectedName = normalizePersonaName(ui.personaLoadSelect ? ui.personaLoadSelect.value : '');
+    if (!selectedName) return;
+    const personas = loadSavedPersonas();
+    const persona = personas.find((entry) => normalizePersonaName(entry.name) === selectedName);
+    if (!persona) return;
+    sit(pendingPersonaLoadSeat, persona);
+    closeLoadPersonaOverlay();
+    CommonUtils.showTableToast(`Loaded player: ${normalizePersonaName(persona.name)}`, {
+        containerId: 'table',
+        duration: 1300
+    });
+}
+
+function deleteSelectedPersona() {
+    const selectedName = normalizePersonaName(ui.personaLoadSelect ? ui.personaLoadSelect.value : '');
+    if (!selectedName) return;
+
+    const personas = loadSavedPersonas();
+    const next = personas.filter((entry) => normalizePersonaName(entry.name) !== selectedName);
+    if (next.length === personas.length) return;
+
+    saveSavedPersonas(next);
+    CommonUtils.showTableToast(`Deleted player: ${selectedName}`, {
+        containerId: 'table',
+        duration: 1200
+    });
+
+    if (!ui.personaLoadSelect) return;
+    if (!next.length) {
+        closeLoadPersonaOverlay();
+        renderSeats();
+        return;
+    }
+
+    ui.personaLoadSelect.innerHTML = next.map((persona) => {
+        const name = normalizePersonaName(persona.name);
+        return `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
+    }).join('');
+    renderSeats();
+}
+
 
 /* --- RENDERING --- */
 function createCardEl(card) {
@@ -1718,8 +2075,19 @@ function renderDealer() {
     }
 }
 
-function sit(idx) {
+function sit(idx, persona = null) {
     if (state.players[idx]) return;
+
+    if (persona && typeof persona === 'object') {
+        state.players[idx] = buildPlayerFromPersona(idx, persona);
+        if (state.phase === 'BETTING') {
+            updateGameFlow();
+        } else {
+            renderSeat(idx);
+        }
+        markSessionDirty();
+        return;
+    }
 
     // determine what kind of clientele just sat down
     let luck = Math.random()
@@ -1757,6 +2125,7 @@ function sit(idx) {
         pendingStandUp: false,
         countingBias: Math.random(),
         conservative: (Math.random() > 0.5 ? true : false),
+        displayName: '',
     };
 
     if (state.phase === 'BETTING') {
@@ -1764,6 +2133,7 @@ function sit(idx) {
     } else {
         renderSeat(idx);
     }
+    markSessionDirty();
 }
 
 function standUp(idx) {
@@ -1780,6 +2150,7 @@ function standUp(idx) {
         if (state.phase === 'PLAYING' && state.turnIndex === idx) {
             runAutoPlay();
         }
+        markSessionDirty();
     } else {
         // Safe to remove immediately
         state.players[idx] = null;
@@ -1788,16 +2159,16 @@ function standUp(idx) {
         } else {
             renderSeats();
         }
+        markSessionDirty();
     }
 }
 
 function renderSeat(idx) {
     const viewportSnapshot = captureViewportState();
-    const el = document.getElementById(`seat-${idx}`);
+    const el = document.getElementById(`seat-slot-${idx}`);
     if (!el) return;
     el.outerHTML = getSeatHTML(idx);
     scheduleTableSizing();
-    restoreViewportState(viewportSnapshot);
     restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
@@ -1808,7 +2179,6 @@ function renderSeats() {
         ui.seats.innerHTML += getSeatHTML(i);
     }
     scheduleTableSizing();
-    restoreViewportState(viewportSnapshot);
     restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
@@ -1841,15 +2211,21 @@ function getHandResultOverlayHTML(hand) {
 
 function getSeatHTML(idx) {
     const p = state.players[idx];
-    const isGameActive = (state.phase === 'DEALING' || state.phase === 'PLAYING' || state.phase === 'RESOLVING');
 
     if (!p) {
         return `
-                    <div class="seat seat-empty" id="seat-${idx}">
-                        <div class="seat-empty-label">Empty</div>
-                        <div class="player-hand-area" aria-hidden="true"></div>
-                        <div class="seat-controls">
-                            <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                    <div class="seat-slot" id="seat-slot-${idx}">
+                        <div class="seat seat-empty" id="seat-${idx}">
+                            <div class="seat-empty-label">Empty</div>
+                            <div class="player-hand-area" aria-hidden="true"></div>
+                            <div class="seat-controls">
+                                <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                            </div>
+                        </div>
+                        <div class="seat-automation">
+                            <div class="persona-save-row">
+                                <button class="btn-mini persona-btn persona-accent-btn" onclick="loadPlayerPersona(${idx})">Load Player</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1880,29 +2256,33 @@ function getSeatHTML(idx) {
 
     let controlsHTML = '';
 
-    // General Controls (Stand Up and Toggles) - Always available if seated
-    const togglesHTML = `
-                <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
-                <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
-                    <span class="toggle-label">Auto Play</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autoplay-${idx}" disabled>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
-                    <span class="toggle-label">Auto Bet</span>
-                    <label class="toggle-switch auto-bet">
-                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
-                        <span class="slider"></span>
-                    </label>
+    const displayName = getPlayerDisplayName(p, idx);
+    const automationHTML = `
+                <div class="seat-automation">
+                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
+                        <span class="toggle-label">Auto Play</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autoplay-${idx}" disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
+                        <span class="toggle-label">Auto Bet</span>
+                        <label class="toggle-switch auto-bet">
+                            <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="persona-save-row">
+                        <button class="btn-mini persona-btn persona-accent-btn" onclick="savePlayerPersona(${idx})">Save Player</button>
+                    </div>
                 </div>
     `;
 
     // Betting Phase Controls
     if (state.phase === 'BETTING') {
         controlsHTML = `
-                    ${togglesHTML}
+                    <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                     <div class="bet-controls">
                         <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || state.minBet}" min="${state.minBet}" step="5">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
@@ -1917,7 +2297,7 @@ function getSeatHTML(idx) {
             const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
             controlsHTML = `
-                        ${togglesHTML}
+                        <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                         <div class="controls">
                             <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                             <button class="action-btn btn-stand" onclick="playerStand()">S</button>
@@ -1926,10 +2306,10 @@ function getSeatHTML(idx) {
                         </div>
                     `;
         } else {
-            controlsHTML = togglesHTML;
+            controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
         }
     } else {
-        controlsHTML = togglesHTML;
+        controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
     }
 
     // Requirement: Persistent Bet Bubble
@@ -1943,19 +2323,20 @@ function getSeatHTML(idx) {
     }
 
     return `
-                <div class="seat ${classList}" id="seat-${idx}">
-                    <div class="seat-info">
-                        <span>Player ${idx + 1} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
-                        <div class='money-anchor'>
-                            <span class="chip-stack">$${p.chips}</span>
-                            <span class="${p.profit >= 0 ? 'player-profit' : 'player-loss'}">${Math.abs(p.profit)}</span>
+                <div class="seat-slot" id="seat-slot-${idx}">
+                    <div class="seat ${classList}" id="seat-${idx}">
+                        <div class="seat-info">
+                            <span>${escapeHTML(displayName)} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
+                            <div class='money-anchor'>
+                                <span class="chip-stack">$${p.chips}</span>
+                                <span class="${p.profit >= 0 ? 'player-profit' : 'player-loss'}">${Math.abs(p.profit)}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="player-hand-area">
-                        ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
+                        <div class="player-hand-area">
+                            ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
 
-                        ${p.hands.length === 1 && state.phase !== 'BETTING'
+                            ${p.hands.length === 1 && state.phase !== 'BETTING'
             ? `<div class="score-pill" style="margin-bottom:5px;">${getScoreDisplay(p.hands[0].cards)}</div>`
             : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
         }
@@ -1996,12 +2377,14 @@ function getSeatHTML(idx) {
             return html;
         })()}
 
-                        ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
-                    </div>
+                            ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
+                        </div>
 
-                    <div class="seat-controls">
-                        ${controlsHTML}
+                        <div class="seat-controls">
+                            ${controlsHTML}
+                        </div>
                     </div>
+                    ${automationHTML}
                 </div>
             `;
 }
@@ -2024,6 +2407,7 @@ ui.seatSelect.addEventListener('change', (e) => {
     }
 
     renderSeats();
+    markSessionDirty();
 });
 
 ui.deckSelect.addEventListener('change', (e) => {
@@ -2035,6 +2419,7 @@ ui.deckSelect.addEventListener('change', (e) => {
         state.tableSettingsChanged = state.tableSettingsChanged || {};
         state.tableSettingsChanged["deckCount"] = parseInt(e.target.value);
     }
+    markSessionDirty();
 })
 
 ui.minBet.addEventListener('change', (e) => {
@@ -2046,7 +2431,74 @@ ui.minBet.addEventListener('change', (e) => {
         state.tableSettingsChanged = state.tableSettingsChanged || {};
         state.tableSettingsChanged["minBet"] =  parseInt(e.target.value); // forces a re-shuffle due to having "changed tables"
     }
+    markSessionDirty();
 });
+
+if (ui.resetStats) {
+    ui.resetStats.addEventListener('click', () => {
+        resetBlackjackStatistics();
+    });
+}
+
+if (ui.personaSaveConfirm) {
+    ui.personaSaveConfirm.addEventListener('click', confirmSavePlayerPersona);
+}
+
+if (ui.personaSaveCancel) {
+    ui.personaSaveCancel.addEventListener('click', closeSavePersonaOverlay);
+}
+
+if (ui.personaSaveOverlay) {
+    ui.personaSaveOverlay.addEventListener('click', (event) => {
+        if (event.target === ui.personaSaveOverlay) {
+            closeSavePersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaSaveName) {
+    ui.personaSaveName.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmSavePlayerPersona();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            closeSavePersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaLoadConfirm) {
+    ui.personaLoadConfirm.addEventListener('click', confirmLoadPlayerPersona);
+}
+
+if (ui.personaLoadDelete) {
+    ui.personaLoadDelete.addEventListener('click', deleteSelectedPersona);
+}
+
+if (ui.personaLoadCancel) {
+    ui.personaLoadCancel.addEventListener('click', closeLoadPersonaOverlay);
+}
+
+if (ui.personaLoadOverlay) {
+    ui.personaLoadOverlay.addEventListener('click', (event) => {
+        if (event.target === ui.personaLoadOverlay) {
+            closeLoadPersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaLoadSelect) {
+    ui.personaLoadSelect.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmLoadPlayerPersona();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            closeLoadPersonaOverlay();
+        }
+    });
+}
 
 
 // Start

@@ -15,7 +15,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Additional card game pages may be added over time.
 
 ## Shared Systems
-- `common.js`: shared card/deck helpers, responsive sizing helpers, toast/audio helpers, and `StateManager`.
+- `common.js`: shared card/deck helpers, responsive sizing helpers, toast/audio helpers, high-score storage helpers, and `StateManager`.
 - `header.js`: shared header control registration and collapse/expand behavior.
 - `shared/mobile-controller.js`: mobile card interaction controller for pick/drag/drop + panning coexistence.
 - `shared/ui-helpers.js`: shared hit-testing and pointer-target helpers.
@@ -36,12 +36,15 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Gameplay and persistence tests are required when rule logic, save-state behavior, shared systems, or input handling changes.
 - Rendering-only changes (CSS/layout/markup) should default to targeted visual verification; full logic test suites are optional unless behavior contracts changed.
 
-## Persistence Contract (Solitaire Games)
+## Persistence Contract
 - Use `CommonUtils.StateManager`.
 - Save key format: `bj_table.save.<gameId>`.
 - State should be marked dirty after meaningful moves.
 - Saves flush on interval and page lifecycle events.
 - On win, clear save state.
+- Solitaire high scores are stored separately under `bj_table.high_scores`, keyed by game + ruleset.
+- Blackjack persists session-level state (seated players, balances, and table statistics) and intentionally resets active dealing/shoe flow to a fresh betting shoe on restore.
+- Blackjack provides a user-facing reset action that resets statistics without removing currently seated players.
 
 ## Add-ons Contract
 - Primary source: `window.AddonManifest` from `addons/manifest.js`.

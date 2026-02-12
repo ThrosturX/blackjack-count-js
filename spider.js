@@ -42,6 +42,19 @@ function syncSpiderSuitUI() {
     select.value = String(spiderState.suitMode || 4);
 }
 
+function getSpiderRuleSetKey() {
+    const suitMode = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
+    const normalized = SPIDER_SUIT_MODES[suitMode] ? suitMode : 4;
+    return `suits-${normalized}`;
+}
+
+function syncSpiderHighScore() {
+    const highScoreEl = document.getElementById('spider-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('spider', getSpiderRuleSetKey(), spiderState.score);
+    highScoreEl.textContent = highScore;
+}
+
 let spiderStateManager = null;
 
 const SPIDER_CARD_HEIGHT = 100;
@@ -414,6 +427,7 @@ function updateStats() {
     const scoreEl = document.getElementById('spider-score');
     if (movesEl) movesEl.textContent = spiderState.moves;
     if (scoreEl) scoreEl.textContent = spiderState.score;
+    syncSpiderHighScore();
 }
 
 function recordMove(moveEntry) {

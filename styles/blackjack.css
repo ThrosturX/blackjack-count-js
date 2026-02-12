@@ -54,6 +54,180 @@
     overflow: visible;
 }
 
+#blackjack-scroll .seat-slot {
+    width: var(--blackjack-seat-min-width);
+    min-width: var(--blackjack-seat-min-width);
+    max-width: var(--blackjack-seat-min-width);
+    flex: 0 0 var(--blackjack-seat-min-width);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: calc(6px * var(--ui-scale));
+}
+
+#blackjack-scroll .seat-automation {
+    min-height: calc(54px * var(--ui-scale));
+    border: 1px solid rgba(242, 201, 76, 0.28);
+    border-radius: calc(10px * var(--ui-scale));
+    background: rgba(7, 6, 21, 0.72);
+    padding: calc(5px * var(--ui-scale)) calc(7px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    gap: calc(4px * var(--ui-scale));
+}
+
+#blackjack-scroll .seat-automation .toggle-container {
+    margin: 0;
+}
+
+#blackjack-scroll .persona-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+    align-items: center;
+}
+
+#blackjack-scroll .persona-select {
+    min-width: 0;
+    width: 100%;
+    font-size: calc(0.62rem * var(--ui-scale));
+    padding: calc(4px * var(--ui-scale));
+}
+
+#blackjack-scroll .persona-btn,
+.persona-save-panel .persona-btn {
+    font-size: calc(0.6rem * var(--ui-scale));
+    line-height: 1;
+    padding: calc(5px * var(--ui-scale)) calc(6px * var(--ui-scale));
+}
+
+#blackjack-scroll .persona-save-row {
+    display: flex;
+}
+
+#blackjack-scroll .persona-save-row .persona-btn {
+    width: 100%;
+}
+
+#blackjack-scroll .persona-accent-btn,
+.persona-save-panel .persona-accent-btn {
+    border-color: rgba(129, 189, 245, 0.85);
+    background: linear-gradient(180deg, rgba(88, 156, 220, 0.92), rgba(67, 129, 196, 0.92));
+    color: #eaf5ff;
+}
+
+#blackjack-scroll .persona-accent-btn:hover,
+.persona-save-panel .persona-accent-btn:hover {
+    background: linear-gradient(180deg, rgba(101, 170, 236, 0.96), rgba(75, 140, 210, 0.96));
+}
+
+#blackjack-scroll .persona-delete-btn,
+.persona-save-panel .persona-delete-btn {
+    border-color: rgba(240, 119, 119, 0.88);
+    background: linear-gradient(180deg, rgba(199, 76, 76, 0.95), rgba(167, 58, 58, 0.95));
+    color: #ffeaea;
+}
+
+#blackjack-scroll .persona-delete-btn:hover,
+.persona-save-panel .persona-delete-btn:hover {
+    background: linear-gradient(180deg, rgba(214, 89, 89, 0.98), rgba(180, 66, 66, 0.98));
+}
+
+#blackjack-scroll .persona-danger-text,
+.persona-save-panel .persona-danger-text {
+    color: #ffb3b3;
+    text-shadow: 0 0 6px rgba(120, 0, 0, 0.45);
+}
+
+#blackjack-scroll .persona-empty {
+    font-size: calc(0.58rem * var(--ui-scale));
+    color: #b9b9b9;
+    text-align: center;
+    padding: calc(4px * var(--ui-scale)) 0;
+}
+
+.persona-save-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 8, 20, 0.64);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1600;
+    padding: 16px;
+}
+
+.persona-save-overlay.show {
+    display: flex;
+}
+
+.persona-save-panel {
+    width: min(360px, 92vw);
+    border-radius: 12px;
+    border: 1px solid rgba(133, 186, 236, 0.65);
+    background: linear-gradient(170deg, rgba(10, 20, 36, 0.96), rgba(8, 14, 29, 0.96));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.persona-save-panel h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #e7f2ff;
+}
+
+#persona-save-name {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(140, 192, 241, 0.58);
+    background: rgba(8, 22, 44, 0.82);
+    color: #ecf6ff;
+}
+
+#persona-load-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(140, 192, 241, 0.58);
+    background: rgba(8, 22, 44, 0.82);
+    color: #ecf6ff;
+}
+
+.persona-save-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.persona-save-panel .persona-save-actions .btn-toggle {
+    background: rgba(0, 0, 0, 0.58);
+    border: 1px solid #4a4a4a;
+    color: #d7d7d7;
+}
+
+.persona-save-panel .persona-save-actions .btn-toggle:hover {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.persona-save-panel #persona-save-confirm {
+    color: #9ecfff;
+}
+
+.persona-save-panel #persona-load-confirm,
+.persona-save-panel #persona-load-cancel {
+    color: #d7d7d7;
+}
+
+.persona-save-panel #persona-load-delete {
+    color: #ff9b9b;
+}
+
 #blackjack-scroll .bet-input {
     min-width: 0;
     width: 100%;
@@ -214,6 +388,13 @@
         flex: 0 0 var(--blackjack-seat-min-width);
         min-height: var(--blackjack-seat-min-height);
         height: var(--blackjack-seat-min-height);
+    }
+
+    #blackjack-scroll .seat-slot {
+        width: var(--blackjack-seat-min-width);
+        min-width: var(--blackjack-seat-min-width);
+        max-width: var(--blackjack-seat-min-width);
+        flex: 0 0 var(--blackjack-seat-min-width);
     }
 
     #blackjack-scroll .seat-controls {

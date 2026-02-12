@@ -65,6 +65,19 @@ const gameState = {
 
 let klondikeStateManager = null;
 
+function getKlondikeRuleSetKey() {
+    const variantId = gameState.variantId || DEFAULT_VARIANT_ID;
+    const drawCount = Number.isFinite(gameState.drawCount) ? gameState.drawCount : 3;
+    return `variant-${variantId}|draw-${drawCount}`;
+}
+
+function syncKlondikeHighScore() {
+    const highScoreEl = document.getElementById('klondike-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('klondike', getKlondikeRuleSetKey(), gameState.score);
+    highScoreEl.textContent = highScore;
+}
+
 // Drag state / UI tuning
 const DRAG_MOVE_THRESHOLD = 6;
 const CARD_HEIGHT = 100;
@@ -537,6 +550,7 @@ function updateWaste() {
 function updateStats() {
     document.getElementById('score-display').textContent = gameState.score;
     document.getElementById('moves-display').textContent = gameState.moves;
+    syncKlondikeHighScore();
 }
 
 /**
@@ -1222,6 +1236,7 @@ function setupEventListeners() {
     // Draw count
     document.getElementById('draw-count-select').addEventListener('change', (e) => {
         gameState.drawCount = parseInt(e.target.value);
+        updateStats();
         if (klondikeStateManager) {
             klondikeStateManager.markDirty();
         }
