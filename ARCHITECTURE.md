@@ -20,6 +20,8 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - `src/header.js`: shared header control registration and collapse/expand behavior.
 - `src/shared/mobile-controller.js`: mobile card interaction controller for pick/drag/drop + panning coexistence.
 - `src/shared/ui-helpers.js`: shared hit-testing and pointer-target helpers.
+- `src/shared/entitlements.js`: canonical local entitlement store with claim metadata (`ownership`, `source`, timestamps) and authoritative merge hooks.
+- `src/shared/entitlement-sync.js`: app lifecycle sync runner that pulls authoritative claims from a native bridge (or debug mock) and applies them through the entitlement store.
 - `src/addons.js` + `src/addons/manifest.js`: addon manifest ingestion and addon loading/toggling.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base/layout/mobile styles.
 
@@ -51,6 +53,22 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Primary source: `window.AddonManifest` from `src/addons/manifest.js`.
 - `src/addons.js` supports legacy inline JSON manifest tags for compatibility.
 - Network fallback to `addons/manifest.json` should only be attempted when protocol is not `file:`.
+- Add-ons are loaded only when their IDs are claimed in `window.EntitlementStore`.
+- Add-ons are additionally filtered by optional manifest `games` allow-list.
+
+## Entitlements Contract
+- Local canonical store: `window.EntitlementStore` (`src/shared/entitlements.js`), persisted in `localStorage` key `bj_table.entitlements.v2`.
+- Claim records include source-of-truth metadata:
+  - `ownership`: `default`, `local`, or `authoritative`.
+  - `source`: provenance label (for example `system-default`, `store-claim`, `play-billing-backend`).
+- Default claim: `default-themes` is always present.
+- Future Play/backend boundary is explicit:
+  - Native/backend sync should call `EntitlementStore.applyAuthoritativeClaims(...)`.
+  - Authoritative claims are applied by `src/shared/entitlement-sync.js` on startup and app resume/foreground transitions.
+  - Android baseline bridge surface is `window.Capacitor.Plugins.EntitlementBridge.getAuthoritativeClaims()`.
+- Debug authoritative feed for local testing:
+  - `localStorage` key `bj_table.entitlements.authoritative_mock.v1`
+  - shape: `{ "ids": ["addon-id"], "revision": "optional-string" }`
 
 ## Extension Guidance
 - New game pages should consume shared header, shared styles, and shared helpers first.

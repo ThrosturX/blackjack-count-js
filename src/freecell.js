@@ -38,6 +38,10 @@ const STACK_X_OFFSET = 3;
 const STACK_X_OFFSET_MAX = 18;
 const MAX_HISTORY = 200;
 const FREECELL_MIN_TABLEAU_CARDS = 20;
+const FREECELL_BASE_TABLEAU_GAP = 12;
+const FREECELL_MIN_TABLEAU_GAP = 4;
+const FREECELL_BASE_FAN_X = 18;
+const FREECELL_MIN_FAN_X = 6;
 
 const freecellDragState = {
     draggedCards: [],
@@ -300,13 +304,72 @@ function getMaxTableauLength() {
     return freecellState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
 }
 
+function getStackOffsets() {
+    return {
+        y: CommonUtils.getSolitaireStackOffset(STACK_OFFSET, { minFactor: 0.42 }),
+        x: CommonUtils.getSolitaireStackOffset(STACK_X_OFFSET, {
+            min: 1,
+            max: Math.min(STACK_X_OFFSET_MAX, STACK_X_OFFSET)
+        })
+    };
+}
+
+function applyAdaptiveTableauSpacing() {
+    const tableEl = document.getElementById('table');
+    const wrapperEl = document.getElementById('freecell-scroll');
+    const tableauEl = document.getElementById('freecell-tableau');
+    if (!tableEl || !wrapperEl || !tableauEl) return;
+
+    const scale = CommonUtils.getUiScaleValue();
+    const baseGap = CommonUtils.getSolitaireStackOffset(FREECELL_BASE_TABLEAU_GAP, {
+        scale,
+        min: FREECELL_MIN_TABLEAU_GAP,
+        max: FREECELL_BASE_TABLEAU_GAP
+    });
+    const baseFan = CommonUtils.getSolitaireStackOffset(FREECELL_BASE_FAN_X, {
+        scale,
+        min: FREECELL_MIN_FAN_X,
+        max: FREECELL_BASE_FAN_X
+    });
+
+    const styles = getComputedStyle(tableauEl);
+    const currentGap = parseFloat(styles.columnGap || styles.gap) || baseGap;
+    const currentFan = parseFloat(getComputedStyle(tableEl).getPropertyValue('--freecell-fan-x')) || baseFan;
+    const availableWidth = wrapperEl.getBoundingClientRect().width || 0;
+    const gapSlots = 7;
+    const fanSlots = 8;
+    const requiredAtBase = tableauEl.scrollWidth
+        + Math.max(0, (baseGap - currentGap) * gapSlots)
+        + Math.max(0, (baseFan - currentFan) * fanSlots);
+    let overflow = Math.max(0, requiredAtBase - availableWidth);
+
+    const gapResult = CommonUtils.consumeOverflowWithSpacing(
+        overflow,
+        baseGap,
+        FREECELL_MIN_TABLEAU_GAP,
+        gapSlots
+    );
+    overflow = gapResult.overflow;
+    const fanResult = CommonUtils.consumeOverflowWithSpacing(
+        overflow,
+        baseFan,
+        FREECELL_MIN_FAN_X,
+        fanSlots
+    );
+
+    tableEl.style.setProperty('--freecell-tableau-gap', `${gapResult.value}px`);
+    tableEl.style.setProperty('--freecell-fan-x', `${fanResult.value}px`);
+}
+
 function ensureTableauSizing() {
+    applyAdaptiveTableauSpacing();
+    const offsets = getStackOffsets();
     const maxCards = Math.max(FREECELL_MIN_TABLEAU_CARDS, getMaxTableauLength());
-    const stackHeight = CommonUtils.getStackHeight(maxCards, STACK_OFFSET);
+    const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
     CommonUtils.ensureTableauMinHeight({
         table: 'table',
         topRow: 'freecell-top-row',
-        stackOffset: STACK_OFFSET,
+        stackOffset: offsets.y,
         maxCards
     });
     const tableauArea = document.getElementById('freecell-tableau');
@@ -331,6 +394,7 @@ function updateTableau() {
     const tableauArea = document.getElementById('freecell-tableau');
     if (!tableauArea) return;
     tableauArea.innerHTML = '';
+    const offsets = getStackOffsets();
 
     freecellState.tableau.forEach((column, colIndex) => {
         const columnEl = document.createElement('div');
@@ -340,8 +404,8 @@ function updateTableau() {
         column.forEach((card, rowIndex) => {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
-            cardEl.style.top = `${rowIndex * STACK_OFFSET}px`;
-            cardEl.style.left = `${Math.min(STACK_X_OFFSET_MAX, rowIndex * STACK_X_OFFSET)}px`;
+            cardEl.style.top = `${rowIndex * offsets.y}px`;
+            cardEl.style.left = `${Math.min(STACK_X_OFFSET_MAX, rowIndex * offsets.x)}px`;
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 
@@ -621,6 +685,7 @@ function createDragLayer(e) {
     freecellDragState.pointerOffsetX = e.clientX - rect.left;
     freecellDragState.pointerOffsetY = e.clientY - rect.top;
 
+    const offsets = getStackOffsets();
     const layer = document.createElement('div');
     layer.className = 'drag-layer';
     layer.style.position = 'fixed';
@@ -629,12 +694,12 @@ function createDragLayer(e) {
     layer.style.pointerEvents = 'none';
     layer.style.zIndex = '1000';
     layer.style.width = `${rect.width}px`;
-    layer.style.height = `${CARD_HEIGHT + (freecellDragState.draggedElements.length - 1) * STACK_OFFSET}px`;
+    layer.style.height = `${CARD_HEIGHT + (freecellDragState.draggedElements.length - 1) * offsets.y}px`;
 
     freecellDragState.draggedElements.forEach((el, idx) => {
         el.style.position = 'absolute';
         el.style.left = '0';
-        el.style.top = `${idx * STACK_OFFSET}px`;
+        el.style.top = `${idx * offsets.y}px`;
         el.style.margin = '0';
         el.style.transform = 'scale(var(--card-scale))';
         el.style.transition = 'none';
@@ -845,11 +910,12 @@ function removeDraggedCardsFromSource() {
 }
 
 function findTableauDropColumn(clientX, clientY) {
+    const offsets = getStackOffsets();
     let bestColumn = null;
     let bestDistance = Infinity;
 
     document.querySelectorAll('.freecell-column').forEach(column => {
-        const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, STACK_OFFSET);
+        const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, offsets.y);
         const paddedRect = UIHelpers.getRectWithPadding(rect, 30);
 
         if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {

@@ -37,6 +37,8 @@ The project is designed to run from both static hosting and `file://`.
 - `src/header.js`: shared header toggle/collapse behavior.
 - `src/shared/mobile-controller.js`: shared mobile touch logic for pick-up and panning coordination.
 - `src/shared/ui-helpers.js`: shared hit-testing and pointer utility helpers.
+- `src/shared/entitlements.js`: canonical local entitlement store with claim metadata and authoritative-merge APIs.
+- `src/shared/entitlement-sync.js`: lifecycle-aware entitlement sync runner (native bridge first, debug mock fallback).
 - `src/addons.js` + `src/addons/manifest.js`: add-on loading and add-on catalog registration.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base, layout, and mobile override style layers.
 
@@ -66,6 +68,19 @@ Solitaire games and Blackjack persist state with `localStorage` via `CommonUtils
 
 - Add-on catalog is defined in `src/addons/manifest.js`.
 - `src/addons.js` supports script manifest (`window.AddonManifest`), legacy inline manifest, and network fallback to `addons/manifest.json` when not on `file://`.
+- Add-ons only appear/load after entitlement claim.
+- Add-ons may include a `games` allow-list so packs only appear in supported game pages.
+
+## Entitlements Boundary (Local Now, Play-Ready Later)
+
+- Canonical local entitlement state is stored by `window.EntitlementStore` in `localStorage` (`bj_table.entitlements.v2`).
+- Claims carry provenance metadata (`ownership`, `source`) so local claims and future Play/backend authoritative claims are explicit.
+- `src/shared/entitlement-sync.js` runs on startup and app foreground/resume and applies authoritative claims via:
+  - `EntitlementStore.applyAuthoritativeClaims(ids, options)`
+- Current source priority:
+  1. Native bridge payload (when available)
+  2. Debug mock payload (`localStorage` key: `bj_table.entitlements.authoritative_mock.v1`)
+  3. Local claims only
 
 ## Tests
 
@@ -93,6 +108,7 @@ When behavior or architecture changes substantially, keep these files in sync:
 
 - Capacitor wrapper progress and resume instructions are documented in `mobile/android/README.md`.
 - Developer shortcut scripts live in `scripts/`.
+- Native entitlement bridge stub is currently provided by `android/app/src/main/java/com/throstur/bjtable/EntitlementBridgePlugin.java`.
 
 ## Android Developer Shortcuts
 

@@ -82,12 +82,17 @@ function syncKlondikeHighScore() {
 const DRAG_MOVE_THRESHOLD = 6;
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
+const STACK_X_OFFSET = 2.5;
 const TABLEAU_DROP_PADDING = 40;
 const FOUNDATION_DROP_PADDING = 30;
 const MAX_HISTORY = 200;
 const MAX_SOLVABLE_DEAL_ATTEMPTS = 12;
 const MAX_SIMULATION_ITERATIONS = 1200;
 const KLONDIKE_MIN_TABLEAU_CARDS = 13;
+const KLONDIKE_BASE_TABLEAU_GAP = 15;
+const KLONDIKE_MIN_TABLEAU_GAP = 4;
+const KLONDIKE_WASTE_FAN_BASE = 20;
+const KLONDIKE_WASTE_FAN_MIN = 8;
 
 const dragState = {
     draggedCards: [],
@@ -383,13 +388,57 @@ function getMaxTableauLength() {
     return gameState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
 }
 
+function getStackOffsets() {
+    return {
+        y: CommonUtils.getSolitaireStackOffset(STACK_OFFSET, { minFactor: 0.42 }),
+        x: CommonUtils.getSolitaireStackOffset(STACK_X_OFFSET, { min: 1, max: STACK_X_OFFSET })
+    };
+}
+
+function getWasteFanOffset() {
+    return CommonUtils.getSolitaireStackOffset(KLONDIKE_WASTE_FAN_BASE, {
+        min: KLONDIKE_WASTE_FAN_MIN,
+        max: KLONDIKE_WASTE_FAN_BASE
+    });
+}
+
+function applyAdaptiveTableauGap() {
+    const tableEl = document.getElementById('klondike-table');
+    const wrapperEl = document.getElementById('klondike-scroll');
+    const tableauEl = document.getElementById('tableau-area');
+    if (!tableEl || !wrapperEl || !tableauEl) return;
+
+    const scale = CommonUtils.getUiScaleValue();
+    const baseGap = CommonUtils.getSolitaireStackOffset(KLONDIKE_BASE_TABLEAU_GAP, {
+        scale,
+        min: KLONDIKE_MIN_TABLEAU_GAP,
+        max: KLONDIKE_BASE_TABLEAU_GAP
+    });
+    const currentGap = parseFloat(getComputedStyle(tableauEl).columnGap || getComputedStyle(tableauEl).gap) || baseGap;
+    const availableWidth = wrapperEl.getBoundingClientRect().width || 0;
+    const gapSlots = 6;
+    const requiredAtBase = tableauEl.scrollWidth + Math.max(0, (baseGap - currentGap) * gapSlots);
+    let overflow = Math.max(0, requiredAtBase - availableWidth);
+    const nextGap = CommonUtils.consumeOverflowWithSpacing(
+        overflow,
+        baseGap,
+        KLONDIKE_MIN_TABLEAU_GAP,
+        gapSlots
+    ).value;
+
+    tableEl.style.setProperty('--klondike-tableau-gap', `${nextGap}px`);
+    tableEl.style.setProperty('--klondike-waste-fan-x', `${getWasteFanOffset()}px`);
+}
+
 function ensureTableauSizing() {
+    applyAdaptiveTableauGap();
+    const offsets = getStackOffsets();
     const maxCards = Math.max(KLONDIKE_MIN_TABLEAU_CARDS, getMaxTableauLength());
-    const stackHeight = CommonUtils.getStackHeight(maxCards, STACK_OFFSET);
+    const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
     CommonUtils.ensureTableauMinHeight({
         table: 'klondike-table',
         topRow: 'top-row',
-        stackOffset: STACK_OFFSET,
+        stackOffset: offsets.y,
         maxCards
     });
     const tableauArea = document.getElementById('tableau-area');
@@ -412,6 +461,7 @@ const scheduleTableauSizing = CommonUtils.createRafScheduler(ensureTableauSizing
  * Update tableau columns
  */
 function updateTableau() {
+    const offsets = getStackOffsets();
     for (let col = 0; col < 7; col++) {
         const columnEl = document.getElementById(`tableau-${col}`);
         columnEl.innerHTML = '';
@@ -421,8 +471,8 @@ function updateTableau() {
         cards.forEach((card, index) => {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
-            cardEl.style.top = `${index * 25}px`;
-            cardEl.style.left = `${index * 2.5}px`;
+            cardEl.style.top = `${index * offsets.y}px`;
+            cardEl.style.left = `${index * offsets.x}px`;
             cardEl.dataset.column = col;
             cardEl.dataset.index = index;
 
@@ -521,7 +571,7 @@ function updateWaste() {
             const card = gameState.waste[i];
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
-            cardEl.style.left = `${(i - startIndex) * 20}px`;
+            cardEl.style.left = `${(i - startIndex) * getWasteFanOffset()}px`;
 
             // Only top card responds to drag
             if (i === gameState.waste.length - 1) {
@@ -728,6 +778,7 @@ function createDragLayer(e) {
     dragState.pointerOffsetX = e.clientX - initialRect.left;
     dragState.pointerOffsetY = e.clientY - initialRect.top;
 
+    const offsets = getStackOffsets();
     const layer = document.createElement('div');
     layer.className = 'drag-layer';
     layer.style.position = 'fixed';
@@ -736,12 +787,12 @@ function createDragLayer(e) {
     layer.style.pointerEvents = 'none';
     layer.style.zIndex = '1000';
     layer.style.width = `${initialRect.width}px`;
-    layer.style.height = `${CARD_HEIGHT + (dragState.draggedElements.length - 1) * STACK_OFFSET}px`;
+    layer.style.height = `${CARD_HEIGHT + (dragState.draggedElements.length - 1) * offsets.y}px`;
 
     dragState.draggedElements.forEach((el, idx) => {
         el.style.position = 'absolute';
         el.style.left = '0';
-        el.style.top = `${idx * STACK_OFFSET}px`;
+        el.style.top = `${idx * offsets.y}px`;
         el.style.margin = '0';
         el.style.transform = 'scale(var(--card-scale))';
         el.style.transition = 'none';
@@ -1293,11 +1344,12 @@ function canDropOnFoundation(targetFoundation) {
 }
 
 function findTableauDropColumn(clientX, clientY) {
+    const offsets = getStackOffsets();
     let bestColumn = null;
     let bestCenterDistance = Infinity;
 
     document.querySelectorAll('.tableau-column').forEach(column => {
-        const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, STACK_OFFSET);
+        const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, offsets.y);
         const paddedRect = UIHelpers.getRectWithPadding(rect, TABLEAU_DROP_PADDING);
 
         if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;

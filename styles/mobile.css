@@ -2,6 +2,13 @@
    MOBILE OVERRIDES (Loaded Last)
    ======================================== */
 
+@media screen and (max-width: 900px) and (pointer: coarse) {
+    :root {
+        /* Fallback for Android/WebView cases where safe-area inset reports 0. */
+        --header-safe-top: max(var(--safe-top), 18px);
+    }
+}
+
 @media screen and (max-width: 600px) {
     /* Hide the 3D shoe on phones to save space */
     .shoe-container {
@@ -19,7 +26,7 @@
     header {
         --landscape-header-row-gap: 10px;
         --landscape-header-pad-y: 6px;
-        padding-top: calc(var(--landscape-header-pad-y) + var(--landscape-header-row-gap));
+        padding-top: calc(var(--header-safe-top) + var(--landscape-header-pad-y) + var(--landscape-header-row-gap));
         padding-bottom: var(--landscape-header-pad-y);
         row-gap: 0;
     }
@@ -65,7 +72,7 @@
 
 @media screen and (max-width: 600px) and (orientation: portrait) {
     header {
-        padding: 6px 8px;
+        padding: calc(6px + var(--header-safe-top)) 8px 6px;
         gap: 8px;
     }
 

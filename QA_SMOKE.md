@@ -16,6 +16,8 @@
 - No unnecessary horizontal scrolling when content fits.
 - Horizontal scrolling works when content does not fit.
 - Works from both static hosting and `file://`.
+- Store page loads and Back button returns to previous page when history exists.
+- Add-ons list only shows claimed add-ons (with `Default Themes` available by default).
 
 ## Game Checks
 - Blackjack: new round flow works, seat count changes resize table correctly, shoe visibility hides only when fit/overlap requires it, dealer content shifts slightly when shoe encroaches near center, and sit/seat controls stay reachable at large table scales.
@@ -31,6 +33,11 @@
 - State is restored after reload.
 - State is saved after moves.
 - Save is cleared after a win.
+
+## Entitlement Checks
+- Claiming an add-on in Store makes it available in supported games after reload.
+- Unclaimed add-ons remain hidden from Add-ons panels.
+- `Reset purchases` returns to default claim set (`default-themes` only).
 
 ## Update Policy
 - Ask to update this file only when behavior-impacting work changes what should be tested.

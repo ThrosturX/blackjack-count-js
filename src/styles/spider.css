@@ -75,7 +75,7 @@
     display: grid;
     grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--spider-fan-x, 18px)));
     justify-content: center;
-    gap: calc(12px * var(--ui-scale));
+    gap: var(--spider-tableau-gap, calc(12px * var(--ui-scale)));
     padding-inline: calc(8px * var(--ui-scale));
     box-sizing: border-box;
 }

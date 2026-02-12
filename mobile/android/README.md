@@ -10,6 +10,12 @@ This file is a resume guide for wrapping the web app in Android via Capacitor.
 - Capacitor packages are pinned to `7.x`.
 - Android debug build is working with JDK 21 and local Android SDK path.
 - Developer shortcuts are available under `scripts/`.
+- Shared web entitlement boundary is implemented:
+  - `src/shared/entitlements.js` is the canonical local store.
+  - `src/shared/entitlement-sync.js` performs startup/resume authoritative sync.
+- Native bridge stub is implemented:
+  - `android/app/src/main/java/com/throstur/bjtable/EntitlementBridgePlugin.java`
+  - Registered from `MainActivity` as `EntitlementBridge`.
 
 ## Environment
 
@@ -60,3 +66,43 @@ android/app/build/outputs/apk/debug/app-debug.apk
 2. No console/module loading errors from local assets.
 3. `localStorage` save/restore works after force-close/reopen.
 4. Touch interactions feel consistent with mobile browser behavior.
+5. Entitlement sync runs on launch/resume without errors.
+
+## Entitlement Bridge Contract (Next Native Hook)
+
+Implemented native bridge surface:
+
+- `window.Capacitor.Plugins.EntitlementBridge.getAuthoritativeClaims()`
+
+Optional future alternatives still supported by the web sync layer:
+
+- `window.NativeEntitlementBridge.getAuthoritativeClaims()`
+- `window.Capacitor.Plugins.PlayEntitlements.getAuthoritativeClaims()`
+
+Payload shape:
+
+```json
+{
+  "ids": ["default-themes", "premium-effects"],
+  "revision": "optional-server-revision",
+  "authority": "play-backend",
+  "source": "play-billing-backend"
+}
+```
+
+The payload is applied through:
+
+- `window.EntitlementStore.applyAuthoritativeClaims(ids, options)`
+
+For local debug before native bridge wiring, use:
+
+- `localStorage['bj_table.entitlements.authoritative_mock.v1']`
+
+Example:
+
+```json
+{
+  "ids": ["default-themes", "premium-effects"],
+  "revision": "debug-1"
+}
+```

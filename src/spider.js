@@ -65,6 +65,10 @@ const SPIDER_DROP_PADDING = 40;
 const SPIDER_COMPLETE_BONUS = 100;
 const SPIDER_MAX_HISTORY = 200;
 const SPIDER_MIN_TABLEAU_CARDS = 26;
+const SPIDER_BASE_TABLEAU_GAP = 12;
+const SPIDER_MIN_TABLEAU_GAP = 3;
+const SPIDER_BASE_FAN_X = 18;
+const SPIDER_MIN_FAN_X = 4;
 
 const spiderDragState = {
     draggedCards: [],
@@ -312,13 +316,72 @@ function getMaxTableauLength() {
     return spiderState.tableau.reduce((max, column) => Math.max(max, column.length), 0);
 }
 
+function getStackOffsets() {
+    return {
+        y: CommonUtils.getSolitaireStackOffset(SPIDER_STACK_OFFSET, { minFactor: 0.4 }),
+        x: CommonUtils.getSolitaireStackOffset(SPIDER_STACK_X_OFFSET, {
+            min: 1,
+            max: Math.min(SPIDER_STACK_X_OFFSET_MAX, SPIDER_STACK_X_OFFSET)
+        })
+    };
+}
+
+function applyAdaptiveTableauSpacing() {
+    const tableEl = document.getElementById('table');
+    const wrapperEl = document.getElementById('spider-scroll');
+    const tableauEl = document.getElementById('spider-tableau');
+    if (!tableEl || !wrapperEl || !tableauEl) return;
+
+    const scale = CommonUtils.getUiScaleValue();
+    const baseGap = CommonUtils.getSolitaireStackOffset(SPIDER_BASE_TABLEAU_GAP, {
+        scale,
+        min: SPIDER_MIN_TABLEAU_GAP,
+        max: SPIDER_BASE_TABLEAU_GAP
+    });
+    const baseFan = CommonUtils.getSolitaireStackOffset(SPIDER_BASE_FAN_X, {
+        scale,
+        min: SPIDER_MIN_FAN_X,
+        max: SPIDER_BASE_FAN_X
+    });
+
+    const styles = getComputedStyle(tableauEl);
+    const currentGap = parseFloat(styles.columnGap || styles.gap) || baseGap;
+    const currentFan = parseFloat(getComputedStyle(tableEl).getPropertyValue('--spider-fan-x')) || baseFan;
+    const availableWidth = wrapperEl.getBoundingClientRect().width || 0;
+    const gapSlots = 9;
+    const fanSlots = 10;
+    const requiredAtBase = tableauEl.scrollWidth
+        + Math.max(0, (baseGap - currentGap) * gapSlots)
+        + Math.max(0, (baseFan - currentFan) * fanSlots);
+    let overflow = Math.max(0, requiredAtBase - availableWidth);
+
+    const gapResult = CommonUtils.consumeOverflowWithSpacing(
+        overflow,
+        baseGap,
+        SPIDER_MIN_TABLEAU_GAP,
+        gapSlots
+    );
+    overflow = gapResult.overflow;
+    const fanResult = CommonUtils.consumeOverflowWithSpacing(
+        overflow,
+        baseFan,
+        SPIDER_MIN_FAN_X,
+        fanSlots
+    );
+
+    tableEl.style.setProperty('--spider-tableau-gap', `${gapResult.value}px`);
+    tableEl.style.setProperty('--spider-fan-x', `${fanResult.value}px`);
+}
+
 function ensureTableauSizing() {
+    applyAdaptiveTableauSpacing();
+    const offsets = getStackOffsets();
     const maxCards = Math.max(SPIDER_MIN_TABLEAU_CARDS, getMaxTableauLength());
-    const stackHeight = CommonUtils.getStackHeight(maxCards, SPIDER_STACK_OFFSET);
+    const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
     CommonUtils.ensureTableauMinHeight({
         table: 'table',
         topRow: 'spider-top-row',
-        stackOffset: SPIDER_STACK_OFFSET,
+        stackOffset: offsets.y,
         maxCards
     });
     const tableauArea = document.getElementById('spider-tableau');
@@ -342,6 +405,7 @@ function updateTableau() {
     const tableauArea = document.getElementById('spider-tableau');
     if (!tableauArea) return;
     tableauArea.innerHTML = '';
+    const offsets = getStackOffsets();
 
     spiderState.tableau.forEach((column, colIndex) => {
         const columnEl = document.createElement('div');
@@ -351,8 +415,8 @@ function updateTableau() {
         column.forEach((card, rowIndex) => {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
-            cardEl.style.top = `${rowIndex * SPIDER_STACK_OFFSET}px`;
-            cardEl.style.left = `${Math.min(SPIDER_STACK_X_OFFSET_MAX, rowIndex * SPIDER_STACK_X_OFFSET)}px`;
+            cardEl.style.top = `${rowIndex * offsets.y}px`;
+            cardEl.style.left = `${Math.min(SPIDER_STACK_X_OFFSET_MAX, rowIndex * offsets.x)}px`;
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 
@@ -620,6 +684,7 @@ function createDragLayer(e) {
     spiderDragState.pointerOffsetX = e.clientX - initialRect.left;
     spiderDragState.pointerOffsetY = e.clientY - initialRect.top;
 
+    const offsets = getStackOffsets();
     const layer = document.createElement('div');
     layer.className = 'drag-layer';
     layer.style.position = 'fixed';
@@ -628,12 +693,12 @@ function createDragLayer(e) {
     layer.style.pointerEvents = 'none';
     layer.style.zIndex = '1000';
     layer.style.width = `${initialRect.width}px`;
-    layer.style.height = `${SPIDER_CARD_HEIGHT + (spiderDragState.draggedElements.length - 1) * SPIDER_STACK_OFFSET}px`;
+    layer.style.height = `${SPIDER_CARD_HEIGHT + (spiderDragState.draggedElements.length - 1) * offsets.y}px`;
 
     spiderDragState.draggedElements.forEach((el, idx) => {
         el.style.position = 'absolute';
         el.style.left = '0';
-        el.style.top = `${idx * SPIDER_STACK_OFFSET}px`;
+        el.style.top = `${idx * offsets.y}px`;
         el.style.margin = '0';
         el.style.transform = 'scale(var(--card-scale))';
         el.style.transition = 'none';
@@ -818,8 +883,9 @@ function dealFromStock() {
                 if (columnEl) {
                     const columnRect = columnEl.getBoundingClientRect();
                     const rowIndex = spiderState.tableau[col].length - 1;
-                    const destX = columnRect.left + (rowIndex * 2.5);
-                    const destY = columnRect.top + (rowIndex * SPIDER_STACK_OFFSET);
+                    const offsets = getStackOffsets();
+                    const destX = columnRect.left + (rowIndex * offsets.x);
+                    const destY = columnRect.top + (rowIndex * offsets.y);
                     await animateDealCard(stockEl, destX, destY);
                 }
             }
@@ -893,11 +959,12 @@ function canDropOnTableau(targetCol) {
 }
 
 function findTableauDropColumn(clientX, clientY) {
+    const offsets = getStackOffsets();
     let bestColumn = null;
     let bestCenterDistance = Infinity;
 
     document.querySelectorAll('.spider-column').forEach(column => {
-        const rect = UIHelpers.getStackBounds(column, SPIDER_CARD_HEIGHT, SPIDER_STACK_OFFSET);
+        const rect = UIHelpers.getStackBounds(column, SPIDER_CARD_HEIGHT, offsets.y);
         const paddedRect = UIHelpers.getRectWithPadding(rect, SPIDER_DROP_PADDING);
 
         if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;

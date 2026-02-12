@@ -110,6 +110,8 @@
 }
 
 #addons-area {
+    flex: 1 0 100%;
+    width: 100%;
     white-space: normal;
 }
 
@@ -163,7 +165,7 @@
     }
 
     header {
-        padding: 6px 10px;
+        padding: calc(6px + var(--header-safe-top)) 10px 6px;
         justify-content: flex-start;
     }
 

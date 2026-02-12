@@ -152,6 +152,38 @@ const CommonUtils = {
         return Math.min(max, Math.max(min, value));
     },
 
+    getUiScaleValue: function () {
+        const styles = getComputedStyle(document.documentElement);
+        const scale = parseFloat(styles.getPropertyValue('--ui-scale'));
+        return this.clampNumber(scale, 0.25, 5, 1);
+    },
+
+    getSolitaireStackOffset: function (baseOffset, options = {}) {
+        const base = this.clampNumber(parseFloat(baseOffset), 1, 300, 24);
+        const scale = Number.isFinite(options.scale) ? options.scale : this.getUiScaleValue();
+        // Below 100%: tighten proportionally. Above 100%: do not keep growing spacing.
+        const scaled = base * (scale <= 1 ? scale : 1);
+        const min = Number.isFinite(options.min)
+            ? options.min
+            : Math.max(1, base * this.clampNumber(parseFloat(options.minFactor), 0.1, 1, 0.45));
+        const max = Number.isFinite(options.max) ? options.max : base;
+        return this.clampNumber(scaled, min, max, base);
+    },
+
+    consumeOverflowWithSpacing: function (overflow, current, min, slotCount) {
+        const slots = Number.isFinite(slotCount) ? slotCount : 0;
+        if (!(overflow > 0) || slots <= 0) {
+            return { value: current, overflow: Math.max(0, overflow || 0) };
+        }
+        const maxReduction = Math.max(0, current - min);
+        const neededPerSlot = overflow / slots;
+        const reduction = Math.min(maxReduction, neededPerSlot);
+        return {
+            value: current - reduction,
+            overflow: Math.max(0, overflow - reduction * slots)
+        };
+    },
+
     getHighScoreStore: function () {
         try {
             const raw = localStorage.getItem('bj_table.high_scores');

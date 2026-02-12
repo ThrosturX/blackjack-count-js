@@ -199,6 +199,38 @@
     };
 
     const getAddonToggleContainer = () => document.getElementById('addons-toggle-list');
+    const resolveStoreHref = () => 'store.html';
+    const getCurrentGameId = () => {
+        const path = (window.location && window.location.pathname) || '';
+        const file = path.split('/').pop() || '';
+        return file.replace(/\.html$/i, '').toLowerCase();
+    };
+
+    const addonSupportsCurrentGame = (addon) => {
+        const games = addon && Array.isArray(addon.games) ? addon.games : null;
+        if (!games || !games.length) return true;
+        const gameId = getCurrentGameId();
+        return games.map(String).map(name => name.toLowerCase()).includes(gameId);
+    };
+
+    const ensureAddonStoreLink = () => {
+        const addonsArea = document.getElementById('addons-area');
+        if (!addonsArea) return;
+        const stats = addonsArea.querySelector('.stats');
+        if (!stats) return;
+        let button = stats.querySelector('.addon-store-button');
+        if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-toggle btn-mini addon-store-button';
+            button.textContent = 'Store';
+            button.setAttribute('aria-label', 'Open store page');
+            button.addEventListener('click', () => {
+                window.location.href = resolveStoreHref();
+            });
+            stats.appendChild(button);
+        }
+    };
 
     const createAddonToggleLabel = (addon) => {
         const label = document.createElement('label');
@@ -273,6 +305,7 @@
     };
 
     const initAddonToggles = () => {
+        ensureAddonStoreLink();
         const container = getAddonToggleContainer();
         if (container) {
             container.innerHTML = '';
@@ -284,11 +317,15 @@
             if (!window.AddonLoader || !window.AddonLoader.addons) {
                 showMessage('Loading add-ons…');
             } else if (!window.AddonLoader.addons.size) {
-                showMessage('No add-ons available.');
+                showMessage('No claimed add-ons available.');
             } else {
+                let rendered = 0;
                 window.AddonLoader.addons.forEach(addon => {
+                    if (!addonSupportsCurrentGame(addon)) return;
                     container.appendChild(createAddonToggleLabel(addon));
+                    rendered += 1;
                 });
+                if (!rendered) showMessage('No claimed add-ons available for this game.');
             }
         }
 
@@ -323,8 +360,9 @@
                 window.__settingsResetInProgress = true;
                 const toggles = document.querySelectorAll('[data-addon-id]');
                 toggles.forEach(input => {
-                    input.checked = true;
-                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, true);
+                    const enabled = input.dataset.addonId === 'default-themes';
+                    input.checked = enabled;
+                    window.AddonLoader.setAddonEnabled(input.dataset.addonId, enabled);
                 });
                 initThemes();
                 applySelectValue(document.getElementById('table-style-select'), 'felt');

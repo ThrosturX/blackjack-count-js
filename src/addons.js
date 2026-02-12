@@ -1,4 +1,20 @@
 (() => {
+    const entitlementStore = window.EntitlementStore;
+    const isAddonClaimed = (id) => entitlementStore ? entitlementStore.isClaimed(id) : id === 'default-themes';
+
+    const getCurrentGameId = () => {
+        const path = (window.location && window.location.pathname) || '';
+        const file = path.split('/').pop() || '';
+        return file.replace(/\.html$/i, '').toLowerCase();
+    };
+
+    const supportsCurrentGame = (addon) => {
+        const games = addon && Array.isArray(addon.games) ? addon.games : null;
+        if (!games || !games.length) return true;
+        const current = getCurrentGameId();
+        return games.map(String).map(name => name.toLowerCase()).includes(current);
+    };
+
     const loadScript = (src) => new Promise((resolve) => {
         const script = document.createElement('script');
         script.src = src;
@@ -72,13 +88,15 @@
             id,
             label: addon.label || id,
             description: addon.description || '',
+            games: Array.isArray(addon.games) ? addon.games.slice() : null,
             styles,
             scripts,
             links,
             loadedScripts,
-            enabled: true
+            enabled: false
         };
         addons.set(id, entry);
+        setAddonEnabled(id, id === 'default-themes');
         return entry;
     };
 
@@ -98,16 +116,27 @@
     };
 
     const ready = (async () => {
+        if (window.EntitlementSync && window.EntitlementSync.ready) {
+            try {
+                await window.EntitlementSync.ready;
+            } catch (err) {
+                // Continue with local claims if sync fails.
+            }
+        }
         const scriptManifest = readScriptManifest();
         const inline = parseInlineManifest();
         const useFetch = window.location && window.location.protocol !== 'file:';
         const manifest = scriptManifest || inline || (useFetch ? await loadFromManifest() : { addons: [] });
         const list = Array.isArray(manifest.addons) ? manifest.addons : [];
         for (const addon of list) {
+            if (!isAddonClaimed(addon.id)) continue;
+            if (!supportsCurrentGame(addon)) continue;
             await loadAddon(addon);
         }
         return Array.from(addons.values());
     })();
+
+    window.StoreEntitlements = entitlementStore || null;
 
     window.AddonLoader = { ready, addons, setAddonEnabled };
 })();

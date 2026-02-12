@@ -80,13 +80,15 @@ window.AddonManifest = {
             id: 'counting-balanced',
             label: 'Balanced Counting',
             description: 'Adds balanced counting systems like Hi-Opt II, Wong Halves and Zen. You can change the counting system mid-shoe to reset the count to zero without shuffling the deck.',
-            scripts: ['addons/counting-balanced-pack.js']
+            scripts: ['addons/counting-balanced-pack.js'],
+            games: ['blackjack']
         },
         {
             id: 'counting-unbalanced',
             label: 'Unbalanced Counting',
             description: "Adds unbalanced counting systems like Knock Out or Red 7. If you're trying to learn the KO or REKO systems, this is the one you want to track the count.",
-            scripts: ['addons/counting-unbalanced-pack.js']
+            scripts: ['addons/counting-unbalanced-pack.js'],
+            games: ['blackjack']
         }
     ]
 };

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+    <title>Card Playing Suite - Store</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <style>
+        body {
+            min-height: 100dvh;
+            background: radial-gradient(circle at top, #1f2a1f 0%, #0c0c0c 70%);
+            overflow-y: auto;
+            padding: 24px 16px 40px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+        }
+
+        .store-shell {
+            width: min(860px, 100%);
+            border: 1px solid rgba(242, 201, 76, 0.4);
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.45);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            padding: 18px;
+            backdrop-filter: blur(4px);
+        }
+
+        .store-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .store-head h1 {
+            margin: 0;
+            font-size: clamp(1.1rem, 2.8vw, 1.7rem);
+            white-space: normal;
+        }
+
+        .store-copy {
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.4;
+            margin: 8px 0;
+        }
+
+        .store-actions {
+            display: flex;
+            gap: 8px;
+            margin: 14px 0 10px;
+        }
+
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .store-item {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .store-item-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .store-item-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .store-item-status {
+            font-size: 0.66rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .store-item-claimed .store-item-status {
+            color: var(--gold);
+        }
+
+        .store-item-desc {
+            margin: 0 0 9px;
+            color: rgba(255, 255, 255, 0.74);
+            font-size: 0.76rem;
+            line-height: 1.22;
+        }
+
+        .store-item-tags {
+            margin: 0 0 8px;
+            color: rgba(255, 255, 255, 0.63);
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="store-shell">
+        <div class="store-head">
+            <a class="back-link" href="index.html" id="store-back-link" aria-label="Go back"><span class="back-arrow" aria-hidden="true"></span></a>
+            <h1>Store</h1>
+        </div>
+        <p class="store-copy">Claim add-ons here for free. Claimed add-ons become available in supported games.</p>
+        <p class="store-copy">Shared-entitlement goal: keep the same claims available across app splits when using the same user account.</p>
+        <div class="store-actions">
+            <button type="button" id="reset-purchases" class="btn-toggle btn-mini">Reset purchases</button>
+        </div>
+        <section class="store-grid" id="store-grid" aria-live="polite"></section>
+    </main>
+
+    <script src="addons/manifest.js"></script>
+    <script src="shared/entitlements.js"></script>
+    <script src="shared/entitlement-sync.js"></script>
+    <script>
+        (() => {
+            const SETTINGS_KEY = 'bj_table.settings';
+            const entitlements = window.EntitlementStore;
+            if (!entitlements) return;
+
+            const loadSettings = () => {
+                try {
+                    const raw = localStorage.getItem(SETTINGS_KEY);
+                    if (!raw) return { addons: {} };
+                    const parsed = JSON.parse(raw);
+                    if (!parsed || typeof parsed !== 'object') return { addons: {} };
+                    if (!parsed.addons || typeof parsed.addons !== 'object') parsed.addons = {};
+                    return parsed;
+                } catch (err) {
+                    return { addons: {} };
+                }
+            };
+
+            const saveAddonSetting = (id, enabled) => {
+                const settings = loadSettings();
+                settings.addons = settings.addons || {};
+                settings.addons[id] = enabled === true;
+                try {
+                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                } catch (err) {
+                    // Ignore storage failures.
+                }
+            };
+
+            const clearAddonSettings = () => {
+                const settings = loadSettings();
+                settings.addons = {};
+                try {
+                    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                } catch (err) {
+                    // Ignore storage failures.
+                }
+            };
+
+            const formatGames = (games) => {
+                if (!Array.isArray(games) || !games.length) return 'All games';
+                return games.map((name) => {
+                    const id = String(name).toLowerCase();
+                    if (id === 'blackjack') return 'Blackjack';
+                    if (id === 'poker') return "Texas Hold'em Poker";
+                    if (id === 'klondike') return 'Klondike Solitaire';
+                    if (id === 'freecell') return 'FreeCell';
+                    if (id === 'spider') return 'Spider Solitaire';
+                    if (id === 'pyramid') return 'Pyramid Solitaire';
+                    if (id === 'tabletop') return 'Table Top Sandbox';
+                    return String(name);
+                }).join(', ');
+            };
+
+            const grid = document.getElementById('store-grid');
+            const backLink = document.getElementById('store-back-link');
+            const addons = (window.AddonManifest && Array.isArray(window.AddonManifest.addons))
+                ? window.AddonManifest.addons
+                : [];
+
+            backLink.addEventListener('click', (event) => {
+                if (window.history.length > 1) {
+                    event.preventDefault();
+                    window.history.back();
+                }
+            });
+
+            const render = () => {
+                grid.innerHTML = '';
+                addons.forEach((addon) => {
+                    const claimed = entitlements.isClaimed(addon.id);
+                    const claim = entitlements.getClaim(addon.id);
+                    const item = document.createElement('article');
+                    item.className = `store-item${claimed ? ' store-item-claimed' : ''}`;
+
+                    const head = document.createElement('div');
+                    head.className = 'store-item-head';
+                    const title = document.createElement('div');
+                    title.className = 'store-item-title';
+                    title.textContent = addon.label || addon.id;
+                    const status = document.createElement('div');
+                    status.className = 'store-item-status';
+                    status.textContent = claimed ? 'Claimed' : 'Unclaimed';
+                    head.append(title, status);
+
+                    const desc = document.createElement('p');
+                    desc.className = 'store-item-desc';
+                    desc.textContent = addon.description || 'No description.';
+
+                    const tags = document.createElement('div');
+                    tags.className = 'store-item-tags';
+                    const claimSource = claim ? ` | Source: ${claim.source}` : '';
+                    tags.textContent = `Available in: ${formatGames(addon.games)}${claimSource}`;
+
+                    const claimBtn = document.createElement('button');
+                    claimBtn.type = 'button';
+                    claimBtn.className = 'btn-toggle btn-mini';
+                    claimBtn.textContent = claimed ? 'Claimed' : 'Claim (Free)';
+                    claimBtn.disabled = claimed;
+                    claimBtn.addEventListener('click', () => {
+                        entitlements.claimLocal(addon.id, { source: 'store-claim' });
+                        if (addon.id !== 'default-themes') saveAddonSetting(addon.id, false);
+                        render();
+                    });
+
+                    item.append(head, desc, tags, claimBtn);
+                    grid.appendChild(item);
+                });
+            };
+
+            document.getElementById('reset-purchases').addEventListener('click', () => {
+                entitlements.resetAllForDebug();
+                clearAddonSettings();
+                render();
+            });
+
+            const boot = async () => {
+                if (window.EntitlementSync && window.EntitlementSync.ready) {
+                    try {
+                        await window.EntitlementSync.ready;
+                    } catch (err) {
+                        // Continue with local entitlement state.
+                    }
+                }
+                render();
+            };
+
+            boot();
+        })();
+    </script>
+</body>
+
+</html>

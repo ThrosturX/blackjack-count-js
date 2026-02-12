@@ -32,11 +32,13 @@
 #stock-waste-area {
     display: flex;
     gap: calc(15px * var(--ui-scale));
+    flex: 0 0 auto;
 }
 
 #foundation-area {
     display: flex;
     gap: calc(15px * var(--ui-scale));
+    flex: 0 0 auto;
 }
 
 /* Pile base styles */
@@ -50,6 +52,12 @@
     width: calc(80px * var(--ui-scale));
     height: calc(110px * var(--ui-scale));
     position: relative;
+    flex: 0 0 auto;
+}
+
+.waste-pile {
+    /* Reserve enough width for up to 3 fanned waste cards to avoid layout jumps. */
+    width: calc((80px * var(--ui-scale)) + (2 * var(--klondike-waste-fan-x, 20px)));
 }
 
 .foundation-pile {
@@ -62,6 +70,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.3s;
+    flex: 0 0 auto;
 }
 
 .foundation-pile:hover {
@@ -97,7 +106,7 @@
 #tableau-area {
     display: flex;
     justify-content: center;
-    gap: calc(15px * var(--ui-scale));
+    gap: var(--klondike-tableau-gap, calc(15px * var(--ui-scale)));
     flex: 1;
     align-items: flex-start;
     flex-wrap: nowrap;
@@ -172,7 +181,7 @@
     }
 
     #tableau-area {
-        gap: calc(10px * var(--ui-scale));
+        gap: var(--klondike-tableau-gap, calc(10px * var(--ui-scale)));
     }
 
     .tableau-column {
