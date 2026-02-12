@@ -17,7 +17,7 @@ if [[ ! -f "$APK_PATH" ]]; then
   exit 1
 fi
 
-CONNECTED_DEVICE="$(adb devices | awk 'NR>1 && $2==\"device\" {print $1; exit}')"
+CONNECTED_DEVICE="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
 if [[ -z "$CONNECTED_DEVICE" ]]; then
   echo "ERROR: no authorized adb device found."
   echo "Check USB cable, USB debugging, and device authorization."
@@ -26,4 +26,3 @@ fi
 
 echo "Installing on device: $CONNECTED_DEVICE"
 adb install -r "$APK_PATH"
-

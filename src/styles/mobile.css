@@ -14,6 +14,33 @@
     body {
         overflow: auto;
     }
+
+    /* Keep total header height stable, but move spare vertical space above controls. */
+    header {
+        --landscape-header-row-gap: 10px;
+        --landscape-header-pad-y: 6px;
+        padding-top: calc(var(--landscape-header-pad-y) + var(--landscape-header-row-gap));
+        padding-bottom: var(--landscape-header-pad-y);
+        row-gap: 0;
+    }
+
+    /* Use the existing second header row for toggles (no extra row added). */
+    .header-toggles {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        padding-left: max(40px, env(safe-area-inset-left));
+        padding-right: max(40px, env(safe-area-inset-right));
+        box-sizing: border-box;
+        gap: 6px;
+    }
+
+    .game-controls {
+        order: 3;
+        margin: 0;
+        min-height: 0;
+    }
 }
 
 @media screen and (max-width: 900px) {
