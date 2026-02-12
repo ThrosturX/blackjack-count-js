@@ -67,8 +67,10 @@
 - `ARCHITECTURE.md`: shared-system boundaries and technical contracts.
 - `QA_SMOKE.md`: smoke verification coverage across games.
 - `ROADMAP.md`: sequencing for stabilization, mobile app readiness, and monetization.
+- `mobile/android/README.md`: Android wrapper setup/resume instructions and command workflow.
 
 ## Turn Hygiene
 - Reuse shared systems first and keep implementations DRY.
 - After substantial changes, call out which shared systems were touched.
 - If documentation is now stale, propose the exact file updates before ending the turn.
+- Keep developer workflow scripts in `scripts/` when adding recurring multi-step commands.

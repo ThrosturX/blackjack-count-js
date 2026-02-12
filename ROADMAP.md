@@ -10,6 +10,7 @@ For Card Playing Suite (working name) in repository `bj_table` (subject to renam
 
 ## Phase 2: Mobile App Readiness (Android First)
 - Prepare a WebView wrapper strategy with offline asset packaging.
+- Status: Capacitor Android wrapper baseline is working with local `src/` asset sync and debug APK build/install workflow.
 - Define storage/version migration strategy for saved games.
 - Validate input behavior in Android WebView for touch-heavy interactions.
 - Add release profile checks for performance on mid-range devices.

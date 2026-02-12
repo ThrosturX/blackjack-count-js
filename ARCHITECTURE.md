@@ -8,6 +8,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Browser-first static app.
 - Must work from `file://` and static hosting.
 - No server/runtime dependency required for core gameplay.
+- Android native wrapper support is provided via Capacitor with `src/` as `webDir`.
 
 ## Entry Points
 - `src/index.html`: launcher page.
@@ -55,3 +56,4 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - New game pages should consume shared header, shared styles, and shared helpers first.
 - Avoid per-game one-off responsiveness logic when shared helpers can be extended.
 - If new shared systems are added, update `AGENTS.md`, `README.md`, and this file.
+- Developer workflow shortcuts for Android are maintained in `scripts/`.

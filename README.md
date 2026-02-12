@@ -92,3 +92,14 @@ When behavior or architecture changes substantially, keep these files in sync:
 ## Android Wrapper Notes
 
 - Capacitor wrapper progress and resume instructions are documented in `mobile/android/README.md`.
+- Developer shortcut scripts live in `scripts/`.
+
+## Android Developer Shortcuts
+
+From repo root:
+
+- `npm run android:doctor`: verify Java/SDK/ADB and installed Capacitor packages.
+- `npm run cap:sync`: sync `src/` web assets into the Android project.
+- `npm run android:build:debug`: build debug APK.
+- `npm run android:install:connected`: install debug APK to an authorized connected device.
+- `npm run android:rebuild:deploy`: full loop (`npm install`, sync, clean build, deploy).
