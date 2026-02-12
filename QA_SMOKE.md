@@ -25,6 +25,7 @@
 - Spider: drag/drop works on desktop and touch, mobile panning works while a card is selected, and suit-mode options behave correctly.
 - Pyramid: Draw 1/Draw 3 both work, and pyramid+waste layout is usable in portrait and landscape.
 - Table Top Sandbox: new deal and target controls work, and pile/foundation/deck configuration is applied correctly.
+- Solitaire high score displays update correctly and remain scoped to the currently selected ruleset (variant/draw/suit mode).
 
 ## Persistence Checks (Solitaire)
 - State is restored after reload.

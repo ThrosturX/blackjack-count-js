@@ -29,7 +29,7 @@
 - Preserve save-state compatibility where practical.
 
 ## Shared Systems Map
-- `common.js`: shared card/deck utilities, card sizing metrics, scroll/min-height helpers, and `StateManager`.
+- `common.js`: shared card/deck utilities, card sizing metrics, scroll/min-height helpers, high-score storage helpers, and `StateManager`.
 - `header.js`: shared header controls, toggle/collapse behavior, and default open sections.
 - `shared/mobile-controller.js`: touch drag/pan coordination and mobile-safe pointer behavior.
 - `shared/ui-helpers.js`: shared hit-testing and pointer helper utilities.
