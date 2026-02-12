@@ -1,0 +1,98 @@
+/* ========================================
+   PYRAMID SOLITAIRE STYLES
+   ======================================== */
+
+#table.pyramid-layout {
+    position: relative;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1200px * var(--ui-scale));
+    height: 80vh;
+    max-height: 80vh;
+    margin-top: calc(20px * var(--ui-scale));
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: calc(24px * var(--ui-scale));
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+#pyramid-top-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: calc(24px * var(--ui-scale));
+}
+
+.pyramid-pile {
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
+    border-radius: calc(10px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pile-placeholder {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    user-select: none;
+}
+
+.pile-placeholder.recycle {
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.pile-placeholder.recycle:hover {
+    color: var(--gold);
+    transform: scale(1.1);
+}
+
+#pyramid-area {
+    position: relative;
+    margin: 0 auto;
+    min-height: calc(var(--scaled-card-h) * 2);
+    transform-origin: top center;
+}
+
+@media (max-width: 900px) {
+    #pyramid-area {
+        transform: translate(8px, -8px);
+    }
+}
+
+@media screen and (max-width: 600px) and (orientation: portrait) {
+    #pyramid-area {
+        transform: translate(18px, -16px);
+    }
+}
+
+.pyramid-card {
+    touch-action: manipulation;
+    margin-left: 0;
+}
+
+.pyramid-card.blocked {
+    opacity: 0.92;
+    filter: saturate(0.65) brightness(0.92);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    cursor: default;
+}
+
+.pyramid-card:hover:not(.blocked) {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+#table.pyramid-layout.scroll-active #pyramid-top-row {
+    justify-content: flex-start;
+}

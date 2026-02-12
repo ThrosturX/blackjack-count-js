@@ -7,20 +7,20 @@ Current repository name is `bj_table` (subject to be renamed appropriately).
 
 No build step is required.
 
-- Open `index.html` directly, or
-- Serve statically: `python3 -m http.server` and open `http://localhost:8000`.
+- Open `src/index.html` directly, or
+- Serve statically: `python3 -m http.server` and open `http://localhost:8000/src/`.
 
 The project is designed to run from both static hosting and `file://`.
 
 ## Included Games
 
-- Blackjack (`blackjack.html`)
-- Texas Hold'em (`poker.html`)
-- Klondike Solitaire (`klondike.html`)
-- FreeCell (`freecell.html`)
-- Spider Solitaire (`spider.html`)
-- Pyramid Solitaire (`pyramid.html`)
-- Table Top Sandbox (`tabletop.html`)
+- Blackjack (`src/blackjack.html`)
+- Texas Hold'em (`src/poker.html`)
+- Klondike Solitaire (`src/klondike.html`)
+- FreeCell (`src/freecell.html`)
+- Spider Solitaire (`src/spider.html`)
+- Pyramid Solitaire (`src/pyramid.html`)
+- Table Top Sandbox (`src/tabletop.html`)
 - And potentially other card games.
 
 ## Variants and Game Options
@@ -33,12 +33,12 @@ The project is designed to run from both static hosting and `file://`.
 
 ## Shared Architecture
 
-- `common.js`: shared card/deck utilities, responsive sizing helpers, toasts/audio helpers, and `StateManager`.
-- `header.js`: shared header toggle/collapse behavior.
-- `shared/mobile-controller.js`: shared mobile touch logic for pick-up and panning coordination.
-- `shared/ui-helpers.js`: shared hit-testing and pointer utility helpers.
-- `addons.js` + `addons/manifest.js`: add-on loading and add-on catalog registration.
-- `styles/core.css`, `styles/layout.css`, `styles/mobile.css`: shared base, layout, and mobile override style layers.
+- `src/common.js`: shared card/deck utilities, responsive sizing helpers, toasts/audio helpers, and `StateManager`.
+- `src/header.js`: shared header toggle/collapse behavior.
+- `src/shared/mobile-controller.js`: shared mobile touch logic for pick-up and panning coordination.
+- `src/shared/ui-helpers.js`: shared hit-testing and pointer utility helpers.
+- `src/addons.js` + `src/addons/manifest.js`: add-on loading and add-on catalog registration.
+- `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base, layout, and mobile override style layers.
 
 ## Persistence
 
@@ -64,16 +64,16 @@ Solitaire games and Blackjack persist state with `localStorage` via `CommonUtils
 
 ## Add-ons and Themes
 
-- Add-on catalog is defined in `addons/manifest.js`.
-- `addons.js` supports script manifest (`window.AddonManifest`), legacy inline manifest, and network fallback to `addons/manifest.json` when not on `file://`.
+- Add-on catalog is defined in `src/addons/manifest.js`.
+- `src/addons.js` supports script manifest (`window.AddonManifest`), legacy inline manifest, and network fallback to `addons/manifest.json` when not on `file://`.
 
 ## Tests
 
 Current logic tests are plain Node scripts:
 
-- `node logic.test.js`
-- `node poker-logic.test.js`
-- `node solitaire-logic.test.js`
+- `node src/logic.test.js`
+- `node src/poker-logic.test.js`
+- `node src/solitaire-logic.test.js`
 
 Guidance:
 - Run logic tests when gameplay rules, persistence, shared systems, or input handling changes.

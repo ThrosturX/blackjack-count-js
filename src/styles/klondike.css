@@ -1,0 +1,193 @@
+/* ========================================
+   KLONDIKE-SPECIFIC STYLES
+   ======================================== */
+
+/* Klondike Table Layout */
+#klondike-table {
+    position: relative;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1400px * var(--ui-scale));
+    height: 80vh;
+    margin: 0px auto;
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    gap: calc(30px * var(--ui-scale));
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+/* Top row: Stock/Waste and Foundations */
+#top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: calc(20px * var(--ui-scale));
+}
+
+#stock-waste-area {
+    display: flex;
+    gap: calc(15px * var(--ui-scale));
+}
+
+#foundation-area {
+    display: flex;
+    gap: calc(15px * var(--ui-scale));
+}
+
+/* Pile base styles */
+.pile {
+    position: relative;
+    min-height: calc(110px * var(--ui-scale));
+}
+
+.stock-pile,
+.waste-pile {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
+    position: relative;
+}
+
+.foundation-pile {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: calc(8px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.foundation-pile:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Pile placeholders */
+.pile-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    user-select: none;
+}
+
+.pile-placeholder.recycle {
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.pile-placeholder.recycle:hover {
+    color: var(--gold);
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Tableau area */
+#tableau-area {
+    display: flex;
+    justify-content: center;
+    gap: calc(15px * var(--ui-scale));
+    flex: 1;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+}
+
+.tableau-column {
+    width: calc(80px * var(--ui-scale));
+    min-height: calc(120px * var(--ui-scale));
+    position: relative;
+    border: 2px dashed transparent;
+    border-radius: calc(8px * var(--ui-scale));
+    transition: all 0.3s;
+}
+
+.tableau-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tableau-column .card {
+    position: absolute;
+    left: 0;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-left: 0;
+}
+
+.tableau-column .card.card-hovered {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 150;
+}
+
+/* Drag feedback */
+.drag-layer .card {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.pile.drag-over-valid {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: var(--green);
+}
+
+.pile.drag-over-invalid {
+    background: rgba(235, 87, 87, 0.2);
+    border-color: var(--red);
+}
+
+.drag-layer {
+    pointer-events: none;
+}
+/* Win animation for cards */
+@keyframes card-cascade {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+.winning-card {
+    animation: card-cascade 2s ease-in forwards;
+}
+
+/* Responsive adjustments for Klondike */
+@media (max-width: 1200px) {
+    #klondike-table {
+        padding: calc(20px * var(--ui-scale));
+    }
+
+    #tableau-area {
+        gap: calc(10px * var(--ui-scale));
+    }
+
+    .tableau-column {
+        width: calc(70px * var(--ui-scale));
+    }
+}
+
+/* --- KLONDIKE HORIZONTAL SCROLL BEHAVIOR --- */
+#klondike-table.scroll-active #top-row {
+    justify-content: flex-start;
+    gap: calc(60px * var(--ui-scale));
+    width: 100%;
+    padding: calc(10px * var(--ui-scale)) 0;
+}
+
+#klondike-table.scroll-active #tableau-area {
+    justify-content: flex-start;
+}
