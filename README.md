@@ -88,3 +88,7 @@ When behavior or architecture changes substantially, keep these files in sync:
 - `ARCHITECTURE.md` for shared-system boundaries and runtime contracts
 - `QA_SMOKE.md` for cross-game verification steps
 - `ROADMAP.md` for sequencing, mobile deployment goals, and monetization milestones
+
+## Android Wrapper Notes
+
+- Capacitor wrapper progress and resume instructions are documented in `mobile/android/README.md`.

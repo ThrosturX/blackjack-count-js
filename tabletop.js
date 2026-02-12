@@ -1060,7 +1060,7 @@ function resolveTableauDropPosition(event, ignoreCardId) {
     let x = tabletopDrag.lastLeft;
     let y = tabletopDrag.lastTop;
 
-    const snap = getSnapPosition(x, y, ignoreCardId);
+    const snap = getSnapPosition(event.clientX, event.clientY, ignoreCardId);
     if (snap) {
         x = snap.x;
         y = snap.y;
@@ -1072,26 +1072,30 @@ function resolveTableauDropPosition(event, ignoreCardId) {
     return { x, y };
 }
 
-function getSnapPosition(x, y, ignoreCardId) {
+function getSnapPosition(dropClientX, dropClientY, ignoreCardId) {
+    const tableauRect = getRectById('tabletop-tableau');
+    if (!tableauRect) return null;
+
+    const localX = dropClientX - tableauRect.left;
+    const localY = dropClientY - tableauRect.top;
     const { w, h } = getCardDimensions();
-    const dropCenterX = x + w / 2;
-    const dropCenterY = y + h / 2;
-    let nearest = null;
-    let nearestDistance = Infinity;
+    let topMatch = null;
     tabletopState.tableau.forEach(entry => {
         if (ignoreCardId && entry.card.id === ignoreCardId) return;
-        const centerX = entry.x + w / 2;
-        const centerY = entry.y + h / 2;
-        const dist = Math.hypot(centerX - dropCenterX, centerY - dropCenterY);
-        if (dist < nearestDistance) {
-            nearestDistance = dist;
-            nearest = entry;
+        const inCardBounds = (
+            localX >= entry.x &&
+            localX <= entry.x + w &&
+            localY >= entry.y &&
+            localY <= entry.y + h
+        );
+        if (!inCardBounds) return;
+        if (!topMatch || entry.z > topMatch.z) {
+            topMatch = entry;
         }
     });
-    const radius = Math.max(TABLETOP_SNAP_RADIUS, Math.max(w, h) * 1.5);
-    if (!nearest || nearestDistance > radius) return null;
+    if (!topMatch) return null;
     const { offsetX, offsetY } = getStackOffsets();
-    return { x: nearest.x + offsetX, y: nearest.y + offsetY };
+    return { x: topMatch.x + offsetX, y: topMatch.y + offsetY };
 }
 
 function getStackOffsets() {

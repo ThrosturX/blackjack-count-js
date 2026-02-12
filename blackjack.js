@@ -206,6 +206,7 @@ function buildPlayerFromPersona(idx, persona) {
         autoPlay: !!persona.autoPlay,
         autoBet: !!persona.autoBet,
         pendingStandUp: false,
+        autoPlayForcedByStandUp: false,
         countingBias: clampNumber(persona.countingBias, Math.random(), 0, 1),
         conservative: !!persona.conservative,
         displayName: normalizePersonaName(persona.name)
@@ -226,6 +227,7 @@ function sanitizeSavedPlayer(savedPlayer, seatIndex) {
         autoPlay: !!savedPlayer.autoPlay,
         autoBet: !!savedPlayer.autoBet,
         pendingStandUp: false,
+        autoPlayForcedByStandUp: false,
         countingBias: clampNumber(savedPlayer.countingBias, Math.random(), 0, 1),
         conservative: !!savedPlayer.conservative,
         displayName: normalizePersonaName(savedPlayer.displayName),
@@ -1172,6 +1174,7 @@ function toggleAuto(idx, type) {
     if (!p) return;
 
     if (type === 'play') {
+        if (p.pendingStandUp && p.autoPlay) return;
         p.autoPlay = !p.autoPlay;
         if (p.autoPlay && state.phase === 'PLAYING' && state.turnIndex === idx) {
             // If it's this player's turn and they just enabled auto-play, trigger it
@@ -1442,11 +1445,9 @@ function nextTurn() {
 }
 
 function runAutoPlay() {
-    const p = state.players[state.turnIndex];
-    if (!p || !p.autoPlay) return;
-
-    const h = p.hands[state.splitIndex];
-    if (h.status !== 'playing') return;
+    const turn = getCurrentTurnHand();
+    if (!turn || !turn.p.autoPlay) return;
+    const { p, h } = turn;
 
     const d = state.dealer.hand[0];
     const action = getStrategyHint(d, h.cards);
@@ -1466,8 +1467,9 @@ function runAutoPlay() {
 }
 
 function playerHit() {
-    const p = state.players[state.turnIndex];
-    const h = p.hands[state.splitIndex];
+    const turn = getCurrentTurnHand();
+    if (!turn) return;
+    const { p, h } = turn;
 
     // Prevent hitting if hand is not in playing status (already busted, stood, etc.)
     if (h.status !== 'playing') {
@@ -1495,7 +1497,7 @@ function playerHit() {
         setTimeout(playerStand, getDelay(500));
     } else {
         updateStrategyHint();
-        if (state.players[state.turnIndex].autoPlay) {
+        if (p.autoPlay) {
             setTimeout(runAutoPlay, getDelay(500));
         }
     }
@@ -1504,8 +1506,9 @@ function playerHit() {
 function playerStand() {
     ui.overlay.classList.remove('show');
     ui.strategyText.textContent = "";
-    const p = state.players[state.turnIndex];
-    const h = p.hands[state.splitIndex];
+    const turn = getCurrentTurnHand();
+    if (!turn) return;
+    const { p, h } = turn;
 
     // Prevent standing if hand is not in playing status
     if (h.status !== 'playing') {
@@ -1529,8 +1532,9 @@ function playerStand() {
 }
 
 function playerDouble() {
-    const p = state.players[state.turnIndex];
-    const h = p.hands[state.splitIndex];
+    const turn = getCurrentTurnHand();
+    if (!turn) return;
+    const { p, h } = turn;
 
     // Prevent doubling if hand is not in playing status
     if (h.status !== 'playing') {
@@ -1560,8 +1564,9 @@ function playerDouble() {
 }
 
 function playerSplit() {
-    const p = state.players[state.turnIndex];
-    const h = p.hands[state.splitIndex];
+    const turn = getCurrentTurnHand();
+    if (!turn) return;
+    const { p, h } = turn;
 
     // Prevent splitting if hand is not in playing status
     if (h.status !== 'playing') {
@@ -1648,6 +1653,14 @@ function dealerTurn() {
         }
     }
     setTimeout(loop, 800);
+}
+
+function getCurrentTurnHand() {
+    const p = state.players[state.turnIndex];
+    if (!p || !Array.isArray(p.hands)) return null;
+    const h = p.hands[state.splitIndex];
+    if (!h) return null;
+    return { p, h };
 }
 
 function resolveRound() {
@@ -1899,6 +1912,8 @@ function resetBlackjackStatistics() {
         if (!player) return;
         player.profit = 0;
     });
+    updateCasinoProfit();
+    ui.playedRounds.textContent = `${state.playedRounds}`;
     markSessionDirty();
     render();
     CommonUtils.showTableToast('Blackjack stats reset', {
@@ -2123,6 +2138,7 @@ function sit(idx, persona = null) {
         autoPlay: false,
         autoBet: false,
         pendingStandUp: false,
+        autoPlayForcedByStandUp: false,
         countingBias: Math.random(),
         conservative: (Math.random() > 0.5 ? true : false),
         displayName: '',
@@ -2136,14 +2152,35 @@ function sit(idx, persona = null) {
     markSessionDirty();
 }
 
+function maybeSitFromSeatTap(event, idx) {
+    const isMobileViewport = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+    if (!isMobileViewport) return;
+    if (event && event.target && event.target.closest('button, input, select, label, a')) return;
+    sit(idx);
+}
+
 function standUp(idx) {
     const p = state.players[idx];
     if (!p) return;
 
-    if (state.phase !== 'BETTING' && p.hands.length > 0) {
-        // Round in progress and player has a hand, mark for removal
+    if (p.pendingStandUp) {
+        p.pendingStandUp = false;
+        if (p.autoPlayForcedByStandUp) {
+            p.autoPlay = false;
+            p.autoPlayForcedByStandUp = false;
+        }
+        renderSeat(idx);
+        markSessionDirty();
+        return;
+    }
+
+    if (state.phase !== 'BETTING') {
+        // Round in progress: queue stand-up and let bot finish if needed
         p.pendingStandUp = true;
-        p.autoPlay = true; // Bot takes over to finish the hand
+        if (!p.autoPlay) {
+            p.autoPlay = true;
+            p.autoPlayForcedByStandUp = true;
+        }
         renderSeat(idx);
 
         // If it's their turn, the bot should start immediately
@@ -2215,14 +2252,15 @@ function getSeatHTML(idx) {
     if (!p) {
         return `
                     <div class="seat-slot" id="seat-slot-${idx}">
-                        <div class="seat seat-empty" id="seat-${idx}">
+                        <div class="seat seat-empty" id="seat-${idx}" onclick="maybeSitFromSeatTap(event, ${idx})">
                             <div class="seat-empty-label">Empty</div>
                             <div class="player-hand-area" aria-hidden="true"></div>
-                            <div class="seat-controls">
-                                <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
-                            </div>
+                            <div class="seat-controls"></div>
                         </div>
                         <div class="seat-automation">
+                            <div class="persona-save-row seat-standup-row">
+                                <button class="btn-standup" onclick="sit(${idx})">Sit Down</button>
+                            </div>
                             <div class="persona-save-row">
                                 <button class="btn-mini persona-btn persona-accent-btn" onclick="loadPlayerPersona(${idx})">Load Player</button>
                             </div>
@@ -2255,6 +2293,7 @@ function getSeatHTML(idx) {
     if (statusClass) classList += ` ${statusClass}`;
 
     let controlsHTML = '';
+    const standUpButtonHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
 
     const displayName = getPlayerDisplayName(p, idx);
     const automationHTML = `
@@ -2273,6 +2312,9 @@ function getSeatHTML(idx) {
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="persona-save-row seat-standup-row">
+                        ${standUpButtonHTML}
+                    </div>
                     <div class="persona-save-row">
                         <button class="btn-mini persona-btn persona-accent-btn" onclick="savePlayerPersona(${idx})">Save Player</button>
                     </div>
@@ -2282,7 +2324,6 @@ function getSeatHTML(idx) {
     // Betting Phase Controls
     if (state.phase === 'BETTING') {
         controlsHTML = `
-                    <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                     <div class="bet-controls">
                         <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || state.minBet}" min="${state.minBet}" step="5">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
@@ -2297,7 +2338,6 @@ function getSeatHTML(idx) {
             const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
             controlsHTML = `
-                        <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                         <div class="controls">
                             <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                             <button class="action-btn btn-stand" onclick="playerStand()">S</button>
@@ -2305,11 +2345,7 @@ function getSeatHTML(idx) {
                             <button class="action-btn btn-split" onclick="playerSplit()" ${!canSplit ? 'disabled' : ''}>SP</button>
                         </div>
                     `;
-        } else {
-            controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
         }
-    } else {
-        controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
     }
 
     // Requirement: Persistent Bet Bubble

@@ -109,6 +109,15 @@
     width: 100%;
 }
 
+#blackjack-scroll .seat-standup-row .btn-standup {
+    position: static;
+    top: auto;
+    right: auto;
+    width: 100%;
+    font-size: calc(0.62rem * var(--ui-scale));
+    padding: calc(5px * var(--ui-scale)) calc(6px * var(--ui-scale));
+}
+
 #blackjack-scroll .persona-accent-btn,
 .persona-save-panel .persona-accent-btn {
     border-color: rgba(129, 189, 245, 0.85);
