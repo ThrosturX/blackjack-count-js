@@ -10,11 +10,19 @@
     --card-base-w: 70px;
     --card-base-h: 100px;
     --card-scale: 1;
+    --ui-scale: 1;
     --card-w: var(--card-base-w);
     --card-h: var(--card-base-h);
+    --scaled-card-w: calc(var(--card-w) * var(--ui-scale));
+    --scaled-card-h: calc(var(--card-h) * var(--ui-scale));
     --table-bg: radial-gradient(circle, #357a44 0%, var(--felt-color) 90%);
     --table-border: var(--felt-border);
     --table-shadow: inset 0 0 60px rgba(0, 0, 0, 0.7);
+}
+
+html {
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body {
@@ -49,9 +57,7 @@ header {
 }
 
 .back-link {
-    position: absolute;
-    top: 12px;
-    left: 20px;
+    position: static;
     color: var(--gold);
     text-decoration: none;
     font-weight: bold;
@@ -60,6 +66,7 @@ header {
     justify-content: center;
     width: 28px;
     height: 28px;
+    flex: 0 0 auto;
 }
 
 .back-link:hover {
@@ -102,6 +109,31 @@ h1 {
     margin: 0;
     color: var(--gold);
     font-size: 1.4rem;
-    width: 100%;
-    text-align: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Header toggle order: Game, Stats, Settings, Themes, Addons */
+#toggle-game {
+    order: 1;
+}
+
+#toggle-stats {
+    order: 2;
+}
+
+#toggle-settings {
+    order: 3;
+}
+
+#toggle-themes {
+    order: 4;
+}
+
+#toggle-addons {
+    order: 5;
 }

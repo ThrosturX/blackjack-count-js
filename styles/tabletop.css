@@ -4,22 +4,21 @@
 
 #table.tabletop-layout {
     position: relative;
-    width: 95vw;
-    max-width: 1500px;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1500px * var(--ui-scale));
     height: 80vh;
     max-height: 80vh;
-    margin-top: 20px;
+    margin-top: calc(20px * var(--ui-scale));
     background: var(--table-bg);
-    border-radius: 40px;
-    border: 12px solid var(--table-border);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
     box-shadow: var(--table-shadow);
-    padding: 30px;
+    padding: calc(30px * var(--ui-scale));
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: 24px;
-    overflow: visible;
+    gap: calc(24px * var(--ui-scale));
     transition: background 0.5s, border-color 0.5s;
 }
 
@@ -27,13 +26,13 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 22px;
+    gap: calc(22px * var(--ui-scale));
 }
 
 .tabletop-zone {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
+    gap: calc(14px * var(--ui-scale));
     flex: 1;
     min-width: 0;
     flex-wrap: wrap;
@@ -54,7 +53,7 @@
 .tabletop-pile {
     width: calc(var(--card-w) * var(--card-scale));
     height: calc(var(--card-h) * var(--card-scale));
-    border-radius: 12px;
+    border-radius: calc(12px * var(--ui-scale));
     border: 2px dashed rgba(255, 255, 255, 0.2);
     background: rgba(0, 0, 0, 0.18);
     position: relative;
@@ -66,7 +65,7 @@
 
 .tabletop-pile .pile-label {
     position: absolute;
-    top: -22px;
+    top: calc(-22px * var(--ui-scale));
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.7rem;
@@ -77,7 +76,7 @@
 
 .tabletop-pile .pile-count {
     position: absolute;
-    bottom: -20px;
+    bottom: calc(-20px * var(--ui-scale));
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.7rem;
@@ -91,7 +90,7 @@
 }
 
 .tabletop-pile--discard {
-    margin-left: 18px;
+    margin-left: calc(18px * var(--ui-scale));
 }
 
 .tabletop-pile.pile-hover {
@@ -109,18 +108,17 @@
 #tabletop-tableau {
     position: relative;
     flex: 1;
-    border-radius: 20px;
+    border-radius: calc(20px * var(--ui-scale));
     border: 2px dashed rgba(255, 255, 255, 0.18);
     background: radial-gradient(circle at top, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.05));
-    overflow: visible;
-    min-height: 280px;
+    min-height: calc(280px * var(--ui-scale));
 }
 
 #tabletop-tableau::before {
     content: 'Tableau';
     position: absolute;
-    top: 12px;
-    left: 16px;
+    top: calc(12px * var(--ui-scale));
+    left: calc(16px * var(--ui-scale));
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.16em;

@@ -21,8 +21,21 @@ const freecellState = {
 
 let freecellStateManager = null;
 
+function getFreecellRuleSetKey() {
+    return 'default';
+}
+
+function syncFreecellHighScore() {
+    const highScoreEl = document.getElementById('freecell-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('freecell', getFreecellRuleSetKey(), freecellState.score);
+    highScoreEl.textContent = highScore;
+}
+
 const CARD_HEIGHT = 100;
 const STACK_OFFSET = 25;
+const STACK_X_OFFSET = 3;
+const STACK_X_OFFSET_MAX = 18;
 const MAX_HISTORY = 200;
 const FREECELL_MIN_TABLEAU_CARDS = 20;
 
@@ -307,7 +320,8 @@ function ensureTableauSizing() {
     CommonUtils.ensureScrollableWidth({
         table: 'table',
         wrapper: 'freecell-scroll',
-        contentSelectors: ['#freecell-top-row', '#freecell-tableau']
+        contentSelectors: ['#freecell-top-row', '#freecell-tableau'],
+        extra: 10
     });
 }
 
@@ -327,7 +341,7 @@ function updateTableau() {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
             cardEl.style.top = `${rowIndex * STACK_OFFSET}px`;
-            cardEl.style.left = `${rowIndex * 3}px`;
+            cardEl.style.left = `${Math.min(STACK_X_OFFSET_MAX, rowIndex * STACK_X_OFFSET)}px`;
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 
@@ -395,6 +409,7 @@ function updateFoundations() {
 function updateStats() {
     document.getElementById('freecell-moves').textContent = freecellState.moves;
     document.getElementById('freecell-score').textContent = freecellState.score;
+    syncFreecellHighScore();
 }
 
 function recordMove(moveEntry) {

@@ -5,18 +5,18 @@
 /* Klondike Table Layout */
 #klondike-table {
     position: relative;
-    width: 95vw;
-    max-width: 1400px;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1400px * var(--ui-scale));
     height: 80vh;
     margin: 0px auto;
     background: var(--table-bg);
-    border-radius: 40px;
-    border: 12px solid var(--table-border);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
     box-shadow: var(--table-shadow);
-    padding: 30px;
+    padding: calc(30px * var(--ui-scale));
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: calc(30px * var(--ui-scale));
     overflow: visible;
     transition: background 0.5s, border-color 0.5s;
 }
@@ -26,37 +26,37 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 20px;
+    gap: calc(20px * var(--ui-scale));
 }
 
 #stock-waste-area {
     display: flex;
-    gap: 15px;
+    gap: calc(15px * var(--ui-scale));
 }
 
 #foundation-area {
     display: flex;
-    gap: 15px;
+    gap: calc(15px * var(--ui-scale));
 }
 
 /* Pile base styles */
 .pile {
     position: relative;
-    min-height: 110px;
+    min-height: calc(110px * var(--ui-scale));
 }
 
 .stock-pile,
 .waste-pile {
-    width: 80px;
-    height: 110px;
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
     position: relative;
 }
 
 .foundation-pile {
-    width: 80px;
-    height: 110px;
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
     border: 2px dashed rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
+    border-radius: calc(8px * var(--ui-scale));
     background: rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
@@ -97,18 +97,18 @@
 #tableau-area {
     display: flex;
     justify-content: center;
-    gap: 15px;
+    gap: calc(15px * var(--ui-scale));
     flex: 1;
     align-items: flex-start;
     flex-wrap: nowrap;
 }
 
 .tableau-column {
-    width: 80px;
-    min-height: 120px;
+    width: calc(80px * var(--ui-scale));
+    min-height: calc(120px * var(--ui-scale));
     position: relative;
     border: 2px dashed transparent;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--ui-scale));
     transition: all 0.3s;
 }
 
@@ -168,24 +168,24 @@
 /* Responsive adjustments for Klondike */
 @media (max-width: 1200px) {
     #klondike-table {
-        padding: 20px;
+        padding: calc(20px * var(--ui-scale));
     }
 
     #tableau-area {
-        gap: 10px;
+        gap: calc(10px * var(--ui-scale));
     }
 
     .tableau-column {
-        width: 70px;
+        width: calc(70px * var(--ui-scale));
     }
 }
 
 /* --- KLONDIKE HORIZONTAL SCROLL BEHAVIOR --- */
 #klondike-table.scroll-active #top-row {
     justify-content: flex-start;
-    gap: 60px;
+    gap: calc(60px * var(--ui-scale));
     width: 100%;
-    padding: 10px 0;
+    padding: calc(10px * var(--ui-scale)) 0;
 }
 
 #klondike-table.scroll-active #tableau-area {

@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Casino Blackjack</title>
+    <title>Card Playing Suite - Blackjack</title>
     <link rel="stylesheet" href="styles/core.css">
     <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
     <link rel="stylesheet" href="styles/blackjack.css">
     <link rel="stylesheet" href="styles/components.css">
-    <link rel="stylesheet" href="themes.css">
+    <link rel="stylesheet" href="styles/themes.css">
     <link rel="stylesheet" href="styles/mobile.css">
 </head>
 
@@ -20,18 +20,31 @@
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
         <h1>Blackjack</h1>
         <div class="header-toggles">
-            <button id="toggle-settings" class="btn-toggle">Settings</button>
-            <button id="toggle-addons" class="btn-toggle">Addons</button>
-            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-game" class="btn-toggle">Game</button>
             <button id="toggle-stats" class="btn-toggle">Stats</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
         </div>
 
         <div class="game-controls">
-            <div class="controls-section collapsed" id="settings-area">
-                <div class="stats">
-                    <label for="fast-mode-checkbox" class="inline-label">Fast Mode:</label>
-                    <input type="checkbox" id="fast-mode-checkbox">
+            <div class="controls-section collapsed" id="game-area">
+                <div class="stats pace-setting">
+                    <span class="inline-label">Game Pace:</span>
+                    <div class="pace-mode" role="group" aria-label="Game pace">
+                        <button type="button" class="pace-mode-btn" data-pace-level="0">Practice</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="1">Classic</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="2">Quick</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="3">Turbo</button>
+                        <button type="button" class="pace-mode-btn" data-pace-level="4">Blitz</button>
+                    </div>
                 </div>
+                <div class="stats">Count:
+                    <select id="count-system-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="settings-area">
                 <div class="stats">Minimum bet:
                     <select id="table-minimum-bet">
                         <option value="5">$5</option>
@@ -69,11 +82,8 @@
                         <option value="8">8</option>
                     </select>
                 </div>
-                <div class="stats">Count:
-                    <select id="count-system-select"></select>
-                </div>
-                <label class="stats" style="display: none;">Card Scale:
-                    <input id="blackjack-card-scale" type="range" min="0.6" max="1.25" step="0.05" value="1">
+                <label class="stats">Table Scale:
+                    <input id="blackjack-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
                     <span id="blackjack-card-scale-value">100%</span>
                 </label>
             </div>
@@ -100,6 +110,9 @@
                 <div class="stats">Count: <span id="run-count">0</span></div>
                 <div class="stats">Casino Profit: <span id="casino-profit">$0</span></div>
                 <div class="stats">Played rounds: <span id="played-rounds">0</span></div>
+                <div class="stats">
+                    <button type="button" id="reset-blackjack-stats" class="btn-toggle btn-mini">Reset Statistics</button>
+                </div>
             </div>
         </div>
     </header>
@@ -156,105 +169,30 @@
         <span id="count-hint" class="count-hint ch-neutral"></span>
     </div>
 
-    <!-- Addon Manifest (Cordoned for local file:// testing) -->
-    <script id="addons-manifest" type="application/json">
-{
-    "addons": [
-        {
-            "id": "default-themes",
-            "label": "Default Themes",
-            "description": "The classic green/red felt tables and some basic simple deck styles.",
-            "scripts": ["addons/default-themes-pack.js"],
-            "styles": ["addons/default-themes.css"]
-        },
-        {
-            "id": "basic-themes",
-            "label": "Basic Themes",
-            "description": "Simple table and deck styles, four of each.",
-            "scripts": ["addons/basic-themes-pack.js"],
-            "styles": ["addons/basic-themes.css"]
-        },
-        {
-            "id": "cyberpunk-themes",
-            "label": "Cyberpunk",
-            "description": "Adds cyberpunk table and deck styles. The Neon Vibe deck has unique effects if 'worn cards' are enabled. Special effects are recommended.",
-            "scripts": ["addons/cyberpunk-pack.js"],
-            "styles": ["addons/cyberpunk-pack.css"]
-        },
-        {
-            "id": "dark-elegance-themes",
-            "label": "Dark Elegance",
-            "description": "Adds dark elegance table and deck styles.",
-            "scripts": ["addons/dark-elegance-pack.js"],
-            "styles": ["addons/dark-elegance-pack.css"]
-        },
-        {
-            "id": "luxe-collection",
-            "label": "Luxe Collection",
-            "description": "Adds luxe table and deck styles.",
-            "scripts": ["addons/luxe-pack.js"],
-            "styles": ["addons/luxe-pack.css"]
-        },
-        {
-            "id": "wildlife-themes",
-            "label": "Wildlife",
-            "description": "Adds wildlife-inspired table and deck styles. The Open Ocean table combined with special effects will take your breath away.",
-            "scripts": ["addons/wildlife-pack.js"],
-            "styles": ["addons/wildlife-pack.css"]
-        },
-        {
-            "id": "ghostly-themes",
-            "label": "Ghostly",
-            "description": "Adds a unique deck style.",
-            "scripts": ["addons/ghostly-pack.js"],
-            "styles": ["addons/ghostly-pack.css"]
-        },
-        {
-            "id": "premium-themes",
-            "label": "Premium Themes",
-            "description": "Adds premium table and deck styles. Special effects are highly recommended.",
-            "scripts": ["addons/themes-pack.js"],
-            "styles": ["addons/premium-themes.css"]
-        },
-        {
-            "id": "premium-effects",
-            "label": "Special Effects",
-            "description": "Adds visual effects and polish. Can be distracting for some players, but man alive do they look cool.",
-            "styles": ["addons/premium-effects.css"]
-        },
-        {
-            "id": "classic-faces",
-            "label": "Classic Faces",
-            "description": "Replaces the standard pattern with the classic English pattern (also known as the Anglo-Saxon or International pattern). The face cards feature easily distinguishable and recognizable scalable vector graphics made by Wikimedia user Ekirahardian. Combine this with 'Worn Cards' for that old summer cabin feel.",
-            "scripts": ["addons/classic-face-art.js", "addons/classic-faces.js"],
-            "styles": ["addons/classic-faces.css"]
-        },
-        {
-            "id": "worn-cards",
-            "label": "Worn Cards",
-            "description": "Adds worn card edges, faded inks, scuffed textures, desaturation. Extremely beautiful, but some cards can be a little bit difficult to read at a glance (depending on the deck style). Surprisingly good for practicing card counting due to the effort require to evaluate them quickly. Try counting these in Fast Mode!",
-            "scripts": ["addons/worn-cards.js"],
-            "styles": ["addons/worn-cards.css"]
-        },
-        {
-            "id": "counting-balanced",
-            "label": "Balanced Counting",
-            "description": "Adds balanced counting systems like Hi-Opt II, Wong Halves and Zen. You can change the counting system mid-shoe to reset the count to zero without shuffling the deck.",
-            "scripts": ["addons/counting-balanced-pack.js"]
-        },
-        {
-            "id": "counting-unbalanced",
-            "label": "Unbalanced Counting",
-            "description": "Adds unbalanced counting systems like Knock Out or Red 7. If you're trying to learn the KO or REKO systems, this is the one you want to track the count.",
-            "scripts": ["addons/counting-unbalanced-pack.js"]
-        }
-    ]
-}
+    <div id="persona-save-overlay" class="persona-save-overlay" aria-hidden="true">
+        <div class="persona-save-panel" role="dialog" aria-modal="true" aria-labelledby="persona-save-title">
+            <h3 id="persona-save-title">Save Player</h3>
+            <input id="persona-save-name" type="text" maxlength="24" placeholder="Enter player name" aria-label="Player name">
+            <div class="persona-save-actions">
+                <button type="button" id="persona-save-confirm" class="btn-toggle btn-mini persona-btn persona-accent-btn">Save</button>
+                <button type="button" id="persona-save-cancel" class="btn-toggle btn-mini">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-
-    </script>
-    <!-- End Addon Manifest (Cordoned for local file:// testing) -->
+    <div id="persona-load-overlay" class="persona-save-overlay" aria-hidden="true">
+        <div class="persona-save-panel" role="dialog" aria-modal="true" aria-labelledby="persona-load-title">
+            <h3 id="persona-load-title">Load Player</h3>
+            <select id="persona-load-select" aria-label="Saved players"></select>
+            <div class="persona-save-actions">
+                <button type="button" id="persona-load-delete" class="btn-toggle btn-mini persona-btn persona-delete-btn persona-danger-text">Delete</button>
+                <button type="button" id="persona-load-confirm" class="btn-toggle btn-mini persona-btn persona-accent-btn">Load</button>
+                <button type="button" id="persona-load-cancel" class="btn-toggle btn-mini">Cancel</button>
+            </div>
+        </div>
+    </div>
     <script src="assets.js"></script>
+    <script src="addons/manifest.js"></script>
     <script src="addons.js"></script>
     <script src="themes.js"></script>
     <script src="card.js"></script>

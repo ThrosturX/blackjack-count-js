@@ -460,12 +460,12 @@ input:checked+.slider:before {
 .addon-toggle-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: stretch;
+    gap: 8px;
+    align-items: flex-start;
     justify-content: center;
-    max-height: calc(45vh + 120px);
+    max-height: min(54vh, 440px);
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 2px;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 209, 91, 0.5) rgba(0, 0, 0, 0.2);
 }
@@ -502,14 +502,15 @@ input:checked+.slider:before {
 .addon-toggle-card {
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
-    padding: 10px;
+    padding: 8px 10px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     align-items: flex-start;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    height: 120px;
+    min-height: 98px;
+    height: auto;
     flex: 0 0 280px;
     max-width: 280px;
 }
@@ -522,8 +523,9 @@ input:checked+.slider:before {
 .addon-toggle-meta {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .addon-toggle-title-row {
@@ -555,16 +557,22 @@ input:checked+.slider:before {
 .addon-toggle-description {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
-    line-height: 1.2;
+    line-height: 1.15;
     white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .addon-toggle-control {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
-    min-width: 102px;
+    justify-content: center;
+    gap: 3px;
+    min-width: 88px;
+    flex: 0 0 88px;
 }
 
 .addon-toggle-control input {

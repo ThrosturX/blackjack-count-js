@@ -18,11 +18,45 @@
 
 @media screen and (max-width: 900px) {
     .header-toggles {
-        width: 100%;
-        justify-content: center;
+        width: auto;
+        justify-content: flex-end;
+        margin-left: auto;
     }
 
     .controls-section {
         white-space: normal;
+    }
+}
+
+@media screen and (max-width: 700px) {
+    .header-toggles {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+}
+
+@media screen and (max-width: 600px) and (orientation: portrait) {
+    header {
+        padding: 6px 8px;
+        gap: 8px;
+    }
+
+    h1 {
+        font-size: 0.95rem;
+    }
+
+    .header-toggles {
+        gap: 6px;
+    }
+
+    .btn-toggle {
+        padding: 5px 8px;
+        font-size: 0.72rem;
+    }
+
+    /* Avoid inaccessible off-screen content on narrow portrait viewports. */
+    .table-scroll {
+        justify-content: flex-start;
     }
 }

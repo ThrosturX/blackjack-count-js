@@ -10,12 +10,13 @@
         body {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
-            min-height: 100vh;
-            height: auto;
+            min-height: 100dvh;
             background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
             margin: 0;
+            padding: 24px 16px 40px;
+            box-sizing: border-box;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
@@ -32,12 +33,14 @@
         }
 
         h1 {
-            font-size: 3rem;
+            font-size: clamp(1.8rem, 8vw, 3rem);
             color: var(--gold);
             margin-bottom: 30px;
             text-transform: uppercase;
-            letter-spacing: 5px;
+            letter-spacing: clamp(1px, 1.3vw, 5px);
             text-shadow: 0 0 10px rgba(242, 201, 76, 0.5);
+            white-space: normal;
+            word-break: break-word;
         }
 
         .game-selection {
@@ -90,12 +93,29 @@
             font-size: 3rem;
             margin-bottom: 10px;
         }
+
+        @media screen and (max-width: 600px) {
+            .welcome-container {
+                width: min(100%, 520px);
+                padding: 24px 16px;
+            }
+
+            .game-selection {
+                gap: 14px;
+            }
+
+            .game-card {
+                width: 100%;
+                max-width: 320px;
+                padding: 20px 16px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="welcome-container">
-        <h1>Casino Suite</h1>
+        <h1>Card Playing Suite</h1>
         <div class="game-selection">
             <a href="blackjack.html" class="game-card">
                 <div class="card-icon">♠️♥️</div>
@@ -104,12 +124,12 @@
             </a>
             <a href="poker.html" class="game-card">
                 <div class="card-icon">🃏💰</div>
-                <h2>Texas Hold'em</h2>
+                <h2>Texas Hold'em Poker</h2>
                 <p>High stakes poker. Outsmart the table!</p>
             </a>
             <a href="klondike.html" class="game-card">
                 <div class="card-icon">🎴♦️</div>
-                <h2>Klondike</h2>
+                <h2>Klondike Solitaire</h2>
                 <p>Classic Klondike. Stack 'em up!</p>
             </a>
             <a href="freecell.html" class="game-card">
@@ -129,7 +149,7 @@
             </a>
             <a href="tabletop.html" class="game-card">
                 <div class="card-icon">🃏🧩</div>
-                <h2>Table Top</h2>
+                <h2>Table Top Sandbox</h2>
                 <p>Sandbox table for manual card play and custom layouts.</p>
             </a>
         </div>

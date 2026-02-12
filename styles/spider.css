@@ -3,22 +3,23 @@
    ======================================== */
 
 #table.spider-layout {
+    --spider-fan-x: calc(18px * var(--ui-scale));
     position: relative;
-    width: 95vw;
-    max-width: 1000px;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1000px * var(--ui-scale));
     height: 80vh;
     max-height: 80vh;
-    margin-top: 20px;
+    margin-top: calc(20px * var(--ui-scale));
     background: var(--table-bg);
-    border-radius: 40px;
-    border: 12px solid var(--table-border);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
     box-shadow: var(--table-shadow);
-    padding: 30px;
+    padding: calc(30px * var(--ui-scale));
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: 24px;
+    gap: calc(24px * var(--ui-scale));
     transition: background 0.5s, border-color 0.5s;
 }
 
@@ -26,29 +27,31 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 20px;
+    gap: calc(20px * var(--ui-scale));
+    padding-inline: calc(8px * var(--ui-scale));
+    box-sizing: border-box;
 }
 
 #spider-stock {
-    width: var(--card-w);
-    height: var(--card-h);
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: calc(6px * var(--ui-scale));
 }
 
 #spider-foundations {
     display: grid;
-    grid-template-columns: repeat(8, var(--card-w));
-    gap: 12px;
+    grid-template-columns: repeat(8, var(--scaled-card-w));
+    gap: calc(12px * var(--ui-scale));
 }
 
 .spider-foundation {
-    width: var(--card-w);
-    height: var(--card-h);
-    border-radius: 10px;
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
+    border-radius: calc(10px * var(--ui-scale));
     border: 2px dashed rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.03);
     position: relative;
@@ -63,22 +66,24 @@
 }
 
 .spider-stock-stack {
-    width: var(--card-w);
-    height: var(--card-h);
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
     position: relative;
 }
 
 #spider-tableau {
     display: grid;
-    grid-template-columns: repeat(10, var(--card-w));
+    grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--spider-fan-x, 18px)));
     justify-content: center;
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale));
+    padding-inline: calc(8px * var(--ui-scale));
+    box-sizing: border-box;
 }
 
 .spider-column {
-    width: var(--card-w);
+    width: calc(var(--scaled-card-w) + var(--spider-fan-x, 18px));
     min-height: 220px;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--ui-scale));
     border: 2px dashed transparent;
     position: relative;
     transition: border 0.3s;
@@ -94,7 +99,7 @@
 
 #table.spider-layout.scroll-active #spider-top-row {
     justify-content: flex-start;
-    gap: 24px;
+    gap: calc(24px * var(--ui-scale));
 }
 
 #table.spider-layout.scroll-active #spider-foundations,

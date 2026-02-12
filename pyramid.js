@@ -21,10 +21,23 @@ const pyramidState = {
     startTime: null,
     timerInterval: null,
     isGameWon: false,
-    moveHistory: []
+    moveHistory: [],
+    drawCount: 1
 };
 
 let pyramidStateManager = null;
+
+function getPyramidRuleSetKey() {
+    const drawCount = pyramidState.drawCount === 3 ? 3 : 1;
+    return `draw-${drawCount}`;
+}
+
+function syncPyramidHighScore() {
+    const highScoreEl = document.getElementById('pyramid-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('pyramid', getPyramidRuleSetKey(), pyramidState.score);
+    highScoreEl.textContent = highScore;
+}
 
 const selectionState = {
     selected: []
@@ -116,6 +129,7 @@ function getPyramidSaveState() {
         score: pyramidState.score,
         moves: pyramidState.moves,
         moveHistory: pyramidState.moveHistory,
+        drawCount: pyramidState.drawCount,
         elapsedSeconds: getElapsedSeconds(pyramidState.startTime),
         isGameWon: pyramidState.isGameWon
     };
@@ -129,7 +143,13 @@ function restorePyramidState(saved) {
     pyramidState.score = Number.isFinite(saved.score) ? saved.score : 0;
     pyramidState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     pyramidState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    pyramidState.drawCount = saved.drawCount === 3 ? 3 : 1;
     pyramidState.isGameWon = false;
+
+    const drawSelect = document.getElementById('pyramid-draw-select');
+    if (drawSelect) {
+        drawSelect.value = String(pyramidState.drawCount);
+    }
 
     clearSelection();
     if (pyramidState.timerInterval) {
@@ -267,6 +287,7 @@ function updateStats() {
     if (movesEl) movesEl.textContent = pyramidState.moves;
     const scoreEl = document.getElementById('pyramid-score');
     if (scoreEl) scoreEl.textContent = pyramidState.score;
+    syncPyramidHighScore();
 }
 
 function drawFromStock() {
@@ -279,13 +300,20 @@ function drawFromStock() {
 
     clearSelection();
 
-    const card = pyramidState.stock.pop();
-    card.hidden = false;
-    pyramidState.waste.push(card);
+    const drawCount = pyramidState.drawCount === 3 ? 3 : 1;
+    const drawnCards = [];
+    for (let i = 0; i < drawCount; i++) {
+        if (pyramidState.stock.length === 0) break;
+        const card = pyramidState.stock.pop();
+        card.hidden = false;
+        pyramidState.waste.push(card);
+        drawnCards.push(card);
+    }
+    if (!drawnCards.length) return;
     pyramidState.moves += 1;
     recordMove({
         type: 'draw',
-        card,
+        cards: drawnCards,
         scoreDelta: 0,
         movesDelta: 1
     });
@@ -476,8 +504,10 @@ function undoLastMove() {
             }
         });
     } else if (entry.type === 'draw') {
-        const card = pyramidState.waste.pop();
-        if (card) {
+        const cards = Array.isArray(entry.cards) ? entry.cards : (entry.card ? [entry.card] : []);
+        for (let i = 0; i < cards.length; i++) {
+            const card = pyramidState.waste.pop();
+            if (!card) break;
             card.hidden = true;
             pyramidState.stock.push(card);
         }
@@ -525,6 +555,19 @@ function setupPyramidEventListeners() {
     const newGameBtn = document.getElementById('pyramid-new-game');
     if (newGameBtn) {
         newGameBtn.addEventListener('click', initPyramidGame);
+    }
+
+    const drawSelect = document.getElementById('pyramid-draw-select');
+    if (drawSelect) {
+        drawSelect.value = String(pyramidState.drawCount || 1);
+        drawSelect.addEventListener('change', (event) => {
+            const next = parseInt(event.target.value, 10);
+            pyramidState.drawCount = next === 3 ? 3 : 1;
+            updateStats();
+            if (pyramidStateManager) {
+                pyramidStateManager.markDirty();
+            }
+        });
     }
 
     const undoBtn = document.getElementById('pyramid-undo');

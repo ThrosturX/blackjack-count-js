@@ -2,6 +2,58 @@ const BET_TIME = 10;
 const MIN_TIMER = 3;
 const PENETRATION = 0.75;
 const SETTINGS_STORAGE_KEY = 'bj_table.settings';
+const PACE_LEVELS = [
+    {
+        id: 'practice',
+        label: 'Practice',
+        description: 'Slowest pace with the most time to think through decisions.',
+        timerTickMs: 1250,
+        humanBetSeconds: BET_TIME + 4,
+        autoBetSeconds: MIN_TIMER + 2,
+        delayMultiplier: 1.2,
+        minDelay: 240
+    },
+    {
+        id: 'classic',
+        label: 'Classic',
+        description: 'Standard table tempo.',
+        timerTickMs: 1000,
+        humanBetSeconds: BET_TIME,
+        autoBetSeconds: MIN_TIMER,
+        delayMultiplier: 1,
+        minDelay: 180
+    },
+    {
+        id: 'quick',
+        label: 'Quick',
+        description: 'Less think time between actions.',
+        timerTickMs: 720,
+        humanBetSeconds: BET_TIME - 2,
+        autoBetSeconds: Math.max(1, MIN_TIMER - 1),
+        delayMultiplier: 0.74,
+        minDelay: 140
+    },
+    {
+        id: 'turbo',
+        label: 'Turbo',
+        description: 'High-pressure pace for advanced play.',
+        timerTickMs: 500,
+        humanBetSeconds: BET_TIME - 4,
+        autoBetSeconds: 2,
+        delayMultiplier: 0.6,
+        minDelay: 110
+    },
+    {
+        id: 'blitz',
+        label: 'Blitz',
+        description: 'Closest to the old fast mode, with minimal decision windows.',
+        timerTickMs: 320,
+        humanBetSeconds: BET_TIME - 5,
+        autoBetSeconds: 1,
+        delayMultiplier: 0.45,
+        minDelay: 90
+    }
+];
 
 /* --- STATE --- */
 const state = {
@@ -26,11 +78,12 @@ const state = {
     maxBet: 1000,
     casinoProfit: 0,
     playedRounds: 0,
-    fastMode: false
+    paceLevel: 1
 };
 
 const ui = {
     seats: document.getElementById('seats'),
+    dealerArea: document.getElementById('dealer-area'),
     dealerCards: document.getElementById('dealer-cards'),
     dealerScore: document.getElementById('dealer-score'),
     overlay: document.getElementById('center-overlay'),
@@ -50,47 +103,497 @@ const ui = {
     themeArea: document.getElementById('theme-area'),
     addonsArea: document.getElementById('addons-area'),
     statsArea: document.getElementById('stats-area'),
+    gameArea: document.getElementById('game-area'),
+    toggleGame: document.getElementById('toggle-game'),
     toggleSettings: document.getElementById('toggle-settings'),
     toggleThemes: document.getElementById('toggle-themes'),
     toggleAddons: document.getElementById('toggle-addons'),
     toggleStats: document.getElementById('toggle-stats'),
-    fastModeCheckbox: document.getElementById('fast-mode-checkbox'),
+    paceModeButtons: Array.from(document.querySelectorAll('.pace-mode-btn')),
     minBet: document.getElementById('table-minimum-bet'),
     countSystemSelect: document.getElementById('count-system-select'),
     topCardPreview: document.getElementById('top-card-preview'),
+    resetStats: document.getElementById('reset-blackjack-stats'),
+    personaSaveOverlay: document.getElementById('persona-save-overlay'),
+    personaSaveName: document.getElementById('persona-save-name'),
+    personaSaveConfirm: document.getElementById('persona-save-confirm'),
+    personaSaveCancel: document.getElementById('persona-save-cancel'),
+    personaLoadOverlay: document.getElementById('persona-load-overlay'),
+    personaLoadSelect: document.getElementById('persona-load-select'),
+    personaLoadDelete: document.getElementById('persona-load-delete'),
+    personaLoadConfirm: document.getElementById('persona-load-confirm'),
+    personaLoadCancel: document.getElementById('persona-load-cancel'),
 };
 
 const scheduleTableSizing = CommonUtils.createRafScheduler(ensureTableSizing);
+const scheduleShoeFitCheck = CommonUtils.createRafScheduler(updateShoeVisibilityForFit);
+const BASE_SEAT_MIN_WIDTH = 166;
+const ABSOLUTE_SEAT_MIN_WIDTH = 166;
+const BASE_SEAT_MIN_HEIGHT = 280;
+const ABSOLUTE_SEAT_MIN_HEIGHT = 220;
+const SPLIT_HAND_SEAT_WIDTH_STEP = 8;
+const SPLIT_HAND_SEAT_WIDTH_CAP = 24;
+const BLACKJACK_PERSONAS_STORAGE_KEY = 'bj_table.blackjack_personas';
+const MAX_BLACKJACK_PERSONAS = 9;
+let blackjackStateManager = null;
+let pendingPersonaSaveSeat = null;
+let pendingPersonaLoadSeat = null;
+
+function markSessionDirty() {
+    if (blackjackStateManager) {
+        blackjackStateManager.markDirty();
+    }
+}
+
+function getElapsedRoundsSafe(value) {
+    return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function clampNumber(value, fallback, min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.min(max, Math.max(min, numeric));
+}
+
+function escapeHTML(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function normalizePersonaName(name) {
+    if (typeof name !== 'string') return '';
+    return name.trim().slice(0, 24);
+}
+
+function loadSavedPersonas() {
+    try {
+        const raw = localStorage.getItem(BLACKJACK_PERSONAS_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((persona) => persona && typeof persona === 'object' && normalizePersonaName(persona.name));
+    } catch (err) {
+        return [];
+    }
+}
+
+function saveSavedPersonas(personas) {
+    try {
+        localStorage.setItem(BLACKJACK_PERSONAS_STORAGE_KEY, JSON.stringify(personas));
+    } catch (err) {
+        // Ignore storage failures.
+    }
+}
+
+function getPlayerDisplayName(player, idx) {
+    const personaName = normalizePersonaName(player && player.displayName);
+    return personaName || `Player ${idx + 1}`;
+}
+
+function buildPlayerFromPersona(idx, persona) {
+    return {
+        id: idx,
+        chips: clampNumber(persona.chips, 1000, 0),
+        currentBet: 0,
+        profit: 0,
+        lastBet: clampNumber(persona.lastBet, state.minBet, state.minBet),
+        hands: [],
+        isReady: false,
+        autoPlay: !!persona.autoPlay,
+        autoBet: !!persona.autoBet,
+        pendingStandUp: false,
+        countingBias: clampNumber(persona.countingBias, Math.random(), 0, 1),
+        conservative: !!persona.conservative,
+        displayName: normalizePersonaName(persona.name)
+    };
+}
+
+function sanitizeSavedPlayer(savedPlayer, seatIndex) {
+    if (!savedPlayer || typeof savedPlayer !== 'object') return null;
+    const chips = clampNumber(savedPlayer.chips, 0, 0);
+    return {
+        id: seatIndex,
+        chips,
+        currentBet: 0,
+        profit: clampNumber(savedPlayer.profit, 0),
+        lastBet: clampNumber(savedPlayer.lastBet, state.minBet, state.minBet),
+        hands: [],
+        isReady: false,
+        autoPlay: !!savedPlayer.autoPlay,
+        autoBet: !!savedPlayer.autoBet,
+        pendingStandUp: false,
+        countingBias: clampNumber(savedPlayer.countingBias, Math.random(), 0, 1),
+        conservative: !!savedPlayer.conservative,
+        displayName: normalizePersonaName(savedPlayer.displayName),
+    };
+}
+
+function getBlackjackSaveState() {
+    return {
+        version: 1,
+        seatCount: state.seatCount,
+        deckCount: state.deckCount,
+        minBet: state.minBet,
+        countingSystem: state.countingSystem,
+        paceLevel: state.paceLevel,
+        casinoProfit: state.casinoProfit,
+        playedRounds: state.playedRounds,
+        players: state.players.map((player, idx) => {
+            if (!player) return null;
+            return {
+                id: idx,
+                chips: player.chips,
+                profit: player.profit,
+                lastBet: player.lastBet,
+                autoPlay: player.autoPlay,
+                autoBet: player.autoBet,
+                countingBias: player.countingBias,
+                conservative: player.conservative,
+                displayName: normalizePersonaName(player.displayName)
+            };
+        })
+    };
+}
+
+function applyStateToControls() {
+    if (ui.seatSelect) ui.seatSelect.value = String(state.seatCount);
+    if (ui.deckSelect) ui.deckSelect.value = String(state.deckCount);
+    if (ui.minBet) ui.minBet.value = String(state.minBet);
+    if (ui.countSystemSelect) ui.countSystemSelect.value = state.countingSystem;
+    applyPaceLevel(state.paceLevel, { persist: false });
+}
+
+function restoreBlackjackState(saved) {
+    if (!saved || typeof saved !== 'object') return;
+
+    state.seatCount = clampNumber(saved.seatCount, state.seatCount, 1, 9);
+    state.deckCount = clampNumber(saved.deckCount, state.deckCount, 1, 8);
+    state.minBet = clampNumber(saved.minBet, state.minBet, 1);
+    state.maxBet = calcMaxBet(state.minBet);
+    state.countingSystem = typeof saved.countingSystem === 'string' ? saved.countingSystem : state.countingSystem;
+    state.paceLevel = normalizePaceLevel(saved.paceLevel);
+    state.casinoProfit = clampNumber(saved.casinoProfit, 0);
+    state.playedRounds = getElapsedRoundsSafe(saved.playedRounds);
+
+    const rawPlayers = Array.isArray(saved.players) ? saved.players : [];
+    state.players = Array.from({ length: state.seatCount }, (_, idx) => sanitizeSavedPlayer(rawPlayers[idx], idx));
+
+    state.runningCount = 0;
+    state.sideCounts = {};
+    state.dealer.hand = [];
+    state.phase = 'BETTING';
+    state.turnIndex = -1;
+    state.splitIndex = -1;
+    state.cutCardReached = false;
+    state.tableSettingsChanged = false;
+    state.isShuffling = false;
+    state.timerVal = 0;
+    if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+    }
+}
+
+function rectsOverlap(a, b, padding = 0) {
+    if (!a || !b) return false;
+    return !(
+        a.right <= b.left + padding ||
+        a.left >= b.right - padding ||
+        a.bottom <= b.top + padding ||
+        a.top >= b.bottom - padding
+    );
+}
+
+function setDealerCenterShift(shiftPx = 0) {
+    if (!ui.dealerArea) return;
+    const value = Number.isFinite(shiftPx) ? Math.round(shiftPx) : 0;
+    ui.dealerArea.style.setProperty('--dealer-center-shift', `${value}px`);
+}
+
+function updateDealerCenterCompensation(tableRect, shoeRect, canFitNeatly) {
+    if (!tableRect || !shoeRect || !canFitNeatly) {
+        setDealerCenterShift(0);
+        return;
+    }
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    const centerX = tableRect.left + (tableRect.width / 2);
+    const desiredCenterClearance = 108 * scale;
+    const encroachment = centerX + desiredCenterClearance - shoeRect.left;
+    const maxShift = 124 * scale;
+    const shift = Math.max(0, Math.min(maxShift, encroachment));
+    // Shoe is on the right side, so shift dealer content to the left.
+    setDealerCenterShift(-shift);
+}
+
+function updateShoeVisibilityForFit() {
+    const tableEl = document.getElementById('table');
+    const shoeEl = document.querySelector('.shoe-container');
+    if (!tableEl || !shoeEl) {
+        setDealerCenterShift(0);
+        return;
+    }
+
+    const shoeStyle = getComputedStyle(shoeEl);
+    if (shoeStyle.display === 'none') {
+        document.body.classList.add('blackjack-hide-shoe-fit');
+        setDealerCenterShift(0);
+        if (ui.topCardPreview) {
+            ui.topCardPreview.style.opacity = 0;
+        }
+        return;
+    }
+
+    const tableRect = tableEl.getBoundingClientRect();
+    const shoeRect = shoeEl.getBoundingClientRect();
+    const seatsRect = ui.seats ? ui.seats.getBoundingClientRect() : null;
+
+    // Apply a provisional dealer shift before overlap checks so shoe/dealer
+    // can share real estate when the shoe drifts toward center.
+    updateDealerCenterCompensation(tableRect, shoeRect, true);
+    const dealerCardsRect = ui.dealerCards ? ui.dealerCards.getBoundingClientRect() : null;
+    const dealerScoreRect = ui.dealerScore ? ui.dealerScore.getBoundingClientRect() : null;
+
+    const inset = 8;
+    const clearGap = 12;
+    const withinTableBounds = (
+        shoeRect.left >= tableRect.left + inset &&
+        shoeRect.right <= tableRect.right - inset &&
+        shoeRect.top >= tableRect.top + inset &&
+        shoeRect.bottom <= tableRect.bottom - inset
+    );
+    const clearsDealer = (
+        !rectsOverlap(shoeRect, dealerCardsRect, clearGap) &&
+        !rectsOverlap(shoeRect, dealerScoreRect, clearGap)
+    );
+    const clearsSeats = !seatsRect || shoeRect.bottom <= seatsRect.top - clearGap;
+
+    const canFitNeatly = withinTableBounds && clearsDealer && clearsSeats;
+    document.body.classList.toggle('blackjack-hide-shoe-fit', !canFitNeatly);
+    if (!canFitNeatly) {
+        setDealerCenterShift(0);
+    }
+
+    if (ui.topCardPreview) {
+        const shouldShowPreview = canFitNeatly && state.shoe.length > 0 && !state.isShuffling;
+        ui.topCardPreview.style.opacity = shouldShowPreview ? 0.92 : 0;
+    }
+}
+
+function loadSettingsSnapshot() {
+    try {
+        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') return null;
+        return data;
+    } catch (err) {
+        return null;
+    }
+}
+
+function persistSettings(updates = {}) {
+    if (window.__settingsResetInProgress) return;
+    try {
+        const current = loadSettingsSnapshot() || { addons: {} };
+        const next = {
+            ...current,
+            ...updates,
+            addons: { ...(current.addons || {}) }
+        };
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    } catch (err) {
+        // Ignore storage failures.
+    }
+}
+
+function normalizePaceLevel(level) {
+    const parsed = parseInt(level, 10);
+    if (!Number.isFinite(parsed)) return 1;
+    return Math.max(0, Math.min(PACE_LEVELS.length - 1, parsed));
+}
+
+function getPaceProfile() {
+    return PACE_LEVELS[normalizePaceLevel(state.paceLevel)] || PACE_LEVELS[1];
+}
+
+function applyPaceLevel(level, options = {}) {
+    const persist = options.persist !== false;
+    state.paceLevel = normalizePaceLevel(level);
+
+    if (ui.paceModeButtons && ui.paceModeButtons.length) {
+        ui.paceModeButtons.forEach(button => {
+            const buttonLevel = normalizePaceLevel(button.dataset.paceLevel);
+            button.classList.toggle('active', buttonLevel === state.paceLevel);
+            button.setAttribute('aria-pressed', buttonLevel === state.paceLevel ? 'true' : 'false');
+        });
+    }
+    if (persist) {
+        persistSettings({ blackjackPaceLevel: state.paceLevel });
+        markSessionDirty();
+    }
+}
+
+function initPaceControls(storedSettings) {
+    const settings = storedSettings || loadSettingsSnapshot();
+    let nextLevel = 1;
+    if (settings && settings.blackjackPaceLevel !== undefined) {
+        nextLevel = parseInt(settings.blackjackPaceLevel, 10);
+    } else if (settings && typeof settings.fastMode === 'boolean') {
+        nextLevel = settings.fastMode ? 4 : 1;
+    }
+    applyPaceLevel(nextLevel, { persist: false });
+
+    if (!ui.paceModeButtons || !ui.paceModeButtons.length) return;
+    ui.paceModeButtons.forEach(button => {
+        if (button.dataset.boundPace === 'true') return;
+        button.dataset.boundPace = 'true';
+        button.addEventListener('click', () => {
+            applyPaceLevel(button.dataset.paceLevel);
+        });
+    });
+}
+
+function captureViewportState() {
+    const docScroller = document.scrollingElement || document.documentElement;
+    const wrapperEl = document.getElementById('blackjack-scroll');
+    const tableEl = document.getElementById('table');
+    return {
+        pageX: window.scrollX,
+        pageY: window.scrollY,
+        docLeft: docScroller ? docScroller.scrollLeft : 0,
+        docTop: docScroller ? docScroller.scrollTop : 0,
+        wrapperLeft: wrapperEl ? wrapperEl.scrollLeft : 0,
+        wrapperTop: wrapperEl ? wrapperEl.scrollTop : 0,
+        tableLeft: tableEl ? tableEl.scrollLeft : 0,
+        tableTop: tableEl ? tableEl.scrollTop : 0
+    };
+}
+
+function restoreViewportState(snapshot) {
+    if (!snapshot) return;
+    const docScroller = document.scrollingElement || document.documentElement;
+    const wrapperEl = document.getElementById('blackjack-scroll');
+    const tableEl = document.getElementById('table');
+
+    if (docScroller) {
+        docScroller.scrollLeft = snapshot.docLeft;
+        docScroller.scrollTop = snapshot.docTop;
+    }
+    if (wrapperEl) {
+        wrapperEl.scrollLeft = snapshot.wrapperLeft;
+        wrapperEl.scrollTop = snapshot.wrapperTop;
+    }
+    if (tableEl) {
+        tableEl.scrollLeft = snapshot.tableLeft;
+        tableEl.scrollTop = snapshot.tableTop;
+    }
+
+    if (window.scrollX !== snapshot.pageX || window.scrollY !== snapshot.pageY) {
+        window.scrollTo(snapshot.pageX, snapshot.pageY);
+    }
+}
+
+function restoreViewportStateForFrames(snapshot, frameCount = 2) {
+    if (!snapshot) return;
+    restoreViewportState(snapshot);
+    let remaining = Math.max(0, frameCount);
+    const tick = () => {
+        restoreViewportState(snapshot);
+        remaining -= 1;
+        if (remaining > 0) {
+            requestAnimationFrame(tick);
+        }
+    };
+    requestAnimationFrame(tick);
+}
 
 function ensureTableSizing() {
     const tableEl = document.getElementById('table');
     if (!tableEl || !ui.seats) return;
+    const viewportSnapshot = captureViewportState();
+    const isCompactViewport = window.matchMedia('(max-width: 900px)').matches;
+
+    tableEl.style.minWidth = '';
+    tableEl.style.minHeight = '';
+    tableEl.style.maxHeight = '';
 
     const seatsStyle = getComputedStyle(ui.seats);
     const gap = parseFloat(seatsStyle.columnGap || seatsStyle.gap) || 0;
     const paddingLeft = parseFloat(seatsStyle.paddingLeft) || 0;
     const paddingRight = parseFloat(seatsStyle.paddingRight) || 0;
 
-    let seatMinWidth = 130;
-    const seatEl = ui.seats.querySelector('.seat');
-    if (seatEl) {
-        const seatStyle = getComputedStyle(seatEl);
-        const minWidth = parseFloat(seatStyle.minWidth);
-        const width = parseFloat(seatStyle.width);
-        if (Number.isFinite(minWidth) && minWidth > 0) {
-            seatMinWidth = minWidth;
-        } else if (Number.isFinite(width) && width > 0) {
-            seatMinWidth = width;
-        }
-    }
+    const seatDimensions = getSeatDimensionsForLayout();
+    const seatMinWidth = seatDimensions.minWidth;
+    const seatMinHeight = seatDimensions.minHeight;
+    ui.seats.style.setProperty('--blackjack-seat-min-width', `${Math.ceil(seatMinWidth)}px`);
+    ui.seats.style.setProperty('--blackjack-seat-min-height', `${Math.ceil(seatMinHeight)}px`);
 
     const seatCount = Math.max(1, state.seatCount || 1);
     const minWidth = paddingLeft + paddingRight + seatMinWidth * seatCount + gap * Math.max(0, seatCount - 1);
+    const requiredWidth = minWidth;
+
+    const tableStyles = getComputedStyle(tableEl);
+    const baseMinHeight = parseFloat(tableStyles.minHeight) || 0;
+    const baseMaxHeight = parseFloat(tableStyles.maxHeight);
+    const paddingBottom = parseFloat(tableStyles.paddingBottom) || 0;
+    const borderBottom = parseFloat(tableStyles.borderBottomWidth) || 0;
+
+    const tableRect = tableEl.getBoundingClientRect();
+    const dealerRect = ui.dealerArea ? ui.dealerArea.getBoundingClientRect() : null;
+    const seatsRect = ui.seats.getBoundingClientRect();
+    let contentBottom = tableRect.top;
+    if (dealerRect) contentBottom = Math.max(contentBottom, dealerRect.bottom);
+    contentBottom = Math.max(contentBottom, seatsRect.bottom);
+    const contentDrivenHeight = Math.ceil(contentBottom - tableRect.top + paddingBottom + borderBottom + 12);
+    const requiredHeight = isCompactViewport
+        ? Math.max(baseMinHeight, contentDrivenHeight)
+        : baseMinHeight;
+
     CommonUtils.ensureScrollableWidth({
         table: tableEl,
         wrapper: 'blackjack-scroll',
-        requiredWidth: Math.ceil(minWidth)
+        requiredWidth: Math.ceil(requiredWidth),
+        enterTolerance: 10,
+        exitTolerance: 4
     });
+
+    tableEl.style.minHeight = `${requiredHeight}px`;
+    const needsTallTable = Number.isFinite(baseMaxHeight) && requiredHeight > baseMaxHeight + 2;
+    tableEl.style.maxHeight = needsTallTable ? 'none' : '';
+    restoreViewportStateForFrames(viewportSnapshot, 2);
+    scheduleShoeFitCheck();
+}
+
+function getSeatDimensionsForLayout() {
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    const isCompactViewport = window.matchMedia('(max-width: 900px)').matches;
+    const widthFloor = Math.max(ABSOLUTE_SEAT_MIN_WIDTH, BASE_SEAT_MIN_WIDTH * scale);
+    const heightFloor = Math.max(ABSOLUTE_SEAT_MIN_HEIGHT, BASE_SEAT_MIN_HEIGHT * scale);
+    let seatMinWidth = widthFloor;
+    if (!isCompactViewport) {
+        const maxHandsAtAnySeat = state.players.reduce((maxHands, player) => {
+            if (!player || !Array.isArray(player.hands)) return maxHands;
+            return Math.max(maxHands, player.hands.length || 0);
+        }, 1);
+        if (maxHandsAtAnySeat > 2) {
+            const splitOverflowHands = maxHandsAtAnySeat - 2;
+            const splitBoost = Math.min(
+                SPLIT_HAND_SEAT_WIDTH_CAP * scale,
+                splitOverflowHands * SPLIT_HAND_SEAT_WIDTH_STEP * scale
+            );
+            seatMinWidth += splitBoost;
+        }
+    }
+
+    const seatMinHeight = heightFloor;
+    return {
+        minWidth: seatMinWidth,
+        minHeight: seatMinHeight
+    };
 }
 
 /* --- AUDIO HANDLING --- */
@@ -117,13 +620,39 @@ function playSound(type) {
 
 document.addEventListener('DOMContentLoaded', () => {
     preloadAudio();
-    CommonUtils.initCardScaleControls('blackjack-card-scale', 'blackjack-card-scale-value');
+    CommonUtils.initCardScaleControls('blackjack-card-scale', 'blackjack-card-scale-value', {
+        min: 0.5,
+        max: 2,
+        legacyStorageKeys: ['bj_table.blackjack_ui_scale']
+    });
+    scheduleShoeFitCheck();
+    initPaceControls();
+    blackjackStateManager = new CommonUtils.StateManager({
+        gameId: 'blackjack',
+        getState: getBlackjackSaveState,
+        setState: restoreBlackjackState
+    });
 });
 
 /* --- INITIALIZATION --- */
 function init() {
-    state.players = Array(state.seatCount).fill(null);
+    const storedSettings = loadSettingsSnapshot();
+    initPaceControls(storedSettings);
+    const restoredSession = blackjackStateManager ? blackjackStateManager.load() : false;
+    if (!restoredSession) {
+        state.players = Array(state.seatCount).fill(null);
+    }
+    applyStateToControls();
     createShoe();
+    updateCasinoProfit();
+    ui.playedRounds.textContent = `${state.playedRounds}`;
+    updateCountHint();
+    if (restoredSession) {
+        CommonUtils.showTableToast('Session restored', {
+            containerId: 'table',
+            duration: 1400
+        });
+    }
 
     // Initialize deck style
     if (ui.deckStyleSelect) {
@@ -138,34 +667,8 @@ function init() {
     }
 
     if (ui.countSystemSelect) {
-        const loadSettings = () => {
-            try {
-                const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-                if (!raw) return null;
-                const data = JSON.parse(raw);
-                if (!data || typeof data !== 'object') return null;
-                return data;
-            } catch (err) {
-                return null;
-            }
-        };
-        const persistSettings = (updates = {}) => {
-            if (window.__settingsResetInProgress) return;
-            try {
-                const current = loadSettings() || { addons: {} };
-                const next = {
-                    ...current,
-                    ...updates,
-                    addons: { ...(current.addons || {}) }
-                };
-                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
-            } catch (err) {
-                // Ignore storage failures.
-            }
-        };
-        const stored = loadSettings();
-        if (stored && stored.countingSystem) {
-            state.countingSystem = stored.countingSystem === 'reko' ? 'ko' : stored.countingSystem;
+        if (storedSettings && storedSettings.countingSystem) {
+            state.countingSystem = storedSettings.countingSystem === 'reko' ? 'ko' : storedSettings.countingSystem;
         }
         const initCounting = () => {
             populateCountingSystems();
@@ -176,6 +679,7 @@ function init() {
                 updateStats();
                 updateCountHint();
                 persistSettings({ countingSystem: state.countingSystem });
+                markSessionDirty();
             });
         };
         if (window.AddonLoader && window.AddonLoader.ready) {
@@ -187,20 +691,39 @@ function init() {
     }
 
     if (ui.topCardPreview) {
-        ui.topCardPreview.onmouseup = () => {
-            const peekCard = ui.topCardPreview.children[0];
-            if (peekCard) peekCard.classList.add('hidden');
-        }
-        ui.topCardPreview.onmousedown = () => {
-            const peekCard = ui.topCardPreview.children[0];
-            if (peekCard) peekCard.classList.remove('hidden');
-        }
+        let lockedOpen = false;
+        const getPeekCard = () => ui.topCardPreview.querySelector('.top-card-preview-card');
+        const setPeekVisible = (visible) => {
+            const peekCard = getPeekCard();
+            if (!peekCard) return;
+            peekCard.classList.toggle('hidden', !visible);
+        };
+
+        ui.topCardPreview.addEventListener('pointerdown', () => {
+            setPeekVisible(true);
+        });
+        ui.topCardPreview.addEventListener('pointerup', () => {
+            if (!lockedOpen) setPeekVisible(false);
+        });
+        ui.topCardPreview.addEventListener('pointerleave', () => {
+            if (!lockedOpen) setPeekVisible(false);
+        });
+        ui.topCardPreview.addEventListener('click', () => {
+            lockedOpen = !lockedOpen;
+            setPeekVisible(lockedOpen);
+        });
     }
 
     window.addEventListener('resize', scheduleTableSizing);
-    document.addEventListener('card-scale:changed', scheduleTableSizing);
+    window.addEventListener('ui-scale:changed', () => {
+        scheduleTableSizing();
+        updateShoeVisual();
+    });
 
-    setTimeout(updateShoeVisual, 100);
+    setTimeout(() => {
+        updateShoeVisual();
+        scheduleTableSizing();
+    }, 100);
 }
 
 function updateDeckStyle() {
@@ -352,10 +875,6 @@ function applyCount(card) {
     updateStats();
 }
 
-ui.fastModeCheckbox.addEventListener('change', (event) => {
-    state.fastMode = event.target.checked;
-});
-
 function createShoe(msg) {
     // Allow shuffling from RESOLVING or BETTING phases, but prevent double trigger
     if (state.isShuffling) return;
@@ -444,6 +963,7 @@ function updateStats() {
 function updateShoeVisual() {
     const cardStack = document.getElementById('card-stack');
     CommonUtils.updateShoeVisual(cardStack, state.shoe, state.isShuffling, state.deckCount, state.totalInitialCards);
+    scheduleShoeFitCheck();
 }
 
 function animateCardDraw(toDealer = true, seatIndex = null) {
@@ -630,6 +1150,7 @@ function placeBetInternal(idx, amt) {
     p.chips -= amt;
     p.isReady = true;
     renderSeat(idx);
+    markSessionDirty();
 }
 
 function clearBet(idx) {
@@ -643,6 +1164,7 @@ function clearBet(idx) {
     p.isReady = false;
 
     updateGameFlow();
+    markSessionDirty();
 }
 
 function toggleAuto(idx, type) {
@@ -667,11 +1189,13 @@ function toggleAuto(idx, type) {
     }
     renderSeat(idx);
     updateGameFlow();
+    markSessionDirty();
 }
 
 function startTimer() {
+    const pace = getPaceProfile();
     const hasHumanSittingUnbet = state.players.some(p => p && !p.autoPlay);
-    state.timerVal = hasHumanSittingUnbet ? BET_TIME : MIN_TIMER;
+    state.timerVal = hasHumanSittingUnbet ? pace.humanBetSeconds : pace.autoBetSeconds;
 
     ui.overlayMain.className = 'overlay-text msg-timer';
     ui.overlayMain.textContent = state.timerVal;
@@ -687,7 +1211,7 @@ function startTimer() {
             ui.overlay.classList.remove('show');
             dealHands();
         }
-    }, state.fastMode ? 300 : 1000);
+    }, pace.timerTickMs);
 }
 
 /* --- GAME LOGIC --- */
@@ -1031,6 +1555,7 @@ function playerDouble() {
     ui.overlay.classList.remove('show');
     ui.strategyText.textContent = "";
     renderSeat(state.turnIndex);
+    markSessionDirty();
     setTimeout(nextTurn, getDelay(800));
 }
 
@@ -1082,6 +1607,7 @@ function playerSplit() {
 
     renderSeat(state.turnIndex);
     updateStrategyHint();
+    markSessionDirty();
     if (p.autoPlay) setTimeout(runAutoPlay, getDelay(500));
 }
 
@@ -1172,6 +1698,7 @@ function resolveRound() {
             }
         });
     });
+    markSessionDirty();
 
     // Update UI
     render();
@@ -1214,6 +1741,7 @@ function finishRound() {
     }
     updateCasinoProfit();
     updatePlayedRounds();
+    markSessionDirty();
 }
 
 function endRound() {
@@ -1229,12 +1757,15 @@ function endRound() {
     updateCountHint();
     updateGameFlow();
     render();
+    markSessionDirty();
 }
 
 /* --- HELPERS --- */
 
 function getDelay(base) {
-    return state.fastMode ? 180 : base;
+    const pace = getPaceProfile();
+    const scaled = Math.round(base * pace.delayMultiplier);
+    return Math.max(pace.minDelay, scaled);
 }
 
 function calcScore(cards, peek = false) {
@@ -1361,6 +1892,161 @@ function calcMaxBet(minBet) {
     return Math.round(raw / div) * div;
 }
 
+function resetBlackjackStatistics() {
+    state.casinoProfit = 0;
+    state.playedRounds = 0;
+    state.players.forEach((player) => {
+        if (!player) return;
+        player.profit = 0;
+    });
+    markSessionDirty();
+    render();
+    CommonUtils.showTableToast('Blackjack stats reset', {
+        containerId: 'table',
+        duration: 1500
+    });
+}
+
+function closeSavePersonaOverlay() {
+    pendingPersonaSaveSeat = null;
+    if (!ui.personaSaveOverlay) return;
+    ui.personaSaveOverlay.classList.remove('show');
+    ui.personaSaveOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function closeLoadPersonaOverlay() {
+    pendingPersonaLoadSeat = null;
+    if (!ui.personaLoadOverlay) return;
+    ui.personaLoadOverlay.classList.remove('show');
+    ui.personaLoadOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function confirmSavePlayerPersona() {
+    if (pendingPersonaSaveSeat === null) return;
+    const player = state.players[pendingPersonaSaveSeat];
+    if (!player) {
+        closeSavePersonaOverlay();
+        return;
+    }
+    const name = normalizePersonaName(ui.personaSaveName ? ui.personaSaveName.value : '');
+    if (!name) {
+        CommonUtils.showTableToast('Enter a player name first', {
+            containerId: 'table',
+            duration: 1300
+        });
+        if (ui.personaSaveName) ui.personaSaveName.focus();
+        return;
+    }
+
+    const personas = loadSavedPersonas();
+    const nextPersona = {
+        name,
+        chips: clampNumber(player.chips, 0, 0),
+        lastBet: clampNumber(player.lastBet, state.minBet, state.minBet),
+        autoPlay: !!player.autoPlay,
+        autoBet: !!player.autoBet,
+        countingBias: clampNumber(player.countingBias, 0.5, 0, 1),
+        conservative: !!player.conservative,
+        updatedAt: Date.now()
+    };
+    const sameNameIndex = personas.findIndex((persona) => normalizePersonaName(persona.name).toLowerCase() === name.toLowerCase());
+    if (sameNameIndex >= 0) {
+        personas[sameNameIndex] = nextPersona;
+    } else {
+        personas.push(nextPersona);
+    }
+
+    personas.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    saveSavedPersonas(personas.slice(0, MAX_BLACKJACK_PERSONAS));
+    player.displayName = name;
+    markSessionDirty();
+    renderSeats();
+    closeSavePersonaOverlay();
+    CommonUtils.showTableToast(`Saved player: ${name}`, {
+        containerId: 'table',
+        duration: 1300
+    });
+}
+
+function savePlayerPersona(idx) {
+    const player = state.players[idx];
+    if (!player || !ui.personaSaveOverlay || !ui.personaSaveName) return;
+    pendingPersonaSaveSeat = idx;
+    ui.personaSaveName.value = normalizePersonaName(player.displayName);
+    ui.personaSaveOverlay.classList.add('show');
+    ui.personaSaveOverlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+        ui.personaSaveName.focus();
+        ui.personaSaveName.select();
+    });
+}
+
+function loadPlayerPersona(idx) {
+    if (state.players[idx] || !ui.personaLoadOverlay || !ui.personaLoadSelect) return;
+    const personas = loadSavedPersonas();
+    if (!personas.length) {
+        CommonUtils.showTableToast('No saved players', {
+            containerId: 'table',
+            duration: 1200
+        });
+        return;
+    }
+    pendingPersonaLoadSeat = idx;
+    ui.personaLoadSelect.innerHTML = personas.map((persona) => {
+        const name = normalizePersonaName(persona.name);
+        return `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
+    }).join('');
+    ui.personaLoadOverlay.classList.add('show');
+    ui.personaLoadOverlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => ui.personaLoadSelect.focus());
+}
+
+function confirmLoadPlayerPersona() {
+    if (pendingPersonaLoadSeat === null || state.players[pendingPersonaLoadSeat]) {
+        closeLoadPersonaOverlay();
+        return;
+    }
+    const selectedName = normalizePersonaName(ui.personaLoadSelect ? ui.personaLoadSelect.value : '');
+    if (!selectedName) return;
+    const personas = loadSavedPersonas();
+    const persona = personas.find((entry) => normalizePersonaName(entry.name) === selectedName);
+    if (!persona) return;
+    sit(pendingPersonaLoadSeat, persona);
+    closeLoadPersonaOverlay();
+    CommonUtils.showTableToast(`Loaded player: ${normalizePersonaName(persona.name)}`, {
+        containerId: 'table',
+        duration: 1300
+    });
+}
+
+function deleteSelectedPersona() {
+    const selectedName = normalizePersonaName(ui.personaLoadSelect ? ui.personaLoadSelect.value : '');
+    if (!selectedName) return;
+
+    const personas = loadSavedPersonas();
+    const next = personas.filter((entry) => normalizePersonaName(entry.name) !== selectedName);
+    if (next.length === personas.length) return;
+
+    saveSavedPersonas(next);
+    CommonUtils.showTableToast(`Deleted player: ${selectedName}`, {
+        containerId: 'table',
+        duration: 1200
+    });
+
+    if (!ui.personaLoadSelect) return;
+    if (!next.length) {
+        closeLoadPersonaOverlay();
+        renderSeats();
+        return;
+    }
+
+    ui.personaLoadSelect.innerHTML = next.map((persona) => {
+        const name = normalizePersonaName(persona.name);
+        return `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`;
+    }).join('');
+    renderSeats();
+}
+
 
 /* --- RENDERING --- */
 function createCardEl(card) {
@@ -1389,8 +2075,19 @@ function renderDealer() {
     }
 }
 
-function sit(idx) {
+function sit(idx, persona = null) {
     if (state.players[idx]) return;
+
+    if (persona && typeof persona === 'object') {
+        state.players[idx] = buildPlayerFromPersona(idx, persona);
+        if (state.phase === 'BETTING') {
+            updateGameFlow();
+        } else {
+            renderSeat(idx);
+        }
+        markSessionDirty();
+        return;
+    }
 
     // determine what kind of clientele just sat down
     let luck = Math.random()
@@ -1428,6 +2125,7 @@ function sit(idx) {
         pendingStandUp: false,
         countingBias: Math.random(),
         conservative: (Math.random() > 0.5 ? true : false),
+        displayName: '',
     };
 
     if (state.phase === 'BETTING') {
@@ -1435,6 +2133,7 @@ function sit(idx) {
     } else {
         renderSeat(idx);
     }
+    markSessionDirty();
 }
 
 function standUp(idx) {
@@ -1451,6 +2150,7 @@ function standUp(idx) {
         if (state.phase === 'PLAYING' && state.turnIndex === idx) {
             runAutoPlay();
         }
+        markSessionDirty();
     } else {
         // Safe to remove immediately
         state.players[idx] = null;
@@ -1459,21 +2159,27 @@ function standUp(idx) {
         } else {
             renderSeats();
         }
+        markSessionDirty();
     }
 }
 
 function renderSeat(idx) {
-    const el = document.getElementById(`seat-${idx}`);
+    const viewportSnapshot = captureViewportState();
+    const el = document.getElementById(`seat-slot-${idx}`);
     if (!el) return;
     el.outerHTML = getSeatHTML(idx);
+    scheduleTableSizing();
+    restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
 function renderSeats() {
+    const viewportSnapshot = captureViewportState();
     ui.seats.innerHTML = '';
     for (let i = 0; i < state.seatCount; i++) {
         ui.seats.innerHTML += getSeatHTML(i);
     }
     scheduleTableSizing();
+    restoreViewportStateForFrames(viewportSnapshot, 2);
 }
 
 function render() {
@@ -1482,15 +2188,45 @@ function render() {
     updateStats();
 }
 
+function getHandResultOverlayHTML(hand) {
+    if (state.phase !== 'RESOLVING' || !hand || !hand.result) return '';
+
+    let resClass = 'result-push';
+    let contentHTML = '<span class="res-text">PUSH</span>';
+
+    if (hand.result === 'win') {
+        resClass = 'result-win';
+        contentHTML = `<span class="res-profit">+$${hand.profit}</span>`;
+    } else if (hand.result === 'lose') {
+        resClass = 'result-lose';
+        contentHTML = `<span class="res-profit">-$${hand.bet}</span>`;
+    }
+
+    return `
+        <div class="hand-result ${resClass}">
+            ${contentHTML}
+        </div>
+    `;
+}
+
 function getSeatHTML(idx) {
     const p = state.players[idx];
-    const isGameActive = (state.phase === 'DEALING' || state.phase === 'PLAYING' || state.phase === 'RESOLVING');
 
     if (!p) {
         return `
-                    <div class="seat" id="seat-${idx}" style="justify-content: flex-end;">
-                        <div style="color:#aaa; margin-bottom:auto;">Empty</div>
-                        <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                    <div class="seat-slot" id="seat-slot-${idx}">
+                        <div class="seat seat-empty" id="seat-${idx}">
+                            <div class="seat-empty-label">Empty</div>
+                            <div class="player-hand-area" aria-hidden="true"></div>
+                            <div class="seat-controls">
+                                <button class="btn-sit" onclick="sit(${idx})">Sit Down</button>
+                            </div>
+                        </div>
+                        <div class="seat-automation">
+                            <div class="persona-save-row">
+                                <button class="btn-mini persona-btn persona-accent-btn" onclick="loadPlayerPersona(${idx})">Load Player</button>
+                            </div>
+                        </div>
                     </div>
                 `;
     }
@@ -1520,29 +2256,33 @@ function getSeatHTML(idx) {
 
     let controlsHTML = '';
 
-    // General Controls (Stand Up and Toggles) - Always available if seated
-    const togglesHTML = `
-                <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
-                <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
-                    <span class="toggle-label">Auto Play</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autoplay-${idx}" disabled>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
-                    <span class="toggle-label">Auto Bet</span>
-                    <label class="toggle-switch auto-bet">
-                        <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
-                        <span class="slider"></span>
-                    </label>
+    const displayName = getPlayerDisplayName(p, idx);
+    const automationHTML = `
+                <div class="seat-automation">
+                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'play')">
+                        <span class="toggle-label">Auto Play</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${p.autoPlay ? 'checked' : ''} name="autoplay-${idx}" disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-container" onclick="toggleAuto(${idx}, 'bet')">
+                        <span class="toggle-label">Auto Bet</span>
+                        <label class="toggle-switch auto-bet">
+                            <input type="checkbox" ${p.autoBet ? 'checked' : ''} name="autobet-${idx}" disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="persona-save-row">
+                        <button class="btn-mini persona-btn persona-accent-btn" onclick="savePlayerPersona(${idx})">Save Player</button>
+                    </div>
                 </div>
     `;
 
     // Betting Phase Controls
     if (state.phase === 'BETTING') {
         controlsHTML = `
-                    ${togglesHTML}
+                    <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                     <div class="bet-controls">
                         <input type="number" class="bet-input" id="bet-in-${idx}" value="${p.lastBet || state.minBet}" min="${state.minBet}" step="5">
                         <button class="btn-bet" onclick="placeBet(${idx}, parseInt(document.getElementById('bet-in-${idx}').value))">Bet</button>
@@ -1557,7 +2297,7 @@ function getSeatHTML(idx) {
             const canSplit = (h.cards.length === 2 && BlackjackLogic.getCardValue(h.cards[0]) === BlackjackLogic.getCardValue(h.cards[1]) && p.chips >= h.bet);
 
             controlsHTML = `
-                        ${togglesHTML}
+                        <button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>
                         <div class="controls">
                             <button class="action-btn btn-hit" onclick="playerHit()">H</button>
                             <button class="action-btn btn-stand" onclick="playerStand()">S</button>
@@ -1566,10 +2306,10 @@ function getSeatHTML(idx) {
                         </div>
                     `;
         } else {
-            controlsHTML = togglesHTML;
+            controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
         }
     } else {
-        controlsHTML = togglesHTML;
+        controlsHTML = `<button class="btn-standup" onclick="standUp(${idx})">${p.pendingStandUp ? 'Cancel' : 'Stand Up'}</button>`;
     }
 
     // Requirement: Persistent Bet Bubble
@@ -1583,19 +2323,20 @@ function getSeatHTML(idx) {
     }
 
     return `
-                <div class="seat ${classList}" id="seat-${idx}">
-                    <div class="seat-info">
-                        <span>Player ${idx + 1} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
-                        <div class='money-anchor'>
-                            <span class="chip-stack">$${p.chips}</span>
-                            <span class="${p.profit >= 0 ? 'player-profit' : 'player-loss'}">${Math.abs(p.profit)}</span>
+                <div class="seat-slot" id="seat-slot-${idx}">
+                    <div class="seat ${classList}" id="seat-${idx}">
+                        <div class="seat-info">
+                            <span>${escapeHTML(displayName)} ${p.autoPlay && !p.pendingStandUp ? '(Bot)' : ''}</span>
+                            <div class='money-anchor'>
+                                <span class="chip-stack">$${p.chips}</span>
+                                <span class="${p.profit >= 0 ? 'player-profit' : 'player-loss'}">${Math.abs(p.profit)}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="player-hand-area">
-                        ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
+                        <div class="player-hand-area">
+                            ${statusText ? `<div style="position:absolute; color:var(--gold); font-weight:bold; font-size:1.2rem; text-shadow:0 2px 4px black; z-index:10; top:-10px;">${statusText}</div>` : ''}
 
-                        ${p.hands.length === 1 && state.phase !== 'BETTING'
+                            ${p.hands.length === 1 && state.phase !== 'BETTING'
             ? `<div class="score-pill" style="margin-bottom:5px;">${getScoreDisplay(p.hands[0].cards)}</div>`
             : `<div class="score-pill" style="margin-bottom:5px; visibility: hidden;">0</div>`
         }
@@ -1609,27 +2350,7 @@ function getSeatHTML(idx) {
                 html += `<div class="split-container">`;
                 p.hands.forEach((h, hIdx) => {
                     const isActive = (isMyTurn && state.splitIndex === hIdx) ? 'active-split' : '';
-
-                    // Result Overlay
-                    let resultHTML = '';
-                    if (state.phase === 'RESOLVING' && h.result) {
-                        let resClass = 'result-push';
-                        let contentHTML = '<span class="res-text">PUSH</span>';
-
-                        if (h.result === 'win') {
-                            resClass = 'result-win';
-                            contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
-                        } else if (h.result === 'lose') {
-                            resClass = 'result-lose';
-                            contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
-                        }
-
-                        resultHTML = `
-                                            <div class="hand-result ${resClass}">
-                                                ${contentHTML}
-                                            </div>
-                                        `;
-                    }
+                    const resultHTML = getHandResultOverlayHTML(h);
 
                     html += `
                                         <div class="mini-hand ${isActive}">
@@ -1644,30 +2365,10 @@ function getSeatHTML(idx) {
                 html += `</div>`;
             } else {
                 const h = p.hands[0];
-
-                // Result Overlay
-                let resultHTML = '';
-                if (state.phase === 'RESOLVING' && h.result) {
-                    let resClass = 'result-push';
-                    let contentHTML = '<span class="res-text">PUSH</span>';
-
-                    if (h.result === 'win') {
-                        resClass = 'result-win';
-                        contentHTML = `<span class="res-profit">+$${h.profit}</span>`;
-                    } else if (h.result === 'lose') {
-                        resClass = 'result-lose';
-                        contentHTML = `<span class="res-profit">-$${h.bet}</span>`;
-                    }
-
-                    resultHTML = `
-                                        <div class="hand-result ${resClass}">
-                                            ${contentHTML}
-                                        </div>
-                                    `;
-                }
+                const resultHTML = getHandResultOverlayHTML(h);
 
                 html = `
-                                    <div class="cards" style="transform: scale(0.8); position: relative;">
+                                    <div class="cards seat-main-cards">
                                         ${h.cards.map(c => createCardEl(c).outerHTML).join('')}
                                         ${resultHTML}
                                     </div>
@@ -1676,10 +2377,14 @@ function getSeatHTML(idx) {
             return html;
         })()}
 
-                        ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
-                    </div>
+                            ${betAmount > 0 ? `<div class="bet-bubble">Bet: $${betAmount}</div>` : ''}
+                        </div>
 
-                    ${controlsHTML}
+                        <div class="seat-controls">
+                            ${controlsHTML}
+                        </div>
+                    </div>
+                    ${automationHTML}
                 </div>
             `;
 }
@@ -1702,6 +2407,7 @@ ui.seatSelect.addEventListener('change', (e) => {
     }
 
     renderSeats();
+    markSessionDirty();
 });
 
 ui.deckSelect.addEventListener('change', (e) => {
@@ -1713,6 +2419,7 @@ ui.deckSelect.addEventListener('change', (e) => {
         state.tableSettingsChanged = state.tableSettingsChanged || {};
         state.tableSettingsChanged["deckCount"] = parseInt(e.target.value);
     }
+    markSessionDirty();
 })
 
 ui.minBet.addEventListener('change', (e) => {
@@ -1724,7 +2431,74 @@ ui.minBet.addEventListener('change', (e) => {
         state.tableSettingsChanged = state.tableSettingsChanged || {};
         state.tableSettingsChanged["minBet"] =  parseInt(e.target.value); // forces a re-shuffle due to having "changed tables"
     }
+    markSessionDirty();
 });
+
+if (ui.resetStats) {
+    ui.resetStats.addEventListener('click', () => {
+        resetBlackjackStatistics();
+    });
+}
+
+if (ui.personaSaveConfirm) {
+    ui.personaSaveConfirm.addEventListener('click', confirmSavePlayerPersona);
+}
+
+if (ui.personaSaveCancel) {
+    ui.personaSaveCancel.addEventListener('click', closeSavePersonaOverlay);
+}
+
+if (ui.personaSaveOverlay) {
+    ui.personaSaveOverlay.addEventListener('click', (event) => {
+        if (event.target === ui.personaSaveOverlay) {
+            closeSavePersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaSaveName) {
+    ui.personaSaveName.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmSavePlayerPersona();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            closeSavePersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaLoadConfirm) {
+    ui.personaLoadConfirm.addEventListener('click', confirmLoadPlayerPersona);
+}
+
+if (ui.personaLoadDelete) {
+    ui.personaLoadDelete.addEventListener('click', deleteSelectedPersona);
+}
+
+if (ui.personaLoadCancel) {
+    ui.personaLoadCancel.addEventListener('click', closeLoadPersonaOverlay);
+}
+
+if (ui.personaLoadOverlay) {
+    ui.personaLoadOverlay.addEventListener('click', (event) => {
+        if (event.target === ui.personaLoadOverlay) {
+            closeLoadPersonaOverlay();
+        }
+    });
+}
+
+if (ui.personaLoadSelect) {
+    ui.personaLoadSelect.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmLoadPlayerPersona();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            closeLoadPersonaOverlay();
+        }
+    });
+}
 
 
 // Start

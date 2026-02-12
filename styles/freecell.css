@@ -2,7 +2,9 @@
     display: flex;
     justify-content: center;
     align-items: start;
-    gap: clamp(12px, calc(100% - (8 * var(--card-w)) - 72px), calc(1.44 * var(--card-w)));
+    gap: clamp(12px, calc(100% - (8 * var(--scaled-card-w)) - 72px), calc(1.44 * var(--scaled-card-w)));
+    padding-inline: calc(8px * var(--ui-scale));
+    box-sizing: border-box;
 }
 
 #freecell-freecells {
@@ -15,15 +17,15 @@
 
 .freecell-group {
     display: grid;
-    grid-template-columns: repeat(4, var(--card-w));
-    gap: 12px;
+    grid-template-columns: repeat(4, var(--scaled-card-w));
+    gap: calc(12px * var(--ui-scale));
 }
 
 .freecell-slot,
 .freecell-foundation {
-    width: var(--card-w);
-    height: var(--card-h);
-    border-radius: 10px;
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
+    border-radius: calc(10px * var(--ui-scale));
     border: 2px dashed rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.03);
     position: relative;
@@ -39,15 +41,17 @@
 
 #freecell-tableau {
     display: grid;
-    grid-template-columns: repeat(8, var(--card-w));
+    grid-template-columns: repeat(8, calc(var(--scaled-card-w) + var(--freecell-fan-x, 18px)));
     justify-content: center;
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale));
+    padding-inline: calc(8px * var(--ui-scale));
+    box-sizing: border-box;
 }
 
 .freecell-column {
-    width: var(--card-w);
+    width: calc(var(--scaled-card-w) + var(--freecell-fan-x, 18px));
     min-height: 40vh;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--ui-scale));
     border: 2px dashed transparent;
     position: relative;
     transition: border 0.3s;
@@ -58,20 +62,21 @@
 }
 
 #table.freecell-layout {
+    --freecell-fan-x: calc(18px * var(--ui-scale));
     position: relative;
-    width: 95vw;
-    max-width: 1000px;
-    margin-top: 20px;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1000px * var(--ui-scale));
+    margin-top: calc(20px * var(--ui-scale));
     background: var(--table-bg);
-    border-radius: 40px;
-    border: 12px solid var(--table-border);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
     box-shadow: var(--table-shadow);
-    padding: 30px;
+    padding: calc(30px * var(--ui-scale));
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: 30px;
+    gap: calc(30px * var(--ui-scale));
     transition: background 0.5s, border-color 0.5s;
 }
 

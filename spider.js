@@ -17,13 +17,50 @@ const spiderState = {
     timerInterval: null,
     isGameWon: false,
     isDealing: false,
-    moveHistory: []
+    moveHistory: [],
+    suitMode: 4
 };
+
+const SPIDER_SUIT_MODES = {
+    4: { label: '4 Suits', suits: SUITS, deckCount: 2 },
+    2: { label: '2 Suits', suits: ['♠', '♥'], deckCount: 4 },
+    1: { label: '1 Suit', suits: ['♠'], deckCount: 8 }
+};
+
+function getSpiderSuitConfig() {
+    const key = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
+    if (!SPIDER_SUIT_MODES[key]) {
+        spiderState.suitMode = 4;
+        return SPIDER_SUIT_MODES[4];
+    }
+    return SPIDER_SUIT_MODES[key];
+}
+
+function syncSpiderSuitUI() {
+    const select = document.getElementById('spider-suit-select');
+    if (!select) return;
+    select.value = String(spiderState.suitMode || 4);
+}
+
+function getSpiderRuleSetKey() {
+    const suitMode = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
+    const normalized = SPIDER_SUIT_MODES[suitMode] ? suitMode : 4;
+    return `suits-${normalized}`;
+}
+
+function syncSpiderHighScore() {
+    const highScoreEl = document.getElementById('spider-high-score');
+    if (!highScoreEl) return;
+    const highScore = CommonUtils.updateHighScore('spider', getSpiderRuleSetKey(), spiderState.score);
+    highScoreEl.textContent = highScore;
+}
 
 let spiderStateManager = null;
 
 const SPIDER_CARD_HEIGHT = 100;
 const SPIDER_STACK_OFFSET = 24;
+const SPIDER_STACK_X_OFFSET = 2.5;
+const SPIDER_STACK_X_OFFSET_MAX = 18;
 const SPIDER_DROP_PADDING = 40;
 const SPIDER_COMPLETE_BONUS = 100;
 const SPIDER_MAX_HISTORY = 200;
@@ -214,6 +251,7 @@ function getSpiderSaveState() {
         score: spiderState.score,
         moves: spiderState.moves,
         moveHistory: spiderState.moveHistory,
+        suitMode: spiderState.suitMode,
         elapsedSeconds: getElapsedSeconds(spiderState.startTime),
         isGameWon: spiderState.isGameWon
     };
@@ -229,6 +267,7 @@ function restoreSpiderState(saved) {
     spiderState.score = Number.isFinite(saved.score) ? saved.score : 0;
     spiderState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     spiderState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    spiderState.suitMode = SPIDER_SUIT_MODES[saved.suitMode] ? saved.suitMode : 4;
     spiderState.isGameWon = false;
     spiderState.isDealing = false;
 
@@ -239,12 +278,14 @@ function restoreSpiderState(saved) {
     spiderState.startTime = Date.now() - elapsed * 1000;
     startTimer();
 
+    syncSpiderSuitUI();
     updateUI();
     updateUndoButtonState();
 }
 
 function dealSpiderLayout() {
-    const deck = CommonUtils.createShoe(2, SUITS, VALUES);
+    const config = getSpiderSuitConfig();
+    const deck = CommonUtils.createShoe(config.deckCount, config.suits, VALUES);
     spiderState.tableau = Array.from({ length: 10 }, () => []);
 
     for (let col = 0; col < 10; col++) {
@@ -290,7 +331,8 @@ function ensureTableauSizing() {
     CommonUtils.ensureScrollableWidth({
         table: 'table',
         wrapper: 'spider-scroll',
-        contentSelectors: ['#spider-top-row', '#spider-tableau']
+        contentSelectors: ['#spider-top-row', '#spider-tableau'],
+        extra: 10
     });
 }
 
@@ -310,7 +352,7 @@ function updateTableau() {
             const cardEl = CommonUtils.createCardEl(card);
             cardEl.style.position = 'absolute';
             cardEl.style.top = `${rowIndex * SPIDER_STACK_OFFSET}px`;
-            cardEl.style.left = `${rowIndex * 2.5}px`;
+            cardEl.style.left = `${Math.min(SPIDER_STACK_X_OFFSET_MAX, rowIndex * SPIDER_STACK_X_OFFSET)}px`;
             cardEl.dataset.column = colIndex;
             cardEl.dataset.index = rowIndex;
 
@@ -385,6 +427,7 @@ function updateStats() {
     const scoreEl = document.getElementById('spider-score');
     if (movesEl) movesEl.textContent = spiderState.moves;
     if (scoreEl) scoreEl.textContent = spiderState.score;
+    syncSpiderHighScore();
 }
 
 function recordMove(moveEntry) {
@@ -881,6 +924,17 @@ function setupSpiderEventListeners() {
     const newGameBtn = document.getElementById('spider-new-game');
     if (newGameBtn) {
         newGameBtn.addEventListener('click', initSpiderGame);
+    }
+
+    const suitSelect = document.getElementById('spider-suit-select');
+    if (suitSelect) {
+        syncSpiderSuitUI();
+        suitSelect.addEventListener('change', (event) => {
+            const nextMode = parseInt(event.target.value, 10);
+            spiderState.suitMode = SPIDER_SUIT_MODES[nextMode] ? nextMode : 4;
+            syncSpiderSuitUI();
+            initSpiderGame();
+        });
     }
 
     const dealBtn = document.getElementById('spider-deal');
