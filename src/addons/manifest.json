@@ -1,0 +1,92 @@
+{
+    "addons": [
+        {
+            "id": "default-themes",
+            "label": "Default Themes",
+            "description": "The classic green/red felt tables and some basic simple deck styles.",
+            "scripts": ["addons/default-themes-pack.js"],
+            "styles": ["addons/default-themes.css"]
+        },
+        {
+            "id": "basic-themes",
+            "label": "Basic Themes",
+            "description": "Simple table and deck styles, four of each.",
+            "scripts": ["addons/basic-themes-pack.js"],
+            "styles": ["addons/basic-themes.css"]
+        },
+        {
+            "id": "cyberpunk-themes",
+            "label": "Cyberpunk",
+            "description": "Adds cyberpunk table and deck styles. The Neon Vibe deck has unique effects if 'worn cards' are enabled. Special effects are recommended.",
+            "scripts": ["addons/cyberpunk-pack.js"],
+            "styles": ["addons/cyberpunk-pack.css"]
+        },
+        {
+            "id": "dark-elegance-themes",
+            "label": "Dark Elegance",
+            "description": "Adds dark elegance table and deck styles.",
+            "scripts": ["addons/dark-elegance-pack.js"],
+            "styles": ["addons/dark-elegance-pack.css"]
+        },
+        {
+            "id": "luxe-collection",
+            "label": "Luxe Collection",
+            "description": "Adds luxe table and deck styles.",
+            "scripts": ["addons/luxe-pack.js"],
+            "styles": ["addons/luxe-pack.css"]
+        },
+        {
+            "id": "wildlife-themes",
+            "label": "Wildlife",
+            "description": "Adds wildlife-inspired table and deck styles. The Open Ocean table combined with special effects will take your breath away.",
+            "scripts": ["addons/wildlife-pack.js"],
+            "styles": ["addons/wildlife-pack.css"]
+        },
+        {
+            "id": "ghostly-themes",
+            "label": "Ghostly",
+            "description": "Adds a unique deck style.",
+            "scripts": ["addons/ghostly-pack.js"],
+            "styles": ["addons/ghostly-pack.css"]
+        },
+        {
+            "id": "premium-themes",
+            "label": "Premium Themes",
+            "description": "Adds premium table and deck styles. Special effects are highly recommended.",
+            "scripts": ["addons/themes-pack.js"],
+            "styles": ["addons/premium-themes.css"]
+        },
+        {
+            "id": "premium-effects",
+            "label": "Special Effects",
+            "description": "Adds visual effects and polish. Can be distracting for some players, but man alive do they look cool.",
+            "styles": ["addons/premium-effects.css"]
+        },
+        {
+            "id": "classic-faces",
+            "label": "Classic Faces",
+            "description": "Replaces the standard pattern with the classic English pattern (also known as the Anglo-Saxon or International pattern). The face cards feature easily distinguishable and recognizable scalable vector graphics made by Wikimedia user Ekirahardian.",
+            "scripts": ["addons/classic-face-art.js", "addons/classic-faces.js"],
+            "styles": ["addons/classic-faces.css"]
+        },
+        {
+            "id": "worn-cards",
+            "label": "Worn Cards",
+            "description": "Adds worn card edges, faded inks, scuffed textures, desaturation. Extremely beautiful, but some cards can be a little bit difficult to read at a glance (depending on the deck style).",
+            "scripts": ["addons/worn-cards.js"],
+            "styles": ["addons/worn-cards.css"]
+        },
+        {
+            "id": "counting-balanced",
+            "label": "Balanced Counting",
+            "description": "Adds balanced counting systems like Hi-Opt II, Wong Halves and Zen. You can change the counting system mid-shoe to reset the count to zero without shuffling the deck.",
+            "scripts": ["addons/counting-balanced-pack.js"]
+        },
+        {
+            "id": "counting-unbalanced",
+            "label": "Unbalanced Counting",
+            "description": "Adds unbalanced counting systems like Knock Out or Red 7. If you're trying to learn the KO or REKO systems, this is the one you want to track the count.",
+            "scripts": ["addons/counting-unbalanced-pack.js"]
+        }
+    ]
+}

@@ -1,0 +1,241 @@
+#table {
+    position: relative;
+    width: calc(95vw * var(--ui-scale));
+    max-width: calc(1400px * var(--ui-scale));
+    min-height: calc(400px * var(--ui-scale));
+    max-height: 70vh;
+    margin-top: calc(20px * var(--ui-scale));
+    background: var(--table-bg);
+    border-radius: calc(100px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+.table-scroll {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll.scroll-active {
+    justify-content: flex-start;
+    overflow-x: auto;
+}
+
+#seats {
+    display: flex;
+    justify-content: center;
+    gap: calc(8px * var(--ui-scale));
+    padding-bottom: calc(20px * var(--ui-scale));
+    width: 100%;
+    z-index: 5;
+    padding-right: calc(80px * var(--ui-scale));
+    flex: 0 0 auto;
+    margin-top: calc(40px * var(--ui-scale));
+}
+
+.seat {
+    width: 16%;
+    min-width: calc(130px * var(--ui-scale));
+    height: calc(280px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: calc(12px * var(--ui-scale));
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    padding: calc(8px * var(--ui-scale));
+    position: relative;
+    transition: border-color 0.3s, opacity 0.3s;
+}
+
+.player-hand-area {
+    flex-grow: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: calc(30px * var(--ui-scale));
+    position: relative;
+}
+
+#dealer-area {
+    position: relative;
+    top: calc(20px * var(--ui-scale));
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 5;
+    flex: 0 0 auto;
+    margin-bottom: calc(40px * var(--ui-scale));
+}
+
+.game-controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+    transition: all 0.3s ease-in-out;
+}
+
+.controls-section {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-height: 1000px;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 1;
+    white-space: nowrap;
+}
+
+#game-area {
+    justify-content: flex-start;
+}
+
+#addons-area {
+    white-space: normal;
+}
+
+#addons-area .stats {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.controls-section.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.header-main {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+/* Mobile responsive overrides */
+
+@media screen and (max-width: 900px) {
+    #table {
+        width: calc(100vw * var(--ui-scale));
+        height: 110%;
+        max-width: 100%;
+        border-width: 0;
+        border-radius: 0;
+        margin-top: 0;
+        box-shadow: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 10px;
+    }
+
+    header {
+        padding: 6px 10px;
+        justify-content: flex-start;
+    }
+
+    h1 {
+        font-size: 1rem;
+        text-align: left;
+    }
+
+    #dealer-area {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        transform: scale(0.9);
+    }
+
+    #seats {
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-bottom: 140px;
+        gap: calc(10px * var(--ui-scale));
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .seat {
+        min-width: calc(110px * var(--ui-scale));
+        width: calc(110px * var(--ui-scale));
+        height: auto;
+        min-height: calc(180px * var(--ui-scale));
+        flex-shrink: 0;
+    }
+
+    .controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 15px 10px;
+        z-index: 1000;
+        border-top: 2px solid var(--gold);
+        justify-content: space-around;
+        gap: 10px;
+    }
+
+    button {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+
+    .btn-clear,
+    .btn-bet {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    #strategy-bar {
+        bottom: 80px;
+        padding: 5px;
+        background: rgba(0, 0, 0, 0.8);
+        border: none;
+    }
+
+    .hint-text {
+        font-size: 1rem;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .shoe-container {
+        display: none !important;
+    }
+}

@@ -10,17 +10,17 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - No server/runtime dependency required for core gameplay.
 
 ## Entry Points
-- `index.html`: launcher page.
-- Game pages: `blackjack.html`, `poker.html`, `klondike.html`, `freecell.html`, `spider.html`, `pyramid.html`, `tabletop.html`.
+- `src/index.html`: launcher page.
+- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/pyramid.html`, `src/tabletop.html`.
 - Additional card game pages may be added over time.
 
 ## Shared Systems
-- `common.js`: shared card/deck helpers, responsive sizing helpers, toast/audio helpers, high-score storage helpers, and `StateManager`.
-- `header.js`: shared header control registration and collapse/expand behavior.
-- `shared/mobile-controller.js`: mobile card interaction controller for pick/drag/drop + panning coexistence.
-- `shared/ui-helpers.js`: shared hit-testing and pointer-target helpers.
-- `addons.js` + `addons/manifest.js`: addon manifest ingestion and addon loading/toggling.
-- `styles/core.css`, `styles/layout.css`, `styles/mobile.css`: shared base/layout/mobile styles.
+- `src/common.js`: shared card/deck helpers, responsive sizing helpers, toast/audio helpers, high-score storage helpers, and `StateManager`.
+- `src/header.js`: shared header control registration and collapse/expand behavior.
+- `src/shared/mobile-controller.js`: mobile card interaction controller for pick/drag/drop + panning coexistence.
+- `src/shared/ui-helpers.js`: shared hit-testing and pointer-target helpers.
+- `src/addons.js` + `src/addons/manifest.js`: addon manifest ingestion and addon loading/toggling.
+- `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base/layout/mobile styles.
 
 ## Layout and Responsiveness Contract
 - Tables are wrapped in `.table-scroll` containers.
@@ -30,7 +30,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Blackjack dealer alignment is fit-aware: when the shoe remains visible but encroaches near center, dealer content may shift slightly off center to preserve usable space.
 - Blackjack table height must grow when scaled content exceeds the default table cap so seat controls remain reachable.
 - Headers should prevent overlap between back button, title, and toggle buttons.
-- Mobile overrides are loaded last (`styles/mobile.css`).
+- Mobile overrides are loaded last (`src/styles/mobile.css`).
 
 ## Test Scope Guidance
 - Gameplay and persistence tests are required when rule logic, save-state behavior, shared systems, or input handling changes.
@@ -47,8 +47,8 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Blackjack provides a user-facing reset action that resets statistics without removing currently seated players.
 
 ## Add-ons Contract
-- Primary source: `window.AddonManifest` from `addons/manifest.js`.
-- `addons.js` supports legacy inline JSON manifest tags for compatibility.
+- Primary source: `window.AddonManifest` from `src/addons/manifest.js`.
+- `src/addons.js` supports legacy inline JSON manifest tags for compatibility.
 - Network fallback to `addons/manifest.json` should only be attempted when protocol is not `file:`.
 
 ## Extension Guidance

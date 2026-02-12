@@ -1,0 +1,168 @@
+.cards {
+    display: flex;
+    justify-content: center;
+    height: var(--card-h);
+}
+
+.card {
+    width: var(--card-w);
+    height: var(--card-h);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    display: flex;
+    padding: 0;
+    box-sizing: border-box;
+    margin-left: -45px;
+    transition: transform 0.2s;
+    position: relative;
+    transform: scale(var(--card-scale));
+    touch-action: none;     /* ← critical: stops page scroll/zoom during drag */
+    user-select: none;      /* prevents text selection */
+}
+
+.card:first-child {
+    margin-left: 0;
+}
+
+.card.red {
+    color: var(--red);
+}
+
+.card.black {
+    color: var(--black);
+}
+
+.card.split-card {
+    background: #fffbf0;
+    border: none;
+    box-shadow: 0 0 0 2px #000, 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.val-top {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.val-top .val-rank,
+.val-bot .val-rank {
+    display: block;
+}
+
+.val-top br,
+.val-bot br {
+    display: none;
+}
+
+.val-top small {
+    font-size: 0.7rem;
+}
+
+.suit-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+}
+
+.val-bot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    line-height: 1;
+    transform: rotate(180deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.val-bot small {
+    font-size: 0.7rem;
+}
+
+.card.hidden {
+    background: var(--card-back-bg);
+    background-size: var(--card-back-bg-size, auto);
+    border: 2px solid white;
+}
+
+.card.hidden * {
+    display: none;
+}
+
+.card.picked-up {
+    transform: scale(calc(var(--card-scale) * 1.08)) translateY(-15px) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+    z-index: 1000 !important;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+/* Thin line representations for card backs and edges */
+.card-back-line {
+    position: absolute;
+    width: 2px;
+    height: 70px;
+    background: linear-gradient(0deg, var(--card-back-color) 0%, var(--card-back-pattern-color) 50%, var(--card-back-color) 100%);
+}
+
+.card-edge-line {
+    position: absolute;
+    width: 2px;
+    height: 70px;
+    background-color: var(--card-edge-color);
+}
+
+/* Card back styling for regular cards (when used elsewhere) */
+.card-back {
+    width: 70px;
+    height: 95px;
+    background: var(--card-back-bg);
+    background-size: var(--card-back-bg-size, auto);
+    border: 2px solid white;
+    border-radius: 6px;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.3),
+        inset 0 0 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+    margin-top: -90px;
+    /* Overlap significantly for realistic stack */
+    opacity: 0.95;
+    transform: translateY(0);
+    transition: transform 0.1s ease;
+}
+
+/* Top visible card has different styling */
+.card-back:last-child {
+    z-index: 10;
+    transform: translateY(0);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.4),
+        inset 0 0 10px rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--card-back-accent);
+}
+
+/* Separator card - thick card to indicate cut card */
+.card-back.separator {
+    background: #ffcc00;
+    background: linear-gradient(135deg, #FFD700 25%, #FFA500 25%, #FFA500 50%, #FFD700 50%, #FFD700 75%, #FFA500 75%);
+    background-size: 8px 8px;
+    z-index: 8 !important;
+    border: 3px solid #ff8c00;
+    box-shadow:
+        0 3px 12px rgba(255, 215, 0, 0.7),
+        inset 0 0 15px rgba(0, 0, 0, 0.3);
+    height: 105px;
+    /* Thicker than regular cards */
+    width: 75px;
+    /* Slightly wider */
+}

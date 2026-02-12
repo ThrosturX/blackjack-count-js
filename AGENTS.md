@@ -29,12 +29,12 @@
 - Preserve save-state compatibility where practical.
 
 ## Shared Systems Map
-- `common.js`: shared card/deck utilities, card sizing metrics, scroll/min-height helpers, high-score storage helpers, and `StateManager`.
-- `header.js`: shared header controls, toggle/collapse behavior, and default open sections.
-- `shared/mobile-controller.js`: touch drag/pan coordination and mobile-safe pointer behavior.
-- `shared/ui-helpers.js`: shared hit-testing and pointer helper utilities.
-- `addons/manifest.js` and `addons.js`: add-on catalog and registration.
-- `styles/core.css`, `styles/layout.css`, `styles/mobile.css`: shared style layers (base, layout, mobile overrides loaded last).
+- `src/common.js`: shared card/deck utilities, card sizing metrics, scroll/min-height helpers, high-score storage helpers, and `StateManager`.
+- `src/header.js`: shared header controls, toggle/collapse behavior, and default open sections.
+- `src/shared/mobile-controller.js`: touch drag/pan coordination and mobile-safe pointer behavior.
+- `src/shared/ui-helpers.js`: shared hit-testing and pointer helper utilities.
+- `src/addons/manifest.js` and `src/addons.js`: add-on catalog and registration.
+- `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared style layers (base, layout, mobile overrides loaded last).
 - If new shared systems are introduced during a turn, update this section in the same turn, or explicitly propose the update at the end of the turn.
 
 ## UX and UI Rules

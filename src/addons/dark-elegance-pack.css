@@ -1,0 +1,38 @@
+/* --- DARK ELEGANCE TABLE THEMES --- */
+
+body.table-obsidian {
+    --felt-color: #0f0f0f;
+    --felt-border: #d4af37;
+    --table-bg: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+    background: #000;
+}
+body.table-obsidian #table,
+body.table-obsidian #klondike-table {
+    border: 3px solid #d4af37;
+}
+
+body.table-abyss {
+    --felt-color: #00040a;
+    --felt-border: #1a3a5f;
+    --table-bg: radial-gradient(circle, #001529 0%, #00040a 100%);
+}
+body.table-abyss #table,
+body.table-abyss #klondike-table {
+    border: 2px solid #2196f3;
+    box-shadow: inset 0 0 100px #000;
+}
+
+/* --- Midnight Onyx Style --- */
+body.deck-luxury-dark {
+    --card-back-color: #1a1a1a;
+    --card-back-pattern-color: #333;
+    --card-back-accent: #d4af37;
+    --card-edge-color: #aa8a2e;
+    --card-back-bg: repeating-linear-gradient(45deg, #111, #111 5px, #222 5px, #222 10px);
+}
+body.deck-luxury-dark .card:not(.hidden) {
+    background: linear-gradient(135deg, #2c2c2c 0%, #000 100%);
+    border: 1px solid #d4af37;
+    color: #e0e0e0;
+}
+
