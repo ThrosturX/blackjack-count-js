@@ -93,6 +93,24 @@ const KLONDIKE_BASE_TABLEAU_GAP = 15;
 const KLONDIKE_MIN_TABLEAU_GAP = 4;
 const KLONDIKE_WASTE_FAN_BASE = 20;
 const KLONDIKE_WASTE_FAN_MIN = 8;
+const KLONDIKE_QUICK_CHECK_LIMITS = {
+    classic: { maxStates: 5000, maxDurationMs: 5000 },
+    vegas: { maxStates: 7000, maxDurationMs: 5000 },
+    'open-towers': { maxStates: 4500, maxDurationMs: 5000 }
+};
+const KLONDIKE_ATTEMPT_CHECK_LIMITS = {
+    classic: { maxStates: 30000, maxDurationMs: 60000 },
+    vegas: { maxStates: 42000, maxDurationMs: 60000 },
+    'open-towers': { maxStates: 26000, maxDurationMs: 60000 }
+};
+const klondikeInsolvabilityDetector = (typeof SolitaireInsolvabilityDetector !== 'undefined')
+    ? SolitaireInsolvabilityDetector.createKlondikePreset()
+    : null;
+let klondikeCheckWorker = null;
+let klondikeCheckRequestId = 0;
+let klondikeCheckSolvedLocked = false;
+let klondikeCheckUnsolvableLocked = false;
+let klondikeStoredSolution = null;
 
 const dragState = {
     draggedCards: [],
@@ -255,6 +273,8 @@ function ensureMobileController() {
  */
 function initGame() {
     ensureMobileController();
+    cleanupKlondikeCheckWorker();
+    resetKlondikeCheckAvailability();
 
     // Reset state
     gameState.tableau = [[], [], [], [], [], [], []];
@@ -344,6 +364,8 @@ function syncVariantUI() {
 function restoreKlondikeState(saved) {
     if (!saved || typeof saved !== 'object') return;
     ensureMobileController();
+    cleanupKlondikeCheckWorker();
+    resetKlondikeCheckAvailability();
 
     gameState.tableau = saved.tableau || [[], [], [], [], [], [], []];
     gameState.foundations = saved.foundations || [[], [], [], []];
@@ -1179,10 +1201,649 @@ function autoComplete() {
     checkWinCondition();
 }
 
+function checkCurrentKlondikeSolvability() {
+    if (klondikeCheckSolvedLocked || klondikeCheckUnsolvableLocked) return;
+    startKlondikeCheckBusyState();
+    runKlondikeCheck('quick');
+}
+
+function runKlondikeCheck(mode) {
+    const limits = getKlondikeCheckLimits(mode);
+    const snapshot = createKlondikeCheckSnapshot();
+    const requestId = ++klondikeCheckRequestId;
+    if (typeof Worker !== 'undefined') {
+        runKlondikeCheckViaWorker({
+            game: 'klondike',
+            snapshot,
+            limits,
+            requestId
+        }).then((result) => {
+            if (!result || requestId !== klondikeCheckRequestId) return;
+            handleKlondikeCheckResult(mode, result, limits, snapshot, { hadWorker: true });
+        }).catch(() => {
+            runKlondikeCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+        });
+        return;
+    }
+    runKlondikeCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+}
+
+function runKlondikeCheckOnMainThreadWithModal(mode, snapshot, limits, requestId) {
+    showKlondikeCheckModal({
+        title: mode === 'attempt' ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Running on the main thread. The page may become unresponsive until the check finishes.',
+        busy: true
+    });
+    window.setTimeout(() => {
+        const fallback = runKlondikeCheckOnMainThread(snapshot, limits);
+        if (!fallback || requestId !== klondikeCheckRequestId) return;
+        closeKlondikeCheckModal();
+        handleKlondikeCheckResult(mode, fallback, limits, snapshot, { hadWorker: false });
+    }, 0);
+}
+
+function getKlondikeCheckLimits(mode) {
+    const variantId = gameState.variantId || DEFAULT_VARIANT_ID;
+    const perVariant = mode === 'attempt' ? KLONDIKE_ATTEMPT_CHECK_LIMITS : KLONDIKE_QUICK_CHECK_LIMITS;
+    const selected = perVariant[variantId] || perVariant[DEFAULT_VARIANT_ID];
+    return {
+        maxStates: selected.maxStates,
+        maxDurationMs: selected.maxDurationMs,
+        relaxedSearch: mode === 'attempt'
+    };
+}
+
+function handleKlondikeCheckResult(mode, result, limits, snapshot, context = {}) {
+    const isAttempt = mode === 'attempt';
+    console.log(
+        `Klondike ${isAttempt ? 'Attempt' : 'Quick'} Check: solved=${result.solved}, reason=${result.reason}, statesExplored=${result.statesExplored}, durationMs=${result.durationMs}, maxStates=${limits.maxStates}, maxDurationMs=${limits.maxDurationMs}`
+    );
+    if (result.solved && result.reason === 'solved') {
+        storeKlondikeSolution(snapshot, result);
+        lockKlondikeChecksAsSolvable();
+        showKlondikeCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `A solution path was found (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    clearKlondikeStoredSolution();
+    const isLikely = result.reason === 'likely-solved';
+    if (result.provenUnsolvable === true) {
+        lockKlondikeChecksAsUnsolvable();
+        showKlondikeCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `No solution exists from this position (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    releaseKlondikeCheckBusyState();
+    if (isLikely) {
+        markKlondikeCheckAsLikely();
+    }
+    const inconclusive = result.reason === 'state-limit'
+        || result.reason === 'time-limit'
+        || result.reason === 'cycle-detected';
+    if (!isAttempt) {
+        promptKlondikeDeepCheck(result);
+        return;
+    }
+    const message = isLikely
+        ? 'This position looks promising, but prove solve could not confirm a full winning line yet. Work the tableau more and try prove solve again.'
+        : (result.reason === 'cycle-detected'
+        ? 'The solver got caught in a loop. Try working the tableau more (reveal hidden cards and clear blockers), then run check again.'
+        : (inconclusive
+            ? 'No immediate solution was found within current limits. This does not mean the deck is unsolvable, only that the solution is not immediately obvious.'
+            : `No solution was found (${result.reason}, ${result.statesExplored} states). This does not mean the deck is unsolvable, only that the solution is not immediately obvious.`));
+    showKlondikeCheckModal({
+        title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+        message,
+        busy: false
+    });
+}
+
+function createKlondikeCheckSnapshot() {
+    const variant = getActiveVariantConfig();
+    return {
+        tableau: gameState.tableau.map(column => column.map(cloneCardForSimulation)),
+        foundations: gameState.foundations.map(pile => pile.map(cloneCardForSimulation)),
+        stock: gameState.stock.map(cloneCardForSimulation),
+        waste: gameState.waste.map(cloneCardForSimulation),
+        drawCount: gameState.drawCount,
+        allowAnyCardOnEmpty: !!variant.allowAnyCardOnEmpty
+    };
+}
+
+function runKlondikeCheckOnMainThread(snapshot, limits) {
+    if (limits && limits.relaxedSearch) {
+        return runKlondikeRelaxedCheckOnMainThread(snapshot, limits);
+    }
+    const state = cloneGameStateForSimulation(snapshot);
+    const drawCount = Number.isFinite(snapshot.drawCount) ? snapshot.drawCount : 3;
+    const variantOptions = { allowAnyCardOnEmpty: !!snapshot.allowAnyCardOnEmpty };
+    const fallbackLimits = getKlondikeCheckLimits('quick');
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const startedAt = Date.now();
+    const initialHidden = countHiddenCards(state.tableau);
+    const initialFoundationCount = countFoundationCards(state.foundations);
+    const startKey = normalizeKlondikeSimulationState(state);
+    const seenStates = new Set([startKey]);
+    const solutionMoves = [];
+    const solutionStateKeys = [startKey];
+    let iterations = 0;
+    let cycleDetected = false;
+
+    while (iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return {
+                solved: false,
+                reason: 'time-limit',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs
+            };
+        }
+        iterations++;
+        const moved = applySimulationAutoMoves(state);
+        if (SolitaireLogic.isGameWon(state.foundations)) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: solutionMoves.slice(),
+                solutionStateKeys: solutionStateKeys.slice()
+            };
+        }
+        if (moved) {
+            solutionMoves.push({ type: 'auto-foundation' });
+            const key = normalizeKlondikeSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (applySimulationTableauMove(state, variantOptions)) {
+            solutionMoves.push({ type: 'tableau-to-tableau' });
+            const key = normalizeKlondikeSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (applySimulationWasteToTableauMove(state, variantOptions)) {
+            solutionMoves.push({ type: 'waste-to-tableau' });
+            const key = normalizeKlondikeSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (state.stock.length > 0) {
+            simulateDrawFromStock(state, drawCount);
+            solutionMoves.push({ type: 'draw-stock', count: drawCount });
+            const key = normalizeKlondikeSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (state.waste.length > 0) {
+            simulateRecycleWaste(state);
+            solutionMoves.push({ type: 'recycle-waste' });
+            const key = normalizeKlondikeSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        break;
+    }
+
+    const hiddenRevealed = initialHidden - countHiddenCards(state.tableau);
+    const foundationProgress = countFoundationCards(state.foundations) - initialFoundationCount;
+    const likelySolvable = hiddenRevealed >= 6 || foundationProgress >= 4 || (hiddenRevealed + foundationProgress) >= 8;
+    return {
+        solved: likelySolvable,
+        reason: likelySolvable ? 'likely-solved' : (cycleDetected ? 'cycle-detected' : (iterations >= maxStates ? 'state-limit' : 'exhausted')),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs
+    };
+}
+
+function runKlondikeRelaxedCheckOnMainThread(snapshot, limits) {
+    const drawCount = Number.isFinite(snapshot.drawCount) ? snapshot.drawCount : 3;
+    const variantOptions = { allowAnyCardOnEmpty: !!snapshot.allowAnyCardOnEmpty };
+    const fallbackLimits = getKlondikeCheckLimits('attempt');
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const startedAt = Date.now();
+    const startState = cloneGameStateForSimulation(snapshot);
+    const initialHidden = countHiddenCards(startState.tableau);
+    const initialFoundationCount = countFoundationCards(startState.foundations);
+    const startKey = normalizeKlondikeSimulationState(startState);
+    const frontier = [{
+        state: startState,
+        key: startKey,
+        moves: [],
+        stateKeys: [startKey],
+        lastMove: null,
+        depth: 0,
+        score: scoreKlondikeSearchState(startState)
+    }];
+    const seenStateDepth = new Map([[startKey, 0]]);
+    let iterations = 0;
+    let bestHiddenRevealed = 0;
+    let bestFoundationProgress = 0;
+
+    while (frontier.length > 0 && iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return {
+                solved: false,
+                reason: 'time-limit',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs
+            };
+        }
+        iterations++;
+        const current = popBestKlondikeSearchNode(frontier);
+        const knownCurrentDepth = seenStateDepth.get(current.key);
+        if (knownCurrentDepth !== undefined && knownCurrentDepth < current.depth) {
+            continue;
+        }
+        const state = cloneGameStateForSimulation(current.state);
+        const moves = current.moves.slice();
+        const stateKeys = current.stateKeys.slice();
+        const lastMove = current.lastMove;
+        const depth = current.depth;
+
+        if (SolitaireLogic.isGameWon(state.foundations)) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: moves,
+                solutionStateKeys: stateKeys
+            };
+        }
+
+        const hiddenRevealed = initialHidden - countHiddenCards(state.tableau);
+        const foundationProgress = countFoundationCards(state.foundations) - initialFoundationCount;
+        if (hiddenRevealed > bestHiddenRevealed) bestHiddenRevealed = hiddenRevealed;
+        if (foundationProgress > bestFoundationProgress) bestFoundationProgress = foundationProgress;
+
+        const candidateMoves = [];
+        candidateMoves.push(...listSimulationTableauToFoundationMoves(state));
+        candidateMoves.push(...listSimulationWasteToFoundationMoves(state));
+        const tableauMoves = listSimulationTableauMoves(state, variantOptions, {
+            requireRevealHidden: false,
+            prioritizeRevealHidden: true,
+            allowSequences: true
+        });
+        candidateMoves.push(...tableauMoves);
+        const wasteMoves = listSimulationWasteToTableauMoves(state, variantOptions);
+        candidateMoves.push(...wasteMoves);
+        candidateMoves.push(...listSimulationFoundationToTableauMoves(state, variantOptions));
+        if (state.stock.length > 0) {
+            candidateMoves.push({ type: 'draw-stock', count: drawCount });
+        }
+        if (state.waste.length > 0) {
+            candidateMoves.push({ type: 'recycle-waste' });
+        }
+
+        for (let i = 0; i < candidateMoves.length; i++) {
+            const move = candidateMoves[i];
+            if (isReverseKlondikeSearchMove(lastMove, move)) {
+                continue;
+            }
+            const nextState = cloneGameStateForSimulation(state);
+            if (!applySimulationKlondikeMove(nextState, move, drawCount, variantOptions)) {
+                continue;
+            }
+            const nextKey = normalizeKlondikeSimulationState(nextState);
+            const nextDepth = depth + 1;
+            const knownDepth = seenStateDepth.get(nextKey);
+            if (knownDepth !== undefined && knownDepth <= nextDepth) {
+                continue;
+            }
+            seenStateDepth.set(nextKey, nextDepth);
+            frontier.push({
+                state: nextState,
+                key: nextKey,
+                moves: moves.concat([move]),
+                stateKeys: stateKeys.concat([nextKey]),
+                lastMove: move,
+                depth: nextDepth,
+                score: scoreKlondikeSearchState(nextState)
+            });
+        }
+    }
+
+    const likelySolvable = bestHiddenRevealed >= 6
+        || bestFoundationProgress >= 4
+        || (bestHiddenRevealed + bestFoundationProgress) >= 8;
+    return {
+        solved: likelySolvable,
+        reason: likelySolvable ? 'likely-solved' : (iterations >= maxStates ? 'state-limit' : 'exhausted'),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs
+    };
+}
+
+function scoreKlondikeSearchState(state) {
+    const foundationCards = countFoundationCards(state.foundations);
+    const hiddenCards = countHiddenCards(state.tableau);
+    const emptyColumns = state.tableau.reduce((sum, pile) => sum + (pile.length === 0 ? 1 : 0), 0);
+    return (foundationCards * 100) + ((28 - hiddenCards) * 14) + (emptyColumns * 8) - (state.stock.length * 0.5);
+}
+
+function popBestKlondikeSearchNode(frontier) {
+    let bestIndex = 0;
+    let bestScore = frontier[0].score;
+    for (let i = 1; i < frontier.length; i++) {
+        if (frontier[i].score > bestScore) {
+            bestScore = frontier[i].score;
+            bestIndex = i;
+        }
+    }
+    const selected = frontier[bestIndex];
+    frontier.splice(bestIndex, 1);
+    return selected;
+}
+
+function isReverseKlondikeSearchMove(previousMove, nextMove) {
+    if (!previousMove || !nextMove) return false;
+    if (previousMove.type === 'tableau-to-tableau' && nextMove.type === 'tableau-to-tableau') {
+        return previousMove.sourceCol === nextMove.targetCol
+            && previousMove.targetCol === nextMove.sourceCol;
+    }
+    if (previousMove.type === 'tableau-to-foundation' && nextMove.type === 'foundation-to-tableau') {
+        return previousMove.sourceCol === nextMove.targetCol
+            && previousMove.foundationIndex === nextMove.foundationIndex;
+    }
+    if (previousMove.type === 'foundation-to-tableau' && nextMove.type === 'tableau-to-foundation') {
+        return previousMove.targetCol === nextMove.sourceCol
+            && previousMove.foundationIndex === nextMove.foundationIndex;
+    }
+    return false;
+}
+
+function runKlondikeCheckViaWorker(payload, onStarted) {
+    return new Promise((resolve, reject) => {
+        if (typeof Worker === 'undefined') {
+            reject(new Error('Web Worker unavailable.'));
+            return;
+        }
+        if (!klondikeCheckWorker) {
+            klondikeCheckWorker = new Worker('shared/solitaire-check-worker.js');
+        }
+        const worker = klondikeCheckWorker;
+        const onMessage = (event) => {
+            const data = event && event.data ? event.data : {};
+            if (data.requestId !== payload.requestId) return;
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            if (data.error) {
+                reject(new Error(data.error));
+                return;
+            }
+            resolve(data.result);
+        };
+        const onError = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupKlondikeCheckWorker();
+            reject(new Error('Klondike worker failed.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        try {
+            worker.postMessage(payload);
+        } catch (err) {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupKlondikeCheckWorker();
+            reject(err instanceof Error ? err : new Error('Klondike worker failed.'));
+            return;
+        }
+        if (typeof onStarted === 'function') {
+            onStarted();
+        }
+    });
+}
+
+function cleanupKlondikeCheckWorker() {
+    klondikeCheckRequestId++;
+    if (!klondikeCheckWorker) return;
+    try {
+        klondikeCheckWorker.terminate();
+    } catch (err) {
+        // Ignore terminate failures.
+    }
+    klondikeCheckWorker = null;
+}
+
+function getSolitaireCheckModalApi() {
+    if (typeof SolitaireCheckModal !== 'undefined') return SolitaireCheckModal;
+    return null;
+}
+
+function showKlondikeCheckModal(options = {}) {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.showInfo(options);
+}
+
+function closeKlondikeCheckModal() {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.close();
+}
+
+function getKlondikeCheckButton() {
+    return document.getElementById('klondike-check');
+}
+
+function startKlondikeCheckBusyState() {
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    if (!klondikeCheckSolvedLocked && !klondikeCheckUnsolvableLocked) {
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+}
+
+function releaseKlondikeCheckBusyState() {
+    if (klondikeCheckSolvedLocked || klondikeCheckUnsolvableLocked) return;
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function markKlondikeCheckAsLikely() {
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Likely';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockKlondikeChecksAsSolvable() {
+    klondikeCheckSolvedLocked = true;
+    klondikeCheckUnsolvableLocked = false;
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'SOLVABLE';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockKlondikeChecksAsUnsolvable() {
+    klondikeCheckSolvedLocked = false;
+    klondikeCheckUnsolvableLocked = true;
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Unsolvable';
+    button.classList.remove('check-solved');
+    button.classList.add('check-unsolvable');
+}
+
+function resetKlondikeCheckAvailability() {
+    klondikeCheckSolvedLocked = false;
+    klondikeCheckUnsolvableLocked = false;
+    clearKlondikeStoredSolution();
+    const button = getKlondikeCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+    closeKlondikeCheckModal();
+}
+
+function promptKlondikeDeepCheck(result) {
+    const needsTableauWork = result && result.reason === 'cycle-detected';
+    const likely = result && result.reason === 'likely-solved';
+    const message = needsTableauWork
+        ? 'The solver got stuck in a loop. Try working the tableau first (reveal hidden cards and free blocked moves), then run a deeper solve attempt.'
+        : (likely
+            ? 'Quick check sees promising progress, but it is not proven yet. Run Prove Solve for a stricter answer?'
+            : 'Quick check found no immediate solution. Run Prove Solve?');
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) {
+        showKlondikeCheckModal({
+            title: 'Quick Check Result',
+            message,
+            busy: false
+        });
+        return;
+    }
+    modal.showChoice({
+        title: 'Quick Check Complete',
+        message,
+        secondaryLabel: 'Not Now',
+        confirmLabel: 'Prove Solve',
+        cancelLabel: 'Close'
+    }).then((choice) => {
+        if (choice === 'confirm') {
+            startKlondikeCheckBusyState();
+            runKlondikeCheck('attempt');
+        }
+    });
+}
+
+function storeKlondikeSolution(snapshot, result) {
+    const moves = Array.isArray(result.solutionMoves) ? result.solutionMoves.slice() : [];
+    if (!moves.length) {
+        klondikeStoredSolution = null;
+        return;
+    }
+    const stateKeys = Array.isArray(result.solutionStateKeys) && result.solutionStateKeys.length
+        ? result.solutionStateKeys.slice()
+        : [normalizeKlondikeSimulationState(cloneGameStateForSimulation(snapshot))];
+    klondikeStoredSolution = { moves, stateKeys };
+}
+
+function clearKlondikeStoredSolution() {
+    klondikeStoredSolution = null;
+}
+
+function getStoredKlondikeHint() {
+    if (!klondikeStoredSolution || !Array.isArray(klondikeStoredSolution.moves) || !klondikeStoredSolution.moves.length) {
+        return null;
+    }
+    const currentKey = normalizeKlondikeSimulationState(cloneGameStateForSimulation(createKlondikeCheckSnapshot()));
+    const stepIndex = klondikeStoredSolution.stateKeys.indexOf(currentKey);
+    if (stepIndex < 0 || stepIndex >= klondikeStoredSolution.moves.length) return null;
+    return klondikeStoredSolution.moves[stepIndex];
+}
+
+function formatKlondikeHintMove(move) {
+    if (!move || !move.type) return 'Try a move that reveals a hidden card.';
+    if (move.type === 'auto-foundation') return 'Move an available card to the foundation.';
+    if (move.type === 'tableau-to-tableau') return 'Move a tableau stack to reveal a hidden card.';
+    if (move.type === 'waste-to-tableau') return 'Move waste top card to tableau.';
+    if (move.type === 'draw-stock') return 'Draw from stock.';
+    if (move.type === 'recycle-waste') return 'Recycle waste into stock.';
+    return 'Try the next legal forward move.';
+}
+
+function cardHintId(card) {
+    if (!card) return '';
+    return `${card.val || ''}${card.suit || ''}`;
+}
+
+function isReverseOfRecentKlondikeMove({ fromPile, fromIndex, move, card }) {
+    if (!move || move.type !== 'tableau') return false;
+    const lastMove = gameState.moveHistory[gameState.moveHistory.length - 1];
+    if (!lastMove || lastMove.type !== 'tableau-to-tableau' || !lastMove.payload) return false;
+    if (fromPile !== 'tableau') return false;
+    if (lastMove.payload.fromColumn !== move.index) return false;
+    if (lastMove.payload.toColumn !== fromIndex) return false;
+    const movedCards = Array.isArray(lastMove.payload.cards) ? lastMove.payload.cards : [];
+    if (!movedCards.length) return true;
+    const movedIds = movedCards.map(cardHintId);
+    return movedIds.includes(cardHintId(card));
+}
+
 /**
  * Show hint
  */
 function showHint() {
+    const storedHint = getStoredKlondikeHint();
+    if (storedHint) {
+        CommonUtils.showTableToast(
+            `Hint: ${formatKlondikeHintMove(storedHint)}`,
+            { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
+        );
+        return;
+    }
+
     // Find a valid move
     const autoMoves = SolitaireLogic.getAutoMoves(gameState);
 
@@ -1201,8 +1862,15 @@ function showHint() {
             const topCard = tableau[tableau.length - 1];
             if (!topCard.hidden) {
                 const validMoves = SolitaireLogic.getValidMoves(topCard, gameState, getVariantOptions());
-                if (validMoves.length > 0) {
-                    const move = validMoves[0];
+                const filteredMoves = validMoves.filter((move) => !isReverseOfRecentKlondikeMove({
+                    fromPile: 'tableau',
+                    fromIndex: col,
+                    move,
+                    card: topCard
+                }));
+                const candidateMoves = filteredMoves.length > 0 ? filteredMoves : validMoves;
+                if (candidateMoves.length > 0) {
+                    const move = candidateMoves[0];
                     CommonUtils.showTableToast(
                         `Hint: Move ${topCard.val}${topCard.suit} to ${move.type} ${move.index + 1}`,
                         { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
@@ -1217,8 +1885,15 @@ function showHint() {
     if (gameState.waste.length > 0) {
         const wasteCard = gameState.waste[gameState.waste.length - 1];
         const validMoves = SolitaireLogic.getValidMoves(wasteCard, gameState, getVariantOptions());
-        if (validMoves.length > 0) {
-            const move = validMoves[0];
+        const filteredMoves = validMoves.filter((move) => !isReverseOfRecentKlondikeMove({
+            fromPile: 'waste',
+            fromIndex: -1,
+            move,
+            card: wasteCard
+        }));
+        const candidateMoves = filteredMoves.length > 0 ? filteredMoves : validMoves;
+        if (candidateMoves.length > 0) {
+            const move = candidateMoves[0];
             CommonUtils.showTableToast(
                 `Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to ${move.type} ${move.index + 1}`,
                 { variant: 'warn', duration: 2200, containerId: 'klondike-table' }
@@ -1244,6 +1919,10 @@ function setupEventListeners() {
     // Hint and auto-complete
     document.getElementById('hint-btn').addEventListener('click', showHint);
     document.getElementById('auto-complete-btn').addEventListener('click', autoComplete);
+    const checkBtn = document.getElementById('klondike-check');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', checkCurrentKlondikeSolvability);
+    }
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
@@ -1562,17 +2241,32 @@ function undoFoundationToFoundationMove(payload) {
 }
 
 function dealSolvableGame() {
+    let staticDeadlockSkips = 0;
     for (let attempt = 1; attempt <= MAX_SOLVABLE_DEAL_ATTEMPTS; attempt++) {
         const deck = CommonUtils.createShoe(1, SUITS, VALUES);
         dealDeck(deck);
+
+        if (isDealRapidlyInsolvable(gameState)) {
+            staticDeadlockSkips++;
+            continue;
+        }
+
         if (isDealLikelySolvable(gameState)) {
             if (attempt > 1) {
                 console.debug(`Klondike: solvable deal found after ${attempt} attempts.`);
             }
+            console.log(`Klondike: discarded ${staticDeadlockSkips} candidate deals via rapid deadlock detection.`);
             return;
         }
     }
-    console.warn(`Klondike: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
+    console.log(`Klondike: discarded ${staticDeadlockSkips} candidate deals via rapid deadlock detection.`);
+    console.warn(`Klondike: Unable to find a likely solvable deal after ${MAX_SOLVABLE_DEAL_ATTEMPTS} attempts (${staticDeadlockSkips} rejected by rapid deadlock checks).`);
+}
+
+function isDealRapidlyInsolvable(state) {
+    if (!klondikeInsolvabilityDetector) return false;
+    const result = klondikeInsolvabilityDetector.evaluate(state);
+    return result.isLikelyInsolvable;
 }
 
 function dealDeck(deck) {
@@ -1717,48 +2411,94 @@ function countFoundationCards(foundations) {
     return foundations.reduce((sum, pile) => sum + pile.length, 0);
 }
 
-function applySimulationTableauMove(state, options) {
+function serializeSimulationCard(card, includeHidden) {
+    if (!card) return '__';
+    const rank = Number.isFinite(card.rank) ? card.rank : String(card.rank || '?');
+    const suit = card.suit || '?';
+    if (!includeHidden) return `${rank}${suit}`;
+    return `${rank}${suit}${card.hidden ? 'h' : 'u'}`;
+}
+
+function serializeSimulationPile(pile, includeHidden) {
+    if (!pile || pile.length === 0) return '';
+    return pile.map((card) => serializeSimulationCard(card, includeHidden)).join(',');
+}
+
+function normalizeKlondikeSimulationState(state) {
+    return state.tableau.map((col) => serializeSimulationPile(col, true)).join('|')
+        + '#'
+        + state.foundations.map((pile) => serializeSimulationPile(pile, false)).join('|')
+        + '#'
+        + serializeSimulationPile(state.stock, true)
+        + '#'
+        + serializeSimulationPile(state.waste, false);
+}
+
+function isMovableSimulationTableauSequence(pile, startIndex) {
+    if (!pile || startIndex < 0 || startIndex >= pile.length) return false;
+    for (let i = startIndex; i < pile.length; i++) {
+        if (!pile[i] || pile[i].hidden) return false;
+    }
+    for (let i = startIndex; i < pile.length - 1; i++) {
+        const current = pile[i];
+        const next = pile[i + 1];
+        if (!SolitaireLogic.canPlaceOnTableau(next, current)) return false;
+    }
+    return true;
+}
+
+function listSimulationTableauMoves(state, options, config = {}) {
+    const requireRevealHidden = config.requireRevealHidden !== false;
+    const prioritizeRevealHidden = config.prioritizeRevealHidden !== false;
+    const allowSequences = !!config.allowSequences;
+    const moves = [];
     for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
         const sourcePile = state.tableau[sourceCol];
         if (sourcePile.length === 0) continue;
-        const movingCard = sourcePile[sourcePile.length - 1];
-        if (movingCard.hidden) continue;
-
-        const wouldRevealHidden = sourcePile.length > 1 && sourcePile[sourcePile.length - 2].hidden;
-
-        for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
-            if (targetCol === sourceCol) continue;
-            const targetPile = state.tableau[targetCol];
-            let isValid = false;
-            if (targetPile.length === 0) {
-                isValid = SolitaireLogic.canMoveToEmptyTableau(movingCard, options);
-            } else {
-                const topCard = targetPile[targetPile.length - 1];
-                if (!topCard.hidden) {
-                    isValid = SolitaireLogic.canPlaceOnTableau(movingCard, topCard);
+        const startIndexes = allowSequences
+            ? Array.from({ length: sourcePile.length }, (_, idx) => idx)
+            : [sourcePile.length - 1];
+        for (let s = 0; s < startIndexes.length; s++) {
+            const startIndex = startIndexes[s];
+            if (!isMovableSimulationTableauSequence(sourcePile, startIndex)) continue;
+            const movingCard = sourcePile[startIndex];
+            const movingCount = sourcePile.length - startIndex;
+            const wouldRevealHidden = startIndex > 0 && sourcePile[startIndex - 1].hidden;
+            if (requireRevealHidden && !wouldRevealHidden) continue;
+            for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+                if (targetCol === sourceCol) continue;
+                const targetPile = state.tableau[targetCol];
+                let isValid = false;
+                if (targetPile.length === 0) {
+                    isValid = SolitaireLogic.canMoveToEmptyTableau(movingCard, options);
+                } else {
+                    const topCard = targetPile[targetPile.length - 1];
+                    if (!topCard.hidden) {
+                        isValid = SolitaireLogic.canPlaceOnTableau(movingCard, topCard);
+                    }
                 }
+                if (!isValid) continue;
+                moves.push({
+                    type: 'tableau-to-tableau',
+                    sourceCol,
+                    targetCol,
+                    startIndex,
+                    count: movingCount,
+                    revealsHidden: wouldRevealHidden
+                });
             }
-            if (!isValid) continue;
-
-            if (!wouldRevealHidden) {
-                continue;
-            }
-
-            sourcePile.pop();
-            targetPile.push(movingCard);
-            const newTop = sourcePile[sourcePile.length - 1];
-            if (newTop && newTop.hidden) {
-                newTop.hidden = false;
-            }
-            return true;
         }
     }
-    return false;
+    if (prioritizeRevealHidden) {
+        moves.sort((a, b) => Number(b.revealsHidden) - Number(a.revealsHidden));
+    }
+    return moves;
 }
 
-function applySimulationWasteToTableauMove(state, options) {
-    if (state.waste.length === 0) return false;
+function listSimulationWasteToTableauMoves(state, options) {
+    if (state.waste.length === 0) return [];
     const movingCard = state.waste[state.waste.length - 1];
+    const moves = [];
     for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
         const targetPile = state.tableau[targetCol];
         let isValid = false;
@@ -1771,12 +2511,151 @@ function applySimulationWasteToTableauMove(state, options) {
             }
         }
         if (isValid) {
-            state.waste.pop();
-            targetPile.push(movingCard);
-            return true;
+            moves.push({ type: 'waste-to-tableau', targetCol });
         }
     }
+    return moves;
+}
+
+function listSimulationTableauToFoundationMoves(state) {
+    const moves = [];
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const pile = state.tableau[sourceCol];
+        if (!pile || pile.length === 0) continue;
+        const card = pile[pile.length - 1];
+        if (!card || card.hidden) continue;
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+            if (SolitaireLogic.canPlaceOnFoundation(card, state.foundations[foundationIndex])) {
+                moves.push({ type: 'tableau-to-foundation', sourceCol, foundationIndex });
+            }
+        }
+    }
+    return moves;
+}
+
+function listSimulationWasteToFoundationMoves(state) {
+    if (!state.waste || state.waste.length === 0) return [];
+    const card = state.waste[state.waste.length - 1];
+    const moves = [];
+    for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+        if (SolitaireLogic.canPlaceOnFoundation(card, state.foundations[foundationIndex])) {
+            moves.push({ type: 'waste-to-foundation', foundationIndex });
+        }
+    }
+    return moves;
+}
+
+function listSimulationFoundationToTableauMoves(state, options) {
+    const moves = [];
+    for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+        const foundation = state.foundations[foundationIndex];
+        if (!foundation || foundation.length === 0) continue;
+        const card = foundation[foundation.length - 1];
+        for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+            const targetPile = state.tableau[targetCol];
+            let isValid = false;
+            if (targetPile.length === 0) {
+                isValid = SolitaireLogic.canMoveToEmptyTableau(card, options);
+            } else {
+                const topCard = targetPile[targetPile.length - 1];
+                if (!topCard.hidden) {
+                    isValid = SolitaireLogic.canPlaceOnTableau(card, topCard);
+                }
+            }
+            if (isValid) {
+                moves.push({ type: 'foundation-to-tableau', foundationIndex, targetCol });
+            }
+        }
+    }
+    return moves;
+}
+
+function applySimulationTableauMoveBySpec(state, move) {
+    const sourcePile = state.tableau[move.sourceCol];
+    const targetPile = state.tableau[move.targetCol];
+    if (!sourcePile || !targetPile || sourcePile.length === 0) return false;
+    const startIndex = Number.isFinite(move.startIndex) ? move.startIndex : sourcePile.length - 1;
+    const count = Number.isFinite(move.count) ? move.count : (sourcePile.length - startIndex);
+    const movingCards = sourcePile.slice(startIndex);
+    if (!movingCards.length || movingCards.length !== count) return false;
+    sourcePile.splice(startIndex, count);
+    targetPile.push(...movingCards);
+    const newTop = sourcePile[sourcePile.length - 1];
+    if (newTop && newTop.hidden) {
+        newTop.hidden = false;
+    }
+    return true;
+}
+
+function applySimulationWasteToTableauMoveBySpec(state, move) {
+    if (state.waste.length === 0) return false;
+    const targetPile = state.tableau[move.targetCol];
+    if (!targetPile) return false;
+    targetPile.push(state.waste.pop());
+    return true;
+}
+
+function applySimulationKlondikeMove(state, move, drawCount, options) {
+    if (!move) return false;
+    if (move.type === 'tableau-to-tableau') {
+        return applySimulationTableauMoveBySpec(state, move);
+    }
+    if (move.type === 'tableau-to-foundation') {
+        const sourcePile = state.tableau[move.sourceCol];
+        if (!sourcePile || sourcePile.length === 0) return false;
+        const card = sourcePile.pop();
+        if (!card) return false;
+        state.foundations[move.foundationIndex].push(card);
+        const newTop = sourcePile[sourcePile.length - 1];
+        if (newTop && newTop.hidden) newTop.hidden = false;
+        return true;
+    }
+    if (move.type === 'waste-to-foundation') {
+        if (!state.waste || state.waste.length === 0) return false;
+        const card = state.waste.pop();
+        if (!card) return false;
+        state.foundations[move.foundationIndex].push(card);
+        return true;
+    }
+    if (move.type === 'foundation-to-tableau') {
+        const foundation = state.foundations[move.foundationIndex];
+        const targetPile = state.tableau[move.targetCol];
+        if (!foundation || foundation.length === 0 || !targetPile) return false;
+        targetPile.push(foundation.pop());
+        return true;
+    }
+    if (move.type === 'waste-to-tableau') {
+        return applySimulationWasteToTableauMoveBySpec(state, move);
+    }
+    if (move.type === 'draw-stock') {
+        if (state.stock.length === 0) return false;
+        simulateDrawFromStock(state, drawCount);
+        return true;
+    }
+    if (move.type === 'recycle-waste') {
+        if (state.waste.length === 0) return false;
+        simulateRecycleWaste(state);
+        return true;
+    }
+    if (move.type === 'auto-foundation') {
+        return applySimulationAutoMoves(state);
+    }
     return false;
+}
+
+function applySimulationTableauMove(state, options) {
+    const moves = listSimulationTableauMoves(state, options, {
+        requireRevealHidden: true,
+        prioritizeRevealHidden: true
+    });
+    if (!moves.length) return false;
+    return applySimulationTableauMoveBySpec(state, moves[0]);
+}
+
+function applySimulationWasteToTableauMove(state, options) {
+    const moves = listSimulationWasteToTableauMoves(state, options);
+    if (!moves.length) return false;
+    return applySimulationWasteToTableauMoveBySpec(state, moves[0]);
 }
 
 function getActiveVariantConfig() {

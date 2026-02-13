@@ -20,6 +20,10 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - `src/header.js`: shared header control registration and collapse/expand behavior.
 - `src/shared/mobile-controller.js`: mobile card interaction controller for pick/drag/drop + panning coexistence.
 - `src/shared/ui-helpers.js`: shared hit-testing and pointer-target helpers.
+- `src/shared/solitaire-insolvability.js`: shared rapid insolvability detector for solitaire deal filtering, with variant-specific forbidden-subgraph matchers.
+- `src/shared/solitaire-solvability.js`: shared bounded forward-search solvability checker that evaluates if a current solitaire state can still reach a win.
+- `src/shared/solitaire-check-modal.js`: shared solitaire modal primitive for long-running check progress, result presentation, and confirmation prompts.
+- `src/shared/solitaire-check-worker.js`: dedicated worker runtime for FreeCell and Klondike check flows so long searches do not block the main thread.
 - `src/shared/entitlements.js`: canonical local entitlement store with claim metadata (`ownership`, `source`, timestamps) and authoritative merge hooks.
 - `src/shared/entitlement-sync.js`: app lifecycle sync runner that pulls authoritative claims from a native bridge (or debug mock) and applies them through the entitlement store.
 - `src/addons.js` + `src/addons/manifest.js`: addon manifest ingestion and addon loading/toggling.

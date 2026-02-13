@@ -31,6 +31,8 @@
             <div class="controls-section" id="game-area">
                 <button id="freecell-new-game" class="game-btn">New Game</button>
                 <button id="freecell-undo" class="game-btn" disabled>Undo</button>
+                <button id="freecell-hint" class="game-btn">Hint</button>
+                <button id="freecell-check" class="game-btn">Check</button>
             </div>
             <div class="controls-section collapsed" id="settings-area">
                 <label class="stats">Table Scale:
@@ -85,6 +87,9 @@
     <script src="common.js"></script>
     <script src="header.js"></script>
     <script src="solitaire-logic.js"></script>
+    <script src="shared/solitaire-insolvability.js"></script>
+    <script src="shared/solitaire-solvability.js"></script>
+    <script src="shared/solitaire-check-modal.js"></script>
     <script src="shared/ui-helpers.js"></script>
     <script src="shared/mobile-controller.js"></script>
     <script src="freecell.js"></script>

@@ -35,6 +35,10 @@
 - `src/header.js`: shared header controls, toggle/collapse behavior, and default open sections.
 - `src/shared/mobile-controller.js`: touch drag/pan coordination and mobile-safe pointer behavior.
 - `src/shared/ui-helpers.js`: shared hit-testing and pointer helper utilities.
+- `src/shared/solitaire-insolvability.js`: shared rapid static insolvability detector with reusable forbidden-subgraph matchers for solitaire variants.
+- `src/shared/solitaire-solvability.js`: shared forward-only solvability search engine for checking whether a current solitaire state can still be solved.
+- `src/shared/solitaire-check-modal.js`: shared modal UI helper for solitaire check/progress/result prompts and confirm flows.
+- `src/shared/solitaire-check-worker.js`: worker-backed solitaire check runner used by both FreeCell and Klondike check flows.
 - `src/shared/entitlements.js`: shared local entitlement storage with claim ownership/source metadata and future authoritative sync hooks.
 - `src/shared/entitlement-sync.js`: lifecycle-aware authoritative entitlement sync bridge (native bridge first, debug mock fallback).
 - `src/addons/manifest.js` and `src/addons.js`: add-on catalog and registration.

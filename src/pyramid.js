@@ -11,6 +11,14 @@ const PYRAMID_ROWS = 7;
 const PYRAMID_PAIR_SCORE = 5;
 const PYRAMID_KING_SCORE = 10;
 const PYRAMID_MAX_HISTORY = 200;
+const PYRAMID_QUICK_CHECK_LIMITS = {
+    1: { maxStates: 10000, maxDurationMs: 1000 },
+    3: { maxStates: 25000, maxDurationMs: 5000 }
+};
+const PYRAMID_ATTEMPT_CHECK_LIMITS = {
+    1: { maxStates: 50000, maxDurationMs: 30000 },
+    3: { maxStates: 100000, maxDurationMs: 60000 }
+};
 
 const pyramidState = {
     pyramid: [],
@@ -26,6 +34,11 @@ const pyramidState = {
 };
 
 let pyramidStateManager = null;
+let pyramidCheckWorker = null;
+let pyramidCheckRequestId = 0;
+let pyramidCheckSolvedLocked = false;
+let pyramidCheckUnsolvableLocked = false;
+let pyramidStoredSolution = null;
 
 function getPyramidRuleSetKey() {
     const drawCount = pyramidState.drawCount === 3 ? 3 : 1;
@@ -121,6 +134,7 @@ function initPyramidGame() {
     startTimer();
     updateUI();
     updateUndoButtonState();
+    resetPyramidCheckAvailability();
     CommonUtils.playSound('shuffle');
     if (pyramidStateManager) {
         pyramidStateManager.markDirty();
@@ -184,6 +198,7 @@ function restorePyramidState(saved) {
 
     updateUI();
     updateUndoButtonState();
+    resetPyramidCheckAvailability();
 }
 
 function dealPyramid() {
@@ -597,6 +612,14 @@ function setupPyramidEventListeners() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
     }
+    const hintBtn = document.getElementById('pyramid-hint');
+    if (hintBtn) {
+        hintBtn.addEventListener('click', showPyramidHint);
+    }
+    const checkBtn = document.getElementById('pyramid-check');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', checkCurrentPyramidSolvability);
+    }
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
@@ -649,4 +672,746 @@ function setupPyramidEventListeners() {
         scheduleThemeSync();
     }
     window.addEventListener('addons:changed', scheduleThemeSync);
+}
+
+function checkCurrentPyramidSolvability() {
+    if (pyramidCheckSolvedLocked || pyramidCheckUnsolvableLocked) return;
+    startPyramidCheckBusyState();
+    runPyramidCheck('quick');
+}
+
+function runPyramidCheck(mode) {
+    const limits = getPyramidCheckLimits(mode, pyramidState.drawCount);
+    const snapshot = createPyramidCheckSnapshot();
+    const requestId = ++pyramidCheckRequestId;
+    if (typeof Worker !== 'undefined') {
+        runPyramidCheckViaWorker({
+            game: 'pyramid',
+            snapshot,
+            limits,
+            requestId
+        }).then((result) => {
+            if (!result || requestId !== pyramidCheckRequestId) return;
+            handlePyramidCheckResult(mode, result, limits, snapshot, { hadWorker: true });
+        }).catch(() => {
+            runPyramidCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+        });
+        return;
+    }
+    runPyramidCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+}
+
+function runPyramidCheckOnMainThreadWithModal(mode, snapshot, limits, requestId) {
+    showPyramidCheckModal({
+        title: mode === 'attempt' ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Running on the main thread. The page may become unresponsive until the check finishes.',
+        busy: true
+    });
+    window.setTimeout(() => {
+        const fallback = runPyramidCheckOnMainThread(snapshot, limits);
+        if (!fallback || requestId !== pyramidCheckRequestId) return;
+        closePyramidCheckModal();
+        handlePyramidCheckResult(mode, fallback, limits, snapshot, { hadWorker: false });
+    }, 0);
+}
+
+function getPyramidCheckLimits(mode, drawCount) {
+    const normalizedDraw = drawCount === 3 ? 3 : 1;
+    const perMode = mode === 'attempt' ? PYRAMID_ATTEMPT_CHECK_LIMITS : PYRAMID_QUICK_CHECK_LIMITS;
+    const selected = perMode[normalizedDraw] || perMode[1];
+    return {
+        maxStates: selected.maxStates,
+        maxDurationMs: selected.maxDurationMs,
+        relaxedSearch: mode === 'attempt'
+    };
+}
+
+function handlePyramidCheckResult(mode, result, limits, snapshot, context = {}) {
+    const isAttempt = mode === 'attempt';
+    console.log(
+        `Pyramid ${isAttempt ? 'Attempt' : 'Quick'} Check: solved=${result.solved}, reason=${result.reason}, statesExplored=${result.statesExplored}, durationMs=${result.durationMs}, maxStates=${limits.maxStates}, maxDurationMs=${limits.maxDurationMs}`
+    );
+    if (result.solved && result.reason === 'solved') {
+        storePyramidSolution(snapshot, result);
+        lockPyramidChecksAsSolvable();
+        showPyramidCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `A solution path was found (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+    clearStoredPyramidSolution();
+    const isLikely = result.reason === 'likely-solved';
+    if (result.provenUnsolvable === true) {
+        lockPyramidChecksAsUnsolvable();
+        showPyramidCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `No solution exists from this position (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+    releasePyramidCheckBusyState();
+    if (isLikely) {
+        markPyramidCheckAsLikely();
+    }
+    const inconclusive = result.reason === 'state-limit'
+        || result.reason === 'time-limit'
+        || result.reason === 'cycle-detected';
+    if (!isAttempt) {
+        promptPyramidDeepCheck(result);
+        return;
+    }
+    const message = isLikely
+        ? 'This position looks promising, but prove solve could not confirm a full winning line yet. Work the layout more and try prove solve again.'
+        : (result.reason === 'cycle-detected'
+        ? 'The solver got caught in a loop. Try clearing more of the layout first, then run check again.'
+        : (inconclusive
+            ? 'No immediate solution was found within current limits. This does not mean the deck is unsolvable, only that the solution is not immediately obvious.'
+            : `No solution was found (${result.reason}, ${result.statesExplored} states). This does not mean the deck is unsolvable, only that the solution is not immediately obvious.`));
+    showPyramidCheckModal({
+        title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+        message,
+        busy: false
+    });
+}
+
+function createPyramidCheckSnapshot() {
+    return {
+        pyramid: pyramidState.pyramid.map((row) => row.map((card) => (card ? cloneCardForCheck(card) : null))),
+        stock: pyramidState.stock.map(cloneCardForCheck),
+        waste: pyramidState.waste.map(cloneCardForCheck),
+        drawCount: pyramidState.drawCount
+    };
+}
+
+function cloneCardForCheck(card) {
+    if (!card) return null;
+    return {
+        suit: card.suit,
+        val: card.val,
+        rank: Number.isFinite(card.rank) ? card.rank : parseCardRankForCheck(card.val),
+        hidden: false
+    };
+}
+
+function parseCardRankForCheck(value) {
+    if (value === 'A') return 1;
+    if (value === 'J') return 11;
+    if (value === 'Q') return 12;
+    if (value === 'K') return 13;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function runPyramidCheckOnMainThread(snapshot, limits) {
+    if (limits && limits.relaxedSearch) {
+        return runPyramidRelaxedCheckOnMainThread(snapshot, limits);
+    }
+    const startedAt = Date.now();
+    const fallbackLimits = getPyramidCheckLimits('quick', snapshot.drawCount);
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const drawCount = snapshot.drawCount === 3 ? 3 : 1;
+    const state = {
+        pyramid: snapshot.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        waste: snapshot.waste.map((card) => Object.assign({}, card))
+    };
+    const initialRemaining = countPyramidCardsRemaining(state.pyramid);
+    const startKey = normalizePyramidSimulationState(state);
+    const seenStates = new Set([startKey]);
+    const solutionMoves = [];
+    const solutionStateKeys = [startKey];
+    let iterations = 0;
+    let cycleDetected = false;
+
+    while (iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return { solved: false, reason: 'time-limit', statesExplored: iterations, prunedStates: 0, durationMs: Date.now() - startedAt, maxStates, maxDurationMs };
+        }
+        if (isPyramidSolvedState(state.pyramid)) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: solutionMoves.slice(),
+                solutionStateKeys: solutionStateKeys.slice()
+            };
+        }
+        iterations++;
+        if (applyPyramidGreedyRemoval(state)) {
+            solutionMoves.push({ type: 'remove-exposed' });
+            const key = normalizePyramidSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (state.stock.length > 0) {
+            for (let i = 0; i < drawCount; i++) {
+                if (!state.stock.length) break;
+                state.waste.push(state.stock.pop());
+            }
+            solutionMoves.push({ type: 'draw-stock', count: drawCount });
+            const key = normalizePyramidSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        if (state.waste.length > 0) {
+            while (state.waste.length > 0) {
+                state.stock.push(state.waste.pop());
+            }
+            solutionMoves.push({ type: 'recycle-waste' });
+            const key = normalizePyramidSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        break;
+    }
+
+    const remaining = countPyramidCardsRemaining(state.pyramid);
+    const cleared = initialRemaining - remaining;
+    const likely = cleared >= 20 || (remaining <= 8 && state.stock.length === 0);
+    return {
+        solved: likely,
+        reason: likely ? 'likely-solved' : (cycleDetected ? 'cycle-detected' : (iterations >= maxStates ? 'state-limit' : 'exhausted')),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs
+    };
+}
+
+function runPyramidRelaxedCheckOnMainThread(snapshot, limits) {
+    const startedAt = Date.now();
+    const fallbackLimits = getPyramidCheckLimits('attempt', snapshot.drawCount);
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const drawCount = snapshot.drawCount === 3 ? 3 : 1;
+    const startState = clonePyramidCheckState({
+        pyramid: snapshot.pyramid,
+        stock: snapshot.stock,
+        waste: snapshot.waste
+    });
+    const initialRemaining = countPyramidCardsRemaining(startState.pyramid);
+    const startKey = normalizePyramidSimulationState(startState);
+    const frontier = [{
+        state: startState,
+        key: startKey,
+        moves: [],
+        stateKeys: [startKey],
+        depth: 0
+    }];
+    const seenStateDepth = new Map([[startKey, 0]]);
+    let iterations = 0;
+    let bestCleared = 0;
+
+    while (frontier.length > 0 && iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return {
+                solved: false,
+                reason: 'time-limit',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs
+            };
+        }
+        iterations++;
+        const current = frontier.pop();
+        const knownCurrentDepth = seenStateDepth.get(current.key);
+        if (knownCurrentDepth !== undefined && knownCurrentDepth < current.depth) {
+            continue;
+        }
+        const state = clonePyramidCheckState(current.state);
+        const moves = current.moves.slice();
+        const stateKeys = current.stateKeys.slice();
+        const depth = current.depth;
+
+        if (isPyramidSolvedState(state.pyramid)) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: moves,
+                solutionStateKeys: stateKeys
+            };
+        }
+
+        const remaining = countPyramidCardsRemaining(state.pyramid);
+        const cleared = initialRemaining - remaining;
+        if (cleared > bestCleared) bestCleared = cleared;
+
+        const candidates = listPyramidCandidateMoves(state, drawCount);
+        for (let i = candidates.length - 1; i >= 0; i--) {
+            const move = candidates[i];
+            const nextState = clonePyramidCheckState(state);
+            if (!applyPyramidSimulationMove(nextState, move, drawCount)) continue;
+            const key = normalizePyramidSimulationState(nextState);
+            const nextDepth = depth + 1;
+            const knownDepth = seenStateDepth.get(key);
+            if (knownDepth !== undefined && knownDepth <= nextDepth) continue;
+            seenStateDepth.set(key, nextDepth);
+            frontier.push({
+                state: nextState,
+                key,
+                moves: moves.concat([{ type: move.type === 'draw-stock' || move.type === 'recycle-waste' ? move.type : 'remove-exposed' }]),
+                stateKeys: stateKeys.concat([key]),
+                depth: nextDepth
+            });
+        }
+    }
+
+    const likely = bestCleared >= 20;
+    const exhausted = frontier.length === 0;
+    return {
+        solved: likely,
+        reason: likely ? 'likely-solved' : (iterations >= maxStates ? 'state-limit' : 'exhausted'),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs,
+        provenUnsolvable: exhausted && !likely
+    };
+}
+
+function isPyramidSolvedState(pyramid) {
+    return pyramid.every((row) => row.every((card) => !card));
+}
+
+function countPyramidCardsRemaining(pyramid) {
+    let remaining = 0;
+    for (let row = 0; row < pyramid.length; row++) {
+        for (let col = 0; col < pyramid[row].length; col++) {
+            if (pyramid[row][col]) remaining++;
+        }
+    }
+    return remaining;
+}
+
+function serializePyramidSimulationCard(card) {
+    if (!card) return '__';
+    const rank = Number.isFinite(card.rank) ? card.rank : String(card.rank || '?');
+    return `${rank}${card.suit || '?'}`;
+}
+
+function serializePyramidSimulationPile(pile) {
+    if (!pile || pile.length === 0) return '';
+    return pile.map((card) => serializePyramidSimulationCard(card)).join(',');
+}
+
+function normalizePyramidSimulationState(state) {
+    const pyramid = state.pyramid.map((row) => row.map((card) => serializePyramidSimulationCard(card)).join(',')).join('|');
+    return `${pyramid}#${serializePyramidSimulationPile(state.stock)}#${serializePyramidSimulationPile(state.waste)}`;
+}
+
+function clonePyramidCheckState(state) {
+    return {
+        pyramid: state.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
+        stock: state.stock.map((card) => Object.assign({}, card)),
+        waste: state.waste.map((card) => Object.assign({}, card))
+    };
+}
+
+function isPyramidCardExposedForCheck(pyramid, row, col) {
+    if (row >= pyramid.length - 1) return true;
+    const belowLeft = pyramid[row + 1] ? pyramid[row + 1][col] : null;
+    const belowRight = pyramid[row + 1] ? pyramid[row + 1][col + 1] : null;
+    return !belowLeft && !belowRight;
+}
+
+function applyPyramidGreedyRemoval(state) {
+    const exposed = [];
+    for (let row = 0; row < state.pyramid.length; row++) {
+        for (let col = 0; col < state.pyramid[row].length; col++) {
+            const card = state.pyramid[row][col];
+            if (!card) continue;
+            if (!isPyramidCardExposedForCheck(state.pyramid, row, col)) continue;
+            exposed.push({ source: 'pyramid', row, col, card });
+        }
+    }
+    const wasteTop = state.waste.length > 0 ? state.waste[state.waste.length - 1] : null;
+
+    for (let i = 0; i < exposed.length; i++) {
+        const a = exposed[i];
+        if (a.card.rank === 13) {
+            state.pyramid[a.row][a.col] = null;
+            return true;
+        }
+        if (wasteTop && (a.card.rank + wasteTop.rank === 13)) {
+            state.pyramid[a.row][a.col] = null;
+            state.waste.pop();
+            return true;
+        }
+        for (let j = i + 1; j < exposed.length; j++) {
+            const b = exposed[j];
+            if (a.card.rank + b.card.rank === 13) {
+                state.pyramid[a.row][a.col] = null;
+                state.pyramid[b.row][b.col] = null;
+                return true;
+            }
+        }
+    }
+
+    if (wasteTop && wasteTop.rank === 13) {
+        state.waste.pop();
+        return true;
+    }
+    return false;
+}
+
+function listPyramidCandidateMoves(state, drawCount) {
+    const exposed = [];
+    for (let row = 0; row < state.pyramid.length; row++) {
+        for (let col = 0; col < state.pyramid[row].length; col++) {
+            const card = state.pyramid[row][col];
+            if (!card) continue;
+            if (!isPyramidCardExposedForCheck(state.pyramid, row, col)) continue;
+            exposed.push({ row, col, card });
+        }
+    }
+    const wasteTop = state.waste.length > 0 ? state.waste[state.waste.length - 1] : null;
+    const moves = [];
+
+    for (let i = 0; i < exposed.length; i++) {
+        const a = exposed[i];
+        if (a.card.rank === 13) {
+            moves.push({ type: 'remove-king', row: a.row, col: a.col, priority: 6 });
+        }
+        if (wasteTop && a.card.rank + wasteTop.rank === 13) {
+            moves.push({ type: 'remove-with-waste', row: a.row, col: a.col, priority: 5 });
+        }
+        for (let j = i + 1; j < exposed.length; j++) {
+            const b = exposed[j];
+            if (a.card.rank + b.card.rank === 13) {
+                moves.push({ type: 'remove-pair', rowA: a.row, colA: a.col, rowB: b.row, colB: b.col, priority: 7 });
+            }
+        }
+    }
+
+    if (wasteTop && wasteTop.rank === 13) {
+        moves.push({ type: 'remove-waste-king', priority: 4 });
+    }
+    if (state.stock.length > 0) {
+        moves.push({ type: 'draw-stock', count: drawCount, priority: 2 });
+    } else if (state.waste.length > 0) {
+        moves.push({ type: 'recycle-waste', priority: 1 });
+    }
+
+    moves.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    return moves;
+}
+
+function applyPyramidSimulationMove(state, move, drawCount) {
+    if (!move) return false;
+    if (move.type === 'remove-king') {
+        if (!state.pyramid[move.row] || !state.pyramid[move.row][move.col]) return false;
+        state.pyramid[move.row][move.col] = null;
+        return true;
+    }
+    if (move.type === 'remove-with-waste') {
+        if (!state.pyramid[move.row] || !state.pyramid[move.row][move.col]) return false;
+        if (!state.waste.length) return false;
+        state.pyramid[move.row][move.col] = null;
+        state.waste.pop();
+        return true;
+    }
+    if (move.type === 'remove-pair') {
+        if (!state.pyramid[move.rowA] || !state.pyramid[move.rowB]) return false;
+        if (!state.pyramid[move.rowA][move.colA] || !state.pyramid[move.rowB][move.colB]) return false;
+        state.pyramid[move.rowA][move.colA] = null;
+        state.pyramid[move.rowB][move.colB] = null;
+        return true;
+    }
+    if (move.type === 'remove-waste-king') {
+        if (!state.waste.length) return false;
+        state.waste.pop();
+        return true;
+    }
+    if (move.type === 'draw-stock') {
+        if (!state.stock.length) return false;
+        const count = Number.isFinite(move.count) ? move.count : drawCount;
+        for (let i = 0; i < count; i++) {
+            if (!state.stock.length) break;
+            state.waste.push(state.stock.pop());
+        }
+        return true;
+    }
+    if (move.type === 'recycle-waste') {
+        if (!state.waste.length) return false;
+        while (state.waste.length > 0) {
+            state.stock.push(state.waste.pop());
+        }
+        return true;
+    }
+    return false;
+}
+
+function runPyramidCheckViaWorker(payload, onStarted) {
+    return new Promise((resolve, reject) => {
+        if (typeof Worker === 'undefined') {
+            reject(new Error('Web Worker unavailable.'));
+            return;
+        }
+        if (!pyramidCheckWorker) {
+            pyramidCheckWorker = new Worker('shared/solitaire-check-worker.js');
+        }
+        const worker = pyramidCheckWorker;
+        const onMessage = (event) => {
+            const data = event && event.data ? event.data : {};
+            if (data.requestId !== payload.requestId) return;
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            if (data.error) {
+                reject(new Error(data.error));
+                return;
+            }
+            resolve(data.result);
+        };
+        const onError = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupPyramidCheckWorker();
+            reject(new Error('Pyramid worker failed.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        try {
+            worker.postMessage(payload);
+        } catch (err) {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupPyramidCheckWorker();
+            reject(err instanceof Error ? err : new Error('Pyramid worker failed.'));
+            return;
+        }
+        if (typeof onStarted === 'function') {
+            onStarted();
+        }
+    });
+}
+
+function cleanupPyramidCheckWorker() {
+    pyramidCheckRequestId++;
+    if (!pyramidCheckWorker) return;
+    try {
+        pyramidCheckWorker.terminate();
+    } catch (err) {
+        // Ignore terminate failures.
+    }
+    pyramidCheckWorker = null;
+}
+
+function getSolitaireCheckModalApi() {
+    if (typeof SolitaireCheckModal !== 'undefined') return SolitaireCheckModal;
+    return null;
+}
+
+function showPyramidCheckModal(options = {}) {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.showInfo(options);
+}
+
+function closePyramidCheckModal() {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.close();
+}
+
+function getPyramidCheckButton() {
+    return document.getElementById('pyramid-check');
+}
+
+function startPyramidCheckBusyState() {
+    const button = getPyramidCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    if (!pyramidCheckSolvedLocked && !pyramidCheckUnsolvableLocked) {
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+}
+
+function releasePyramidCheckBusyState() {
+    if (pyramidCheckSolvedLocked || pyramidCheckUnsolvableLocked) return;
+    const button = getPyramidCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function markPyramidCheckAsLikely() {
+    const button = getPyramidCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Likely';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockPyramidChecksAsSolvable() {
+    pyramidCheckSolvedLocked = true;
+    pyramidCheckUnsolvableLocked = false;
+    const button = getPyramidCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'SOLVABLE';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockPyramidChecksAsUnsolvable() {
+    pyramidCheckSolvedLocked = false;
+    pyramidCheckUnsolvableLocked = true;
+    const button = getPyramidCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Unsolvable';
+    button.classList.remove('check-solved');
+    button.classList.add('check-unsolvable');
+}
+
+function resetPyramidCheckAvailability() {
+    pyramidCheckSolvedLocked = false;
+    pyramidCheckUnsolvableLocked = false;
+    clearStoredPyramidSolution();
+    const button = getPyramidCheckButton();
+    if (button) {
+        button.disabled = false;
+        button.textContent = 'Check';
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+    closePyramidCheckModal();
+}
+
+function promptPyramidDeepCheck(result) {
+    const needsTableauWork = result && result.reason === 'cycle-detected';
+    const likely = result && result.reason === 'likely-solved';
+    const message = needsTableauWork
+        ? 'The solver got stuck in a loop. Try opening up the layout first (clear exposed pairs and improve access), then run a deeper solve attempt.'
+        : (likely
+            ? 'Quick check sees promising progress, but it is not proven yet. Run Prove Solve for a stricter answer?'
+            : 'Quick check found no immediate solution. Run Prove Solve?');
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) {
+        showPyramidCheckModal({
+            title: 'Quick Check Result',
+            message,
+            busy: false
+        });
+        return;
+    }
+    modal.showChoice({
+        title: 'Quick Check Complete',
+        message,
+        secondaryLabel: 'Not Now',
+        confirmLabel: 'Prove Solve',
+        cancelLabel: 'Close'
+    }).then((choice) => {
+        if (choice === 'confirm') {
+            startPyramidCheckBusyState();
+            runPyramidCheck('attempt');
+        }
+    });
+}
+
+function storePyramidSolution(snapshot, result) {
+    const moves = Array.isArray(result.solutionMoves) ? result.solutionMoves.slice() : [];
+    if (!moves.length) {
+        pyramidStoredSolution = null;
+        return;
+    }
+    const stateKeys = Array.isArray(result.solutionStateKeys) && result.solutionStateKeys.length
+        ? result.solutionStateKeys.slice()
+        : [normalizePyramidSimulationState({
+            pyramid: snapshot.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
+            stock: snapshot.stock.map((card) => Object.assign({}, card)),
+            waste: snapshot.waste.map((card) => Object.assign({}, card))
+        })];
+    pyramidStoredSolution = { moves, stateKeys };
+}
+
+function clearStoredPyramidSolution() {
+    pyramidStoredSolution = null;
+}
+
+function getStoredPyramidHint() {
+    if (!pyramidStoredSolution || !Array.isArray(pyramidStoredSolution.moves) || !pyramidStoredSolution.moves.length) {
+        return null;
+    }
+    const snapshot = createPyramidCheckSnapshot();
+    const currentState = {
+        pyramid: snapshot.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        waste: snapshot.waste.map((card) => Object.assign({}, card))
+    };
+    const key = normalizePyramidSimulationState(currentState);
+    const stepIndex = pyramidStoredSolution.stateKeys.indexOf(key);
+    if (stepIndex < 0 || stepIndex >= pyramidStoredSolution.moves.length) return null;
+    return pyramidStoredSolution.moves[stepIndex];
+}
+
+function formatPyramidHintMove(move) {
+    if (!move || !move.type) return 'Remove an exposed pair that sums to 13.';
+    if (move.type === 'remove-exposed') return 'Remove an exposed king or exposed pair summing to 13.';
+    if (move.type === 'draw-stock') return 'Draw from stock.';
+    if (move.type === 'recycle-waste') return 'Recycle waste into stock.';
+    return 'Try the next legal forward move.';
+}
+
+function showPyramidHint() {
+    const storedHint = getStoredPyramidHint();
+    if (storedHint) {
+        CommonUtils.showTableToast(`Hint: ${formatPyramidHintMove(storedHint)}`, { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    const snapshot = createPyramidCheckSnapshot();
+    const state = {
+        pyramid: snapshot.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        waste: snapshot.waste.map((card) => Object.assign({}, card))
+    };
+    if (applyPyramidGreedyRemoval(state)) {
+        CommonUtils.showTableToast('Hint: Remove an exposed king or exposed pair summing to 13.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    if (state.stock.length > 0) {
+        CommonUtils.showTableToast('Hint: Draw from stock.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    if (state.waste.length > 0) {
+        CommonUtils.showTableToast('Hint: Recycle waste into stock.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    CommonUtils.showTableToast('Hint: No clear move found.', { variant: 'warn', containerId: 'table', duration: 2200 });
 }

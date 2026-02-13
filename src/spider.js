@@ -70,6 +70,21 @@ const SPIDER_MIN_TABLEAU_GAP = 3;
 const SPIDER_BASE_FAN_X = 18;
 const SPIDER_MIN_FAN_X = 4;
 const SPIDER_FAN_PADDING = 2;
+const SPIDER_QUICK_CHECK_LIMITS = {
+    1: { maxStates: 9000, maxDurationMs: 5000 },
+    2: { maxStates: 7000, maxDurationMs: 5000 },
+    4: { maxStates: 5500, maxDurationMs: 5000 }
+};
+const SPIDER_ATTEMPT_CHECK_LIMITS = {
+    1: { maxStates: 55000, maxDurationMs: 60000 },
+    2: { maxStates: 45000, maxDurationMs: 60000 },
+    4: { maxStates: 35000, maxDurationMs: 60000 }
+};
+let spiderCheckWorker = null;
+let spiderCheckRequestId = 0;
+let spiderCheckSolvedLocked = false;
+let spiderCheckUnsolvableLocked = false;
+let spiderStoredSolution = null;
 
 const spiderDragState = {
     draggedCards: [],
@@ -225,6 +240,7 @@ function initSpiderGame() {
     startTimer();
     updateUI();
     updateUndoButtonState();
+    resetSpiderCheckAvailability();
     CommonUtils.playSound('shuffle');
     if (spiderStateManager) {
         spiderStateManager.markDirty();
@@ -286,6 +302,7 @@ function restoreSpiderState(saved) {
     syncSpiderSuitUI();
     updateUI();
     updateUndoButtonState();
+    resetSpiderCheckAvailability();
 }
 
 function dealSpiderLayout() {
@@ -1015,6 +1032,14 @@ function setupSpiderEventListeners() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
     }
+    const hintBtn = document.getElementById('spider-hint');
+    if (hintBtn) {
+        hintBtn.addEventListener('click', showSpiderHint);
+    }
+    const checkBtn = document.getElementById('spider-check');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', checkCurrentSpiderSolvability);
+    }
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
@@ -1069,4 +1094,835 @@ function setupSpiderEventListeners() {
     window.addEventListener('addons:changed', scheduleThemeSync);
     window.addEventListener('resize', scheduleTableauSizing);
     window.addEventListener('card-scale:changed', scheduleTableauSizing);
+}
+
+function checkCurrentSpiderSolvability() {
+    if (spiderCheckSolvedLocked || spiderCheckUnsolvableLocked) return;
+    startSpiderCheckBusyState();
+    runSpiderCheck('quick');
+}
+
+function runSpiderCheck(mode) {
+    const limits = getSpiderCheckLimits(mode, spiderState.suitMode);
+    const snapshot = createSpiderCheckSnapshot();
+    const requestId = ++spiderCheckRequestId;
+    if (typeof Worker !== 'undefined') {
+        runSpiderCheckViaWorker({
+            game: 'spider',
+            snapshot,
+            limits,
+            requestId
+        }).then((result) => {
+            if (!result || requestId !== spiderCheckRequestId) return;
+            handleSpiderCheckResult(mode, result, limits, snapshot, { hadWorker: true });
+        }).catch(() => {
+            runSpiderCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+        });
+        return;
+    }
+    runSpiderCheckOnMainThreadWithModal(mode, snapshot, limits, requestId);
+}
+
+function runSpiderCheckOnMainThreadWithModal(mode, snapshot, limits, requestId) {
+    showSpiderCheckModal({
+        title: mode === 'attempt' ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Running on the main thread. The page may become unresponsive until the check finishes.',
+        busy: true
+    });
+    window.setTimeout(() => {
+        const fallback = runSpiderCheckOnMainThread(snapshot, limits);
+        if (!fallback || requestId !== spiderCheckRequestId) return;
+        closeSpiderCheckModal();
+        handleSpiderCheckResult(mode, fallback, limits, snapshot, { hadWorker: false });
+    }, 0);
+}
+
+function getSpiderCheckLimits(mode, suitMode) {
+    const normalizedSuitMode = Number(suitMode) === 1 || Number(suitMode) === 2 ? Number(suitMode) : 4;
+    const perMode = mode === 'attempt' ? SPIDER_ATTEMPT_CHECK_LIMITS : SPIDER_QUICK_CHECK_LIMITS;
+    const selected = perMode[normalizedSuitMode] || perMode[4];
+    return {
+        maxStates: selected.maxStates,
+        maxDurationMs: selected.maxDurationMs,
+        relaxedSearch: mode === 'attempt'
+    };
+}
+
+function handleSpiderCheckResult(mode, result, limits, snapshot, context = {}) {
+    const isAttempt = mode === 'attempt';
+    console.log(
+        `Spider ${isAttempt ? 'Attempt' : 'Quick'} Check: solved=${result.solved}, reason=${result.reason}, statesExplored=${result.statesExplored}, durationMs=${result.durationMs}, maxStates=${limits.maxStates}, maxDurationMs=${limits.maxDurationMs}`
+    );
+    if (result.solved && result.reason === 'solved') {
+        storeSpiderSolution(snapshot, result);
+        lockSpiderChecksAsSolvable();
+        showSpiderCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `A solution path was found (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+    clearSpiderStoredSolution();
+    const isLikely = result.reason === 'likely-solved';
+    if (result.provenUnsolvable === true) {
+        lockSpiderChecksAsUnsolvable();
+        showSpiderCheckModal({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `No solution exists from this position (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+    releaseSpiderCheckBusyState();
+    if (isLikely) {
+        markSpiderCheckAsLikely();
+    }
+    const inconclusive = result.reason === 'state-limit'
+        || result.reason === 'time-limit'
+        || result.reason === 'cycle-detected';
+    if (!isAttempt) {
+        promptSpiderDeepCheck(result);
+        return;
+    }
+    const message = isLikely
+        ? 'This position looks promising, but prove solve could not confirm a full winning line yet. Work the tableau more and try prove solve again.'
+        : (result.reason === 'cycle-detected'
+        ? 'The solver got caught in a loop. Try working the tableau more (build cleaner runs and expose hidden cards), then run check again.'
+        : (inconclusive
+            ? 'No immediate solution was found within current limits. This does not mean the deck is unsolvable, only that the solution is not immediately obvious.'
+            : `No solution was found (${result.reason}, ${result.statesExplored} states). This does not mean the deck is unsolvable, only that the solution is not immediately obvious.`));
+    showSpiderCheckModal({
+        title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+        message,
+        busy: false
+    });
+}
+
+function createSpiderCheckSnapshot() {
+    return {
+        tableau: spiderState.tableau.map((column) => column.map(cloneSpiderCardForCheck)),
+        stock: spiderState.stock.map(cloneSpiderCardForCheck),
+        foundations: spiderState.foundations.slice(),
+        suitMode: spiderState.suitMode
+    };
+}
+
+function cloneSpiderCardForCheck(card) {
+    if (!card) return null;
+    return {
+        suit: card.suit,
+        val: card.val,
+        rank: Number.isFinite(card.rank) ? card.rank : parseSpiderRankForCheck(card.val),
+        hidden: !!card.hidden
+    };
+}
+
+function parseSpiderRankForCheck(value) {
+    if (value === 'A') return 1;
+    if (value === 'J') return 11;
+    if (value === 'Q') return 12;
+    if (value === 'K') return 13;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function runSpiderCheckOnMainThread(snapshot, limits) {
+    if (limits && limits.relaxedSearch) {
+        return runSpiderRelaxedCheckOnMainThread(snapshot, limits);
+    }
+    const startedAt = Date.now();
+    const fallbackLimits = getSpiderCheckLimits('quick', snapshot.suitMode);
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const state = {
+        tableau: snapshot.tableau.map((column) => column.map((card) => Object.assign({}, card))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        foundations: snapshot.foundations.slice()
+    };
+    const initialHidden = countSpiderHiddenCards(state.tableau);
+    const initialFoundations = state.foundations.length;
+    const startKey = normalizeSpiderSimulationState(state);
+    const seenStates = new Set([startKey]);
+    const solutionMoves = [];
+    const solutionStateKeys = [startKey];
+    let iterations = 0;
+    let cycleDetected = false;
+
+    while (iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return { solved: false, reason: 'time-limit', statesExplored: iterations, prunedStates: 0, durationMs: Date.now() - startedAt, maxStates, maxDurationMs };
+        }
+
+        iterations++;
+        const completed = completeSpiderSequences(state);
+        if (state.foundations.length >= 8) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: solutionMoves.slice(),
+                solutionStateKeys: solutionStateKeys.slice()
+            };
+        }
+        if (completed > 0) {
+            solutionMoves.push({ type: 'complete-sequence' });
+            const key = normalizeSpiderSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+
+        const move = findSpiderHeuristicMove(state);
+        if (move) {
+            const moving = state.tableau[move.from].splice(move.startIndex);
+            state.tableau[move.to].push(...moving);
+            const sourceTop = state.tableau[move.from][state.tableau[move.from].length - 1];
+            if (sourceTop && sourceTop.hidden) {
+                sourceTop.hidden = false;
+            }
+            solutionMoves.push({ type: 'tableau-to-tableau', from: move.from, to: move.to });
+            const key = normalizeSpiderSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+
+        if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
+            for (let col = 0; col < 10; col++) {
+                const dealt = state.stock.pop();
+                if (!dealt) break;
+                dealt.hidden = false;
+                state.tableau[col].push(dealt);
+            }
+            solutionMoves.push({ type: 'deal-row' });
+            const key = normalizeSpiderSimulationState(state);
+            if (seenStates.has(key)) {
+                cycleDetected = true;
+                break;
+            }
+            seenStates.add(key);
+            solutionStateKeys.push(key);
+            continue;
+        }
+        break;
+    }
+
+    const hiddenRevealed = initialHidden - countSpiderHiddenCards(state.tableau);
+    const foundationProgress = state.foundations.length - initialFoundations;
+    const likely = foundationProgress >= 2 || hiddenRevealed >= 12 || (foundationProgress >= 1 && hiddenRevealed >= 8);
+    return {
+        solved: likely,
+        reason: likely ? 'likely-solved' : (cycleDetected ? 'cycle-detected' : (iterations >= maxStates ? 'state-limit' : 'exhausted')),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs
+    };
+}
+
+function runSpiderRelaxedCheckOnMainThread(snapshot, limits) {
+    const startedAt = Date.now();
+    const fallbackLimits = getSpiderCheckLimits('attempt', snapshot.suitMode);
+    const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
+    const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const startState = cloneSpiderCheckState({
+        tableau: snapshot.tableau,
+        stock: snapshot.stock,
+        foundations: snapshot.foundations
+    });
+    const initialHidden = countSpiderHiddenCards(startState.tableau);
+    const initialFoundations = startState.foundations.length;
+    const startKey = normalizeSpiderSimulationState(startState);
+    const frontier = [{
+        state: startState,
+        key: startKey,
+        moves: [],
+        stateKeys: [startKey],
+        lastMove: null,
+        depth: 0,
+        score: scoreSpiderSearchState(startState)
+    }];
+    const seenStateDepth = new Map([[startKey, 0]]);
+    let iterations = 0;
+    let bestHiddenRevealed = 0;
+    let bestFoundationProgress = 0;
+
+    while (frontier.length > 0 && iterations < maxStates) {
+        if ((Date.now() - startedAt) >= maxDurationMs) {
+            return {
+                solved: false,
+                reason: 'time-limit',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs
+            };
+        }
+        iterations++;
+        const current = popBestSpiderSearchNode(frontier);
+        const knownCurrentDepth = seenStateDepth.get(current.key);
+        if (knownCurrentDepth !== undefined && knownCurrentDepth < current.depth) {
+            continue;
+        }
+        const state = cloneSpiderCheckState(current.state);
+        const moves = current.moves.slice();
+        const stateKeys = current.stateKeys.slice();
+        let lastMove = current.lastMove;
+        let depth = current.depth;
+
+        const completed = completeSpiderSequences(state);
+        if (completed > 0) {
+            const afterComplete = normalizeSpiderSimulationState(state);
+            const nextDepth = depth + 1;
+            const knownDepth = seenStateDepth.get(afterComplete);
+            if (knownDepth !== undefined && knownDepth <= nextDepth) {
+                continue;
+            }
+            seenStateDepth.set(afterComplete, nextDepth);
+            moves.push({ type: 'complete-sequence' });
+            stateKeys.push(afterComplete);
+            depth = nextDepth;
+            lastMove = { type: 'complete-sequence' };
+        }
+
+        if (state.foundations.length >= 8) {
+            return {
+                solved: true,
+                reason: 'solved',
+                statesExplored: iterations,
+                prunedStates: 0,
+                durationMs: Date.now() - startedAt,
+                maxStates,
+                maxDurationMs,
+                solutionMoves: moves,
+                solutionStateKeys: stateKeys
+            };
+        }
+
+        const hiddenRevealed = initialHidden - countSpiderHiddenCards(state.tableau);
+        const foundationProgress = state.foundations.length - initialFoundations;
+        if (hiddenRevealed > bestHiddenRevealed) bestHiddenRevealed = hiddenRevealed;
+        if (foundationProgress > bestFoundationProgress) bestFoundationProgress = foundationProgress;
+
+        const candidateMoves = listSpiderHeuristicMoves(state, {
+            maxMoves: 22,
+            blockedReverse: lastMove
+        });
+        if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
+            candidateMoves.push({ type: 'deal-row' });
+        }
+
+        for (let i = 0; i < candidateMoves.length; i++) {
+            const move = candidateMoves[i];
+            const nextState = cloneSpiderCheckState(state);
+            if (!applySpiderSimulationMove(nextState, move)) continue;
+            const nextKey = normalizeSpiderSimulationState(nextState);
+            const nextDepth = depth + 1;
+            const knownDepth = seenStateDepth.get(nextKey);
+            if (knownDepth !== undefined && knownDepth <= nextDepth) continue;
+            seenStateDepth.set(nextKey, nextDepth);
+            frontier.push({
+                state: nextState,
+                key: nextKey,
+                moves: moves.concat([move]),
+                stateKeys: stateKeys.concat([nextKey]),
+                lastMove: move,
+                depth: nextDepth,
+                score: scoreSpiderSearchState(nextState) + (Number.isFinite(move.score) ? move.score * 0.2 : 0)
+            });
+        }
+    }
+
+    const likely = bestFoundationProgress >= 2
+        || bestHiddenRevealed >= 12
+        || (bestFoundationProgress >= 1 && bestHiddenRevealed >= 8);
+    return {
+        solved: likely,
+        reason: likely ? 'likely-solved' : (iterations >= maxStates ? 'state-limit' : 'exhausted'),
+        statesExplored: iterations,
+        prunedStates: 0,
+        durationMs: Date.now() - startedAt,
+        maxStates,
+        maxDurationMs
+    };
+}
+
+function countSpiderHiddenCards(tableau) {
+    return tableau.reduce((sum, column) => sum + column.reduce((colSum, card) => colSum + (card.hidden ? 1 : 0), 0), 0);
+}
+
+function serializeSpiderSimulationCard(card, includeHidden = true) {
+    if (!card) return '__';
+    const rank = Number.isFinite(card.rank) ? card.rank : String(card.rank || '?');
+    const suit = card.suit || '?';
+    if (!includeHidden) return `${rank}${suit}`;
+    return `${rank}${suit}${card.hidden ? 'h' : 'u'}`;
+}
+
+function serializeSpiderSimulationPile(pile, includeHidden = true) {
+    if (!pile || pile.length === 0) return '';
+    return pile.map((card) => serializeSpiderSimulationCard(card, includeHidden)).join(',');
+}
+
+function normalizeSpiderSimulationState(state) {
+    const tableau = state.tableau.map((column) => serializeSpiderSimulationPile(column, true)).join('|');
+    return `${tableau}#${serializeSpiderSimulationPile(state.stock, true)}#${state.foundations.join(',')}`;
+}
+
+function cloneSpiderCheckState(state) {
+    return {
+        tableau: state.tableau.map((column) => column.map((card) => Object.assign({}, card))),
+        stock: state.stock.map((card) => Object.assign({}, card)),
+        foundations: state.foundations.slice()
+    };
+}
+
+function completeSpiderSequences(state) {
+    let completed = 0;
+    for (let col = 0; col < state.tableau.length; col++) {
+        while (true) {
+            const column = state.tableau[col];
+            if (!column || column.length < 13) break;
+            const start = column.length - 13;
+            const seq = column.slice(start);
+            const first = seq[0];
+            if (!first || first.hidden || first.rank !== 13) break;
+            let valid = true;
+            for (let i = 0; i < seq.length - 1; i++) {
+                const current = seq[i];
+                const next = seq[i + 1];
+                if (!current || !next || current.hidden || next.hidden || current.suit !== next.suit || current.rank !== next.rank + 1) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid) break;
+            const removed = column.splice(start, 13);
+            state.foundations.push(removed[0].suit);
+            const newTop = column[column.length - 1];
+            if (newTop && newTop.hidden) {
+                newTop.hidden = false;
+            }
+            completed++;
+        }
+    }
+    return completed;
+}
+
+function findSpiderHeuristicMove(state) {
+    const moves = listSpiderHeuristicMoves(state, { maxMoves: 1 });
+    return moves.length ? moves[0] : null;
+}
+
+function findSpiderHintMove(state) {
+    const reversePair = getReverseSpiderHintPair();
+    if (!reversePair) {
+        return findSpiderHeuristicMove(state);
+    }
+    const withoutReverse = findSpiderHeuristicMoveWithExclusion(state, reversePair.from, reversePair.to);
+    if (withoutReverse) return withoutReverse;
+    return findSpiderHeuristicMove(state);
+}
+
+function getReverseSpiderHintPair() {
+    const history = spiderState.moveHistory;
+    const lastMove = history[history.length - 1];
+    if (!lastMove || lastMove.type !== 'tableau-to-tableau' || !lastMove.payload) return null;
+    if (!Number.isFinite(lastMove.payload.fromCol) || !Number.isFinite(lastMove.payload.toCol)) return null;
+    return { from: lastMove.payload.toCol, to: lastMove.payload.fromCol };
+}
+
+function findSpiderHeuristicMoveWithExclusion(state, blockedFrom, blockedTo) {
+    const moves = listSpiderHeuristicMoves(state, {
+        maxMoves: 1,
+        blockedReverse: { type: 'tableau-to-tableau', from: blockedFrom, to: blockedTo }
+    });
+    return moves.length ? moves[0] : null;
+}
+
+function isSpiderMovableSequence(sequence) {
+    if (!sequence || sequence.length === 0) return false;
+    if (sequence.some((card) => !card || card.hidden)) return false;
+    for (let i = 0; i < sequence.length - 1; i++) {
+        if (sequence[i].rank !== sequence[i + 1].rank + 1) return false;
+    }
+    return true;
+}
+
+function scoreSpiderMove(source, moving, ontoEmpty) {
+    let score = moving.length * 10;
+    if (ontoEmpty) score -= 5;
+    const revealIndex = source.length - moving.length - 1;
+    if (revealIndex >= 0) {
+        const revealCard = source[revealIndex];
+        if (revealCard && revealCard.hidden) score += 40;
+    }
+    const sameSuitRun = moving.every((card, index) => index === 0 || card.suit === moving[index - 1].suit);
+    if (sameSuitRun) score += 25;
+    return score;
+}
+
+function scoreSpiderSearchState(state) {
+    const hiddenCards = countSpiderHiddenCards(state.tableau);
+    const completed = state.foundations.length;
+    const emptyColumns = state.tableau.reduce((sum, pile) => sum + (pile.length === 0 ? 1 : 0), 0);
+    return (completed * 220) + ((54 - hiddenCards) * 10) + (emptyColumns * 8) - state.stock.length;
+}
+
+function popBestSpiderSearchNode(frontier) {
+    let bestIndex = 0;
+    let bestScore = frontier[0].score;
+    for (let i = 1; i < frontier.length; i++) {
+        if (frontier[i].score > bestScore) {
+            bestScore = frontier[i].score;
+            bestIndex = i;
+        }
+    }
+    const selected = frontier[bestIndex];
+    frontier.splice(bestIndex, 1);
+    return selected;
+}
+
+function listSpiderHeuristicMoves(state, options = {}) {
+    const maxMoves = Number.isFinite(options.maxMoves) ? Math.max(1, options.maxMoves) : Infinity;
+    const blockedReverse = options.blockedReverse || null;
+    const moves = [];
+    for (let from = 0; from < state.tableau.length; from++) {
+        const source = state.tableau[from];
+        if (!source || source.length === 0) continue;
+        for (let startIndex = source.length - 1; startIndex >= 0; startIndex--) {
+            const moving = source.slice(startIndex);
+            if (!isSpiderMovableSequence(moving)) continue;
+            const lead = moving[0];
+            for (let to = 0; to < state.tableau.length; to++) {
+                if (to === from) continue;
+                if (blockedReverse
+                    && blockedReverse.type === 'tableau-to-tableau'
+                    && blockedReverse.from === from
+                    && blockedReverse.to === to) {
+                    continue;
+                }
+                const target = state.tableau[to];
+                const ontoEmpty = !target || target.length === 0;
+                if (!ontoEmpty) {
+                    const top = target[target.length - 1];
+                    if (top.hidden || top.rank !== lead.rank + 1) continue;
+                }
+                let score = scoreSpiderMove(source, moving, ontoEmpty);
+                if (!ontoEmpty) {
+                    const top = target[target.length - 1];
+                    if (top && top.suit === lead.suit) {
+                        score += 12;
+                    } else {
+                        score -= 3;
+                    }
+                }
+                if (startIndex > 0 && source[startIndex - 1] && source[startIndex - 1].hidden) {
+                    score += 20;
+                }
+                if (ontoEmpty && startIndex === 0 && source.length > 1) {
+                    score -= 8;
+                }
+                moves.push({
+                    type: 'tableau-to-tableau',
+                    from,
+                    to,
+                    startIndex,
+                    count: moving.length,
+                    score
+                });
+            }
+        }
+    }
+    moves.sort((a, b) => (b.score || 0) - (a.score || 0));
+    if (moves.length > maxMoves) {
+        return moves.slice(0, maxMoves);
+    }
+    return moves;
+}
+
+function applySpiderSimulationMove(state, move) {
+    if (!move) return false;
+    if (move.type === 'tableau-to-tableau') {
+        const source = state.tableau[move.from];
+        const target = state.tableau[move.to];
+        if (!source || !target || source.length === 0) return false;
+        const startIndex = Number.isFinite(move.startIndex) ? move.startIndex : source.length - 1;
+        const moved = source.splice(startIndex);
+        if (!moved.length) return false;
+        target.push(...moved);
+        const sourceTop = source[source.length - 1];
+        if (sourceTop && sourceTop.hidden) sourceTop.hidden = false;
+        return true;
+    }
+    if (move.type === 'deal-row') {
+        if (state.stock.length < 10 || state.tableau.some((column) => column.length === 0)) return false;
+        for (let col = 0; col < 10; col++) {
+            const dealt = state.stock.pop();
+            if (!dealt) return false;
+            dealt.hidden = false;
+            state.tableau[col].push(dealt);
+        }
+        return true;
+    }
+    return false;
+}
+
+function runSpiderCheckViaWorker(payload, onStarted) {
+    return new Promise((resolve, reject) => {
+        if (typeof Worker === 'undefined') {
+            reject(new Error('Web Worker unavailable.'));
+            return;
+        }
+        if (!spiderCheckWorker) {
+            spiderCheckWorker = new Worker('shared/solitaire-check-worker.js');
+        }
+        const worker = spiderCheckWorker;
+        const onMessage = (event) => {
+            const data = event && event.data ? event.data : {};
+            if (data.requestId !== payload.requestId) return;
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            if (data.error) {
+                reject(new Error(data.error));
+                return;
+            }
+            resolve(data.result);
+        };
+        const onError = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupSpiderCheckWorker();
+            reject(new Error('Spider worker failed.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        try {
+            worker.postMessage(payload);
+        } catch (err) {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupSpiderCheckWorker();
+            reject(err instanceof Error ? err : new Error('Spider worker failed.'));
+            return;
+        }
+        if (typeof onStarted === 'function') {
+            onStarted();
+        }
+    });
+}
+
+function cleanupSpiderCheckWorker() {
+    spiderCheckRequestId++;
+    if (!spiderCheckWorker) return;
+    try {
+        spiderCheckWorker.terminate();
+    } catch (err) {
+        // Ignore terminate failures.
+    }
+    spiderCheckWorker = null;
+}
+
+function getSolitaireCheckModalApi() {
+    if (typeof SolitaireCheckModal !== 'undefined') return SolitaireCheckModal;
+    return null;
+}
+
+function showSpiderCheckModal(options = {}) {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.showInfo(options);
+}
+
+function closeSpiderCheckModal() {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.close();
+}
+
+function getSpiderCheckButton() {
+    return document.getElementById('spider-check');
+}
+
+function startSpiderCheckBusyState() {
+    const button = getSpiderCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    if (!spiderCheckSolvedLocked && !spiderCheckUnsolvableLocked) {
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+}
+
+function releaseSpiderCheckBusyState() {
+    if (spiderCheckSolvedLocked || spiderCheckUnsolvableLocked) return;
+    const button = getSpiderCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function markSpiderCheckAsLikely() {
+    const button = getSpiderCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Likely';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockSpiderChecksAsSolvable() {
+    spiderCheckSolvedLocked = true;
+    spiderCheckUnsolvableLocked = false;
+    const button = getSpiderCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'SOLVABLE';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function lockSpiderChecksAsUnsolvable() {
+    spiderCheckSolvedLocked = false;
+    spiderCheckUnsolvableLocked = true;
+    const button = getSpiderCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Unsolvable';
+    button.classList.remove('check-solved');
+    button.classList.add('check-unsolvable');
+}
+
+function resetSpiderCheckAvailability() {
+    spiderCheckSolvedLocked = false;
+    spiderCheckUnsolvableLocked = false;
+    clearSpiderStoredSolution();
+    const button = getSpiderCheckButton();
+    if (button) {
+        button.disabled = false;
+        button.textContent = 'Check';
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+    closeSpiderCheckModal();
+}
+
+function promptSpiderDeepCheck(result) {
+    const needsTableauWork = result && result.reason === 'cycle-detected';
+    const likely = result && result.reason === 'likely-solved';
+    const message = needsTableauWork
+        ? 'The solver got stuck in a loop. Try improving the tableau first (organize runs, reveal cards, and create space), then run a deeper solve attempt.'
+        : (likely
+            ? 'Quick check sees promising progress, but it is not proven yet. Run Prove Solve for a stricter answer?'
+            : 'Quick check found no immediate solution. Run Prove Solve?');
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) {
+        showSpiderCheckModal({
+            title: 'Quick Check Result',
+            message,
+            busy: false
+        });
+        return;
+    }
+    modal.showChoice({
+        title: 'Quick Check Complete',
+        message,
+        secondaryLabel: 'Not Now',
+        confirmLabel: 'Prove Solve',
+        cancelLabel: 'Close'
+    }).then((choice) => {
+        if (choice === 'confirm') {
+            startSpiderCheckBusyState();
+            runSpiderCheck('attempt');
+        }
+    });
+}
+
+function storeSpiderSolution(snapshot, result) {
+    const moves = Array.isArray(result.solutionMoves) ? result.solutionMoves.slice() : [];
+    if (!moves.length) {
+        spiderStoredSolution = null;
+        return;
+    }
+    const stateKeys = Array.isArray(result.solutionStateKeys) && result.solutionStateKeys.length
+        ? result.solutionStateKeys.slice()
+        : [normalizeSpiderSimulationState({
+            tableau: snapshot.tableau.map((column) => column.map((card) => Object.assign({}, card))),
+            stock: snapshot.stock.map((card) => Object.assign({}, card)),
+            foundations: snapshot.foundations.slice()
+        })];
+    spiderStoredSolution = { moves, stateKeys };
+}
+
+function clearSpiderStoredSolution() {
+    spiderStoredSolution = null;
+}
+
+function getStoredSpiderHint() {
+    if (!spiderStoredSolution || !Array.isArray(spiderStoredSolution.moves) || !spiderStoredSolution.moves.length) {
+        return null;
+    }
+    const snapshot = createSpiderCheckSnapshot();
+    const state = {
+        tableau: snapshot.tableau.map((column) => column.map((card) => Object.assign({}, card))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        foundations: snapshot.foundations.slice()
+    };
+    const key = normalizeSpiderSimulationState(state);
+    const stepIndex = spiderStoredSolution.stateKeys.indexOf(key);
+    if (stepIndex < 0 || stepIndex >= spiderStoredSolution.moves.length) return null;
+    return spiderStoredSolution.moves[stepIndex];
+}
+
+function formatSpiderHintMove(move) {
+    if (!move || !move.type) return 'Try improving a descending run and revealing a hidden card.';
+    if (move.type === 'complete-sequence') return 'Complete a full K-to-A same-suit run.';
+    if (move.type === 'tableau-to-tableau') return `Move a run from column ${move.from + 1} to column ${move.to + 1}.`;
+    if (move.type === 'deal-row') return 'Deal a new row from stock.';
+    return 'Try the next legal forward move.';
+}
+
+function showSpiderHint() {
+    const storedHint = getStoredSpiderHint();
+    if (storedHint) {
+        CommonUtils.showTableToast(`Hint: ${formatSpiderHintMove(storedHint)}`, { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    const snapshot = createSpiderCheckSnapshot();
+    const state = {
+        tableau: snapshot.tableau.map((column) => column.map((card) => Object.assign({}, card))),
+        stock: snapshot.stock.map((card) => Object.assign({}, card)),
+        foundations: snapshot.foundations.slice()
+    };
+    if (completeSpiderSequences(state) > 0) {
+        CommonUtils.showTableToast('Hint: Complete a full K-to-A same-suit run.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    const move = findSpiderHintMove(state);
+    if (move) {
+        CommonUtils.showTableToast(`Hint: Move a run from column ${move.from + 1} to column ${move.to + 1}.`, { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
+        CommonUtils.showTableToast('Hint: Deal a new row from stock.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        return;
+    }
+    CommonUtils.showTableToast('Hint: No clear move found.', { variant: 'warn', containerId: 'table', duration: 2200 });
 }

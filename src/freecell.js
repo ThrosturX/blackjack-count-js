@@ -45,6 +45,22 @@ const FREECELL_MIN_FAN_X = 6;
 const FREECELL_TOP_LABEL = ['F', 'R', 'E', 'E'];
 const FREECELL_BOTTOM_LABEL = ['C', 'E', 'L', 'L'];
 const FREECELL_FOUNDATION_SUITS = ['♥', '♠', '♦', '♣'];
+const FREECELL_MAX_SOLVABLE_DEAL_ATTEMPTS = 8;
+const FREECELL_QUICK_CHECK_MAX_STATES = 50000;
+const FREECELL_QUICK_CHECK_MAX_DURATION_MS = 5000;
+const FREECELL_DEEP_CHECK_MAX_STATES = 1000000;
+const FREECELL_DEEP_CHECK_MAX_DURATION_MS = 60000;
+const freecellInsolvabilityDetector = (typeof SolitaireInsolvabilityDetector !== 'undefined')
+    ? SolitaireInsolvabilityDetector.createFreeCellPreset()
+    : null;
+const freecellSolvabilityChecker = (typeof SolitaireStateSolvabilityChecker !== 'undefined')
+    ? new SolitaireStateSolvabilityChecker(createFreecellSolvabilityAdapter())
+    : null;
+let freecellCheckWorker = null;
+let freecellCheckRequestId = 0;
+let freecellCheckSolvedLocked = false;
+let freecellCheckUnsolvableLocked = false;
+let freecellStoredSolution = null;
 
 const freecellDragState = {
     draggedCards: [],
@@ -207,6 +223,8 @@ function ensureMobileController() {
 
 function initFreeCellGame() {
     ensureMobileController();
+    cleanupFreecellCheckWorker();
+    resetFreecellCheckAvailability();
 
     freecellState.tableau = Array.from({ length: 8 }, () => []);
     freecellState.freeCells = Array(4).fill(null);
@@ -261,6 +279,8 @@ function getFreecellSaveState() {
 function restoreFreecellState(saved) {
     if (!saved || typeof saved !== 'object') return;
     ensureMobileController();
+    cleanupFreecellCheckWorker();
+    resetFreecellCheckAvailability();
 
     freecellState.tableau = saved.tableau || Array.from({ length: 8 }, () => []);
     freecellState.freeCells = saved.freeCells || Array(4).fill(null);
@@ -282,17 +302,47 @@ function restoreFreecellState(saved) {
 }
 
 function dealFreeCellLayout() {
-    const deck = CommonUtils.createShoe(1, SUITS, VALUES);
-    freecellState.tableau = Array.from({ length: 8 }, () => []);
+    let discardedDeals = 0;
+    for (let attempt = 1; attempt <= FREECELL_MAX_SOLVABLE_DEAL_ATTEMPTS; attempt++) {
+        const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+        const candidateTableau = buildFreecellTableauFromDeck(deck);
+        if (isFreecellDealRapidlyInsolvable(candidateTableau)) {
+            discardedDeals++;
+            continue;
+        }
+        freecellState.tableau = candidateTableau;
+        console.log(`FreeCell: discarded ${discardedDeals} candidate deals via rapid deadlock detection.`);
+        return;
+    }
 
+    // Fallback: keep gameplay non-blocking even if all sampled deals are rejected.
+    const fallbackDeck = CommonUtils.createShoe(1, SUITS, VALUES);
+    freecellState.tableau = buildFreecellTableauFromDeck(fallbackDeck);
+    console.log(`FreeCell: discarded ${discardedDeals} candidate deals via rapid deadlock detection.`);
+    console.warn(`FreeCell: Unable to find a clear rapid-solvable deal after ${FREECELL_MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
+}
+
+function buildFreecellTableauFromDeck(deck) {
+    const tableau = Array.from({ length: 8 }, () => []);
     for (let col = 0; col < 8; col++) {
         const cardsInColumn = col < 4 ? 7 : 6;
         for (let row = 0; row < cardsInColumn; row++) {
             const card = deck.pop();
             card.hidden = false;
-            freecellState.tableau[col].push(card);
+            tableau[col].push(card);
         }
     }
+    return tableau;
+}
+
+function isFreecellDealRapidlyInsolvable(tableau) {
+    if (!freecellInsolvabilityDetector) return false;
+    const result = freecellInsolvabilityDetector.evaluate({
+        tableau,
+        freeCells: Array(4).fill(null),
+        foundations: [[], [], [], []]
+    });
+    return result.isLikelyInsolvable;
 }
 
 function updateUI() {
@@ -991,6 +1041,730 @@ function getTableauSequence(column, startIndex) {
     return sequence;
 }
 
+function checkCurrentFreecellSolvability() {
+    if (freecellCheckSolvedLocked || freecellCheckUnsolvableLocked) return;
+    if (!freecellSolvabilityChecker) {
+        console.warn('FreeCell Check: Shared solvability checker is unavailable.');
+        CommonUtils.showTableToast('Solvability checker unavailable.', { variant: 'warn', containerId: 'table' });
+        return;
+    }
+    startCheckButtonsBusyState();
+    runFreecellCheck('quick');
+}
+
+function runFreecellCheck(mode) {
+    const isAttempt = mode === 'attempt';
+    const limits = isAttempt
+        ? { maxStates: FREECELL_DEEP_CHECK_MAX_STATES, maxDurationMs: FREECELL_DEEP_CHECK_MAX_DURATION_MS }
+        : { maxStates: FREECELL_QUICK_CHECK_MAX_STATES, maxDurationMs: FREECELL_QUICK_CHECK_MAX_DURATION_MS };
+    const snapshot = createFreecellSolvabilitySnapshot();
+    const requestId = ++freecellCheckRequestId;
+    const hasWorkerSupport = typeof Worker !== 'undefined';
+    if (hasWorkerSupport) {
+        runCheckViaWorker({
+            game: 'freecell',
+            snapshot,
+            limits,
+            requestId
+        }).then((result) => {
+            if (!result || requestId !== freecellCheckRequestId) return;
+            handleFreecellCheckResult(mode, result, limits, snapshot, { hadWorker: true });
+        }).catch(() => {
+            runFreecellCheckOnMainThread(mode, snapshot, limits, requestId);
+        });
+        return;
+    }
+    runFreecellCheckOnMainThread(mode, snapshot, limits, requestId);
+}
+
+function runFreecellCheckOnMainThread(mode, snapshot, limits, requestId) {
+    showQuickCheckOverlay({
+        title: mode === 'attempt' ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Running on the main thread. The page may become unresponsive until the check finishes.',
+        busy: true
+    });
+    window.setTimeout(() => {
+        const result = freecellSolvabilityChecker.check(snapshot, limits);
+        if (!result || requestId !== freecellCheckRequestId) return;
+        if (!result.solved && result.reason === 'exhausted') {
+            result.provenUnsolvable = true;
+        }
+        closeQuickCheckOverlay();
+        handleFreecellCheckResult(mode, result, limits, snapshot, { hadWorker: false });
+    }, 0);
+}
+
+function handleFreecellCheckResult(mode, result, limits, snapshot, context = {}) {
+    const isAttempt = mode === 'attempt';
+    console.log(
+        `FreeCell ${isAttempt ? 'Attempt' : 'Quick'} Check: solved=${result.solved}, reason=${result.reason}, statesExplored=${result.statesExplored}, prunedStates=${result.prunedStates || 0}, durationMs=${result.durationMs}, maxStates=${limits.maxStates}, maxDurationMs=${limits.maxDurationMs}`
+    );
+
+    if (result.solved && result.reason === 'solved') {
+        storeFreecellSolution(snapshot, result);
+        lockFreecellChecksAsSolvable();
+        showQuickCheckOverlay({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `A solution path was found (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    clearStoredFreecellSolution();
+    if (result.provenUnsolvable === true) {
+        lockFreecellChecksAsUnsolvable();
+        showQuickCheckOverlay({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `No solution exists from this position (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    releaseCheckButtonsFromBusyState();
+    const inconclusive = result.reason === 'state-limit'
+        || result.reason === 'time-limit'
+        || result.reason === 'cycle-detected';
+    const message = result.reason === 'cycle-detected'
+        ? 'The solver got caught in a loop. Try working the tableau more (open lanes, move blockers, expose key cards), then run check again.'
+        : (inconclusive
+            ? 'No immediate solution was found within current limits. This does not mean the deck is unsolvable, only that the solution is not immediately obvious.'
+            : `No solution was found (${result.reason}, ${result.statesExplored} states). This does not mean the deck is unsolvable, only that the solution is not immediately obvious.`);
+    if (!isAttempt) {
+        promptFreecellDeepCheck(result);
+        return;
+    }
+    showQuickCheckOverlay({ title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`, message, busy: false });
+}
+
+function getCheckButton() {
+    return document.getElementById('freecell-check');
+}
+
+function startCheckButtonsBusyState() {
+    const button = getCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    if (!freecellCheckSolvedLocked && !freecellCheckUnsolvableLocked) {
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+}
+
+function promptFreecellDeepCheck(result) {
+    const needsTableauWork = result && result.reason === 'cycle-detected';
+    const message = needsTableauWork
+        ? 'The solver got stuck in a loop. Try working the tableau first (open lanes, free blockers, and expose useful cards), then run a deeper solve attempt.'
+        : 'Quick check found no immediate solution. Run a deeper solve attempt?';
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) {
+        showQuickCheckOverlay({
+            title: 'Quick Check Result',
+            message,
+            busy: false
+        });
+        return;
+    }
+    modal.showChoice({
+        title: 'Quick Check Complete',
+        message,
+        secondaryLabel: 'Not Now',
+        confirmLabel: 'Prove Solve',
+        cancelLabel: 'Close'
+    }).then((choice) => {
+        if (choice === 'confirm') {
+            startCheckButtonsBusyState();
+            runFreecellCheck('attempt');
+        }
+    });
+}
+
+function storeFreecellSolution(snapshot, result) {
+    const moves = Array.isArray(result.solutionMoves) ? result.solutionMoves.slice() : [];
+    if (!moves.length) {
+        freecellStoredSolution = null;
+        return;
+    }
+    const stateKeys = Array.isArray(result.solutionStateKeys) && result.solutionStateKeys.length
+        ? result.solutionStateKeys.slice()
+        : [normalizeFreecellHintState(snapshot)];
+    freecellStoredSolution = { moves, stateKeys };
+}
+
+function clearStoredFreecellSolution() {
+    freecellStoredSolution = null;
+}
+
+function showFreecellHint() {
+    if (showStoredFreecellHint()) return;
+    const snapshot = createFreecellSolvabilitySnapshot();
+    const moves = listFreecellSolvabilityMoves(snapshot);
+    if (!moves.length) {
+        CommonUtils.showTableToast('Hint: No clear move found.', { variant: 'warn', containerId: 'table', duration: 2200 });
+        return;
+    }
+    const filteredMoves = moves.filter((move) => !isReverseOfRecentFreecellMove(move));
+    const selected = filteredMoves.length ? filteredMoves[0] : moves[0];
+    const hint = formatFreecellHintMove(selected);
+    CommonUtils.showTableToast(`Hint: ${hint}`, { variant: 'warn', containerId: 'table', duration: 2600 });
+}
+
+function isReverseOfRecentFreecellMove(move) {
+    if (!move || !move.type) return false;
+    const history = freecellState.moveHistory;
+    const lastMove = history[history.length - 1];
+    if (!lastMove || !lastMove.payload || !lastMove.type) return false;
+
+    if (lastMove.type === 'tableau-to-tableau' && move.type === 'tableau-to-tableau') {
+        return move.sourceCol === lastMove.payload.to.index
+            && move.targetCol === lastMove.payload.from.index;
+    }
+    if (lastMove.type === 'tableau-to-freecell' && move.type === 'freecell-to-tableau') {
+        return move.cellIndex === lastMove.payload.to.index
+            && move.targetCol === lastMove.payload.from.index;
+    }
+    if (lastMove.type === 'freecell-to-tableau' && move.type === 'tableau-to-freecell') {
+        return move.sourceCol === lastMove.payload.to.index
+            && move.cellIndex === lastMove.payload.from.index;
+    }
+    return false;
+}
+
+function showStoredFreecellHint() {
+    if (!freecellStoredSolution || !Array.isArray(freecellStoredSolution.moves) || !freecellStoredSolution.moves.length) {
+        return false;
+    }
+    const currentKey = normalizeFreecellHintState();
+    const stateKeys = Array.isArray(freecellStoredSolution.stateKeys) ? freecellStoredSolution.stateKeys : [];
+    const stepIndex = stateKeys.indexOf(currentKey);
+    if (stepIndex < 0 || stepIndex >= freecellStoredSolution.moves.length) {
+        return false;
+    }
+    const hint = formatFreecellHintMove(freecellStoredSolution.moves[stepIndex]);
+    CommonUtils.showTableToast(`Hint: ${hint}`, { variant: 'warn', containerId: 'table', duration: 2600 });
+    return true;
+}
+
+function formatFreecellHintMove(move) {
+    if (!move || !move.type) return 'Try moving a low-risk card forward.';
+    if (move.type === 'tableau-to-foundation') return `Move top card from tableau ${move.sourceCol + 1} to foundation.`;
+    if (move.type === 'freecell-to-foundation') return `Move free cell ${move.cellIndex + 1} card to foundation.`;
+    if (move.type === 'tableau-to-freecell') return `Move top card from tableau ${move.sourceCol + 1} to free cell ${move.cellIndex + 1}.`;
+    if (move.type === 'freecell-to-tableau') return `Move free cell ${move.cellIndex + 1} card to tableau ${move.targetCol + 1}.`;
+    if (move.type === 'tableau-to-tableau') return `Move sequence from tableau ${move.sourceCol + 1} to tableau ${move.targetCol + 1}.`;
+    return 'Try the next legal forward move.';
+}
+
+function normalizeFreecellHintState(snapshot) {
+    const base = snapshot || createFreecellSolvabilitySnapshot();
+    const state = {
+        tableau: base.tableau.map((column) => column.map(cloneCardForSolvability)),
+        freeCells: base.freeCells.map((card) => (card ? cloneCardForSolvability(card) : null)),
+        foundations: base.foundations.map((pile) => pile.map(cloneCardForSolvability))
+    };
+    applyForcedSafeFoundationClosure(state);
+    const tableauKey = state.tableau.map((column) => column.map(toCardIdForSolvability).join(',')).join('|');
+    const freeCellsKey = state.freeCells.map((card) => (card ? toCardIdForSolvability(card) : '_')).join(',');
+    const foundationKey = state.foundations.map((pile) => String(pile.length)).join(',');
+    return `T:${tableauKey}|C:${freeCellsKey}|F:${foundationKey}`;
+}
+
+function lockFreecellChecksAsUnsolvable() {
+    freecellCheckUnsolvableLocked = true;
+    freecellCheckSolvedLocked = false;
+    const button = getCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Unsolvable';
+    button.classList.remove('check-solved');
+    button.classList.add('check-unsolvable');
+}
+
+function lockFreecellChecksAsSolvable() {
+    freecellCheckSolvedLocked = true;
+    freecellCheckUnsolvableLocked = false;
+    const button = getCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'SOLVABLE';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function releaseCheckButtonsFromBusyState() {
+    if (freecellCheckSolvedLocked || freecellCheckUnsolvableLocked) return;
+    const button = getCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function resetFreecellCheckAvailability() {
+    freecellCheckSolvedLocked = false;
+    freecellCheckUnsolvableLocked = false;
+    clearStoredFreecellSolution();
+    const button = getCheckButton();
+    if (button) {
+        button.disabled = false;
+        button.textContent = 'Check';
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+    closeQuickCheckOverlay();
+}
+
+function getSolitaireCheckModalApi() {
+    if (typeof SolitaireCheckModal !== 'undefined') return SolitaireCheckModal;
+    return null;
+}
+
+function showQuickCheckOverlay(options = {}) {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.showInfo(options);
+}
+
+function closeQuickCheckOverlay() {
+    const modal = getSolitaireCheckModalApi();
+    if (!modal) return;
+    modal.close();
+}
+
+function cleanupFreecellCheckWorker() {
+    freecellCheckRequestId++;
+    if (freecellCheckWorker) {
+        try {
+            freecellCheckWorker.terminate();
+        } catch (err) {
+            // Ignore terminate failures.
+        }
+        freecellCheckWorker = null;
+    }
+}
+
+function runCheckViaWorker(payload, onStarted) {
+    return new Promise((resolve, reject) => {
+        if (typeof Worker === 'undefined') {
+            reject(new Error('Web Worker is not available.'));
+            return;
+        }
+        if (!freecellCheckWorker) {
+            freecellCheckWorker = new Worker('shared/solitaire-check-worker.js');
+        }
+        const worker = freecellCheckWorker;
+        const onMessage = (event) => {
+            const data = event && event.data ? event.data : {};
+            if (data.requestId !== payload.requestId) return;
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            if (data.error) {
+                reject(new Error(data.error));
+                return;
+            }
+            resolve(data.result);
+        };
+        const onError = (event) => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupFreecellCheckWorker();
+            reject(event instanceof ErrorEvent ? event.error || new Error(event.message) : new Error('Worker execution failed.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        try {
+            worker.postMessage(payload);
+        } catch (err) {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupFreecellCheckWorker();
+            reject(err instanceof Error ? err : new Error('Worker execution failed.'));
+            return;
+        }
+        if (typeof onStarted === 'function') {
+            onStarted();
+        }
+    });
+}
+
+function createFreecellSolvabilitySnapshot() {
+    return {
+        tableau: freecellState.tableau.map(column => column.map(cloneCardForSolvability)),
+        freeCells: freecellState.freeCells.map(card => (card ? cloneCardForSolvability(card) : null)),
+        foundations: freecellState.foundations.map(pile => pile.map(cloneCardForSolvability))
+    };
+}
+
+function cloneCardForSolvability(card) {
+    if (!card) return null;
+    return {
+        suit: card.suit,
+        val: card.val,
+        rank: Number.isFinite(card.rank) ? card.rank : parseCardRank(card.val),
+        color: card.color || getCardColor(card.suit),
+        hidden: false
+    };
+}
+
+function parseCardRank(value) {
+    if (value === 'A') return 1;
+    if (value === 'J') return 11;
+    if (value === 'Q') return 12;
+    if (value === 'K') return 13;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function getCardColor(suit) {
+    return (suit === '♥' || suit === '♦') ? 'red' : 'black';
+}
+
+function createFreecellSolvabilityAdapter() {
+    return {
+        isSolved: (state) => state.foundations.every(pile => pile.length === 13),
+        prepareState: (state) => {
+            applyForcedSafeFoundationClosure(state);
+            return state;
+        },
+        shouldPrune: (state) => {
+            if (state.foundations.every(pile => pile.length === 13)) return false;
+            return !hasAnyFreecellForwardMove(state);
+        },
+        normalizeState: (state) => {
+            const tableauKey = state.tableau
+                .map(column => column.map(toCardIdForSolvability).join(','))
+                .join('|');
+            const freeCellsKey = state.freeCells
+                .map(card => (card ? toCardIdForSolvability(card) : '_'))
+                .join(',');
+            const foundationKey = state.foundations
+                .map(pile => String(pile.length))
+                .join(',');
+            return `T:${tableauKey}|C:${freeCellsKey}|F:${foundationKey}`;
+        },
+        listMoves: (state) => listFreecellSolvabilityMoves(state),
+        applyMove: (state, move) => applyFreecellSolvabilityMove(state, move)
+    };
+}
+
+function toCardIdForSolvability(card) {
+    return `${card.suit}${card.val}`;
+}
+
+function listFreecellSolvabilityMoves(state) {
+    const moves = [];
+
+    for (let cellIndex = 0; cellIndex < state.freeCells.length; cellIndex++) {
+        const card = state.freeCells[cellIndex];
+        if (!card) continue;
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+            if (SolitaireLogic.canPlaceOnFoundation(card, state.foundations[foundationIndex])) {
+                moves.push({ type: 'freecell-to-foundation', cellIndex, foundationIndex, priority: 4 });
+            }
+        }
+    }
+
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const column = state.tableau[sourceCol];
+        if (!column || column.length === 0) continue;
+        const top = column[column.length - 1];
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+            if (SolitaireLogic.canPlaceOnFoundation(top, state.foundations[foundationIndex])) {
+                moves.push({ type: 'tableau-to-foundation', sourceCol, foundationIndex, priority: 4 });
+            }
+        }
+    }
+
+    const emptyCellIndex = state.freeCells.findIndex(cell => !cell);
+    if (emptyCellIndex !== -1) {
+        for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+            const column = state.tableau[sourceCol];
+            if (!column || column.length === 0) continue;
+            moves.push({ type: 'tableau-to-freecell', sourceCol, cellIndex: emptyCellIndex, priority: 2 });
+        }
+    }
+
+    for (let cellIndex = 0; cellIndex < state.freeCells.length; cellIndex++) {
+        const card = state.freeCells[cellIndex];
+        if (!card) continue;
+        for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+            const target = state.tableau[targetCol];
+            if (!target || target.length === 0) {
+                moves.push({ type: 'freecell-to-tableau', cellIndex, targetCol, priority: 2 });
+                continue;
+            }
+            const top = target[target.length - 1];
+            if (SolitaireLogic.canPlaceOnTableau(card, top)) {
+                moves.push({ type: 'freecell-to-tableau', cellIndex, targetCol, priority: 2 });
+            }
+        }
+    }
+
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const source = state.tableau[sourceCol];
+        if (!source || source.length === 0) continue;
+
+        for (let startIndex = source.length - 1; startIndex >= 0; startIndex--) {
+            const sequence = getSolverTableauSequence(source, startIndex);
+            if (!sequence) continue;
+            const movingCount = sequence.length;
+
+            for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+                if (targetCol === sourceCol) continue;
+                if (!canPlaceSolverSequenceOnTableau(sequence[0], state.tableau[targetCol])) continue;
+                const maxMovable = getSolverMaxMovableCards(state, sourceCol, targetCol, movingCount);
+                if (movingCount > maxMovable) continue;
+                moves.push({
+                    type: 'tableau-to-tableau',
+                    sourceCol,
+                    targetCol,
+                    startIndex,
+                    count: movingCount,
+                    priority: movingCount > 1 ? 3 : 1
+                });
+            }
+        }
+    }
+
+    moves.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    return moves;
+}
+
+function applyFreecellSolvabilityMove(state, move) {
+    if (!move || !move.type) return null;
+    const next = {
+        tableau: state.tableau.map(column => column.slice()),
+        freeCells: state.freeCells.slice(),
+        foundations: state.foundations.map(pile => pile.slice())
+    };
+
+    switch (move.type) {
+        case 'tableau-to-foundation': {
+            const source = next.tableau[move.sourceCol];
+            if (!source || source.length === 0) return null;
+            const card = source.pop();
+            next.foundations[move.foundationIndex].push(card);
+            return next;
+        }
+        case 'freecell-to-foundation': {
+            const card = next.freeCells[move.cellIndex];
+            if (!card) return null;
+            next.freeCells[move.cellIndex] = null;
+            next.foundations[move.foundationIndex].push(card);
+            return next;
+        }
+        case 'tableau-to-freecell': {
+            const source = next.tableau[move.sourceCol];
+            if (!source || source.length === 0) return null;
+            if (next.freeCells[move.cellIndex]) return null;
+            next.freeCells[move.cellIndex] = source.pop();
+            return next;
+        }
+        case 'freecell-to-tableau': {
+            const card = next.freeCells[move.cellIndex];
+            if (!card) return null;
+            const target = next.tableau[move.targetCol];
+            if (!target) return null;
+            next.freeCells[move.cellIndex] = null;
+            target.push(card);
+            return next;
+        }
+        case 'tableau-to-tableau': {
+            const source = next.tableau[move.sourceCol];
+            const target = next.tableau[move.targetCol];
+            if (!source || !target) return null;
+            const moving = source.splice(move.startIndex, move.count);
+            if (!moving || moving.length === 0) return null;
+            target.push(...moving);
+            return next;
+        }
+        default:
+            return null;
+    }
+}
+
+function getSolverTableauSequence(column, startIndex) {
+    if (!column || startIndex < 0 || startIndex >= column.length) return null;
+    const sequence = column.slice(startIndex);
+    for (let i = 1; i < sequence.length; i++) {
+        if (!SolitaireLogic.canPlaceOnTableau(sequence[i], sequence[i - 1])) {
+            return null;
+        }
+    }
+    return sequence;
+}
+
+function canPlaceSolverSequenceOnTableau(baseCard, targetPile) {
+    if (!baseCard) return false;
+    if (!Array.isArray(targetPile) || targetPile.length === 0) return true;
+    const top = targetPile[targetPile.length - 1];
+    return SolitaireLogic.canPlaceOnTableau(baseCard, top);
+}
+
+function getSolverMaxMovableCards(state, sourceCol, targetCol, movingCount) {
+    const emptyFreeCells = state.freeCells.filter(card => !card).length;
+    let emptyColumns = state.tableau.filter(column => column.length === 0).length;
+
+    if (state.tableau[targetCol].length === 0) {
+        emptyColumns -= 1;
+    }
+
+    const sourceColumn = state.tableau[sourceCol];
+    if (sourceColumn && sourceColumn.length === movingCount) {
+        emptyColumns += 1;
+    }
+
+    emptyColumns = Math.max(0, emptyColumns);
+    return (emptyFreeCells + 1) * Math.pow(2, emptyColumns);
+}
+
+function applyForcedSafeFoundationClosure(state) {
+    while (true) {
+        const move = findForcedSafeFoundationMove(state);
+        if (!move) break;
+        if (move.from === 'freecell') {
+            const card = state.freeCells[move.sourceIndex];
+            if (!card) continue;
+            state.freeCells[move.sourceIndex] = null;
+            state.foundations[move.foundationIndex].push(card);
+        } else {
+            const source = state.tableau[move.sourceIndex];
+            if (!source || source.length === 0) continue;
+            const card = source.pop();
+            if (!card) continue;
+            state.foundations[move.foundationIndex].push(card);
+        }
+    }
+}
+
+function findForcedSafeFoundationMove(state) {
+    const candidates = [];
+
+    for (let cellIndex = 0; cellIndex < state.freeCells.length; cellIndex++) {
+        const card = state.freeCells[cellIndex];
+        if (!card) continue;
+        const foundationIndex = findFoundationTargetForCard(state, card);
+        if (foundationIndex === -1) continue;
+        if (!isSafeFoundationPromotion(card, state.foundations)) continue;
+        candidates.push({ from: 'freecell', sourceIndex: cellIndex, foundationIndex, rank: card.rank });
+    }
+
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const source = state.tableau[sourceCol];
+        if (!source || source.length === 0) continue;
+        const card = source[source.length - 1];
+        const foundationIndex = findFoundationTargetForCard(state, card);
+        if (foundationIndex === -1) continue;
+        if (!isSafeFoundationPromotion(card, state.foundations)) continue;
+        candidates.push({ from: 'tableau', sourceIndex: sourceCol, foundationIndex, rank: card.rank });
+    }
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.rank - b.rank);
+    return candidates[0];
+}
+
+function findFoundationTargetForCard(state, card) {
+    for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+        if (SolitaireLogic.canPlaceOnFoundation(card, state.foundations[foundationIndex])) {
+            return foundationIndex;
+        }
+    }
+    return -1;
+}
+
+function isSafeFoundationPromotion(card, foundations) {
+    if (!card || !Number.isFinite(card.rank)) return false;
+    if (card.rank <= 2) return true;
+
+    const bySuit = getFoundationRanksBySuit(foundations);
+    const rank = card.rank;
+
+    if (card.suit === '♥') {
+        return Math.min(bySuit['♠'], bySuit['♣']) >= rank - 1 && bySuit['♦'] >= rank - 2;
+    }
+    if (card.suit === '♦') {
+        return Math.min(bySuit['♠'], bySuit['♣']) >= rank - 1 && bySuit['♥'] >= rank - 2;
+    }
+    if (card.suit === '♠') {
+        return Math.min(bySuit['♥'], bySuit['♦']) >= rank - 1 && bySuit['♣'] >= rank - 2;
+    }
+    if (card.suit === '♣') {
+        return Math.min(bySuit['♥'], bySuit['♦']) >= rank - 1 && bySuit['♠'] >= rank - 2;
+    }
+    return false;
+}
+
+function getFoundationRanksBySuit(foundations) {
+    const ranks = { '♥': 0, '♦': 0, '♠': 0, '♣': 0 };
+    for (const pile of foundations) {
+        if (!pile || pile.length === 0) continue;
+        const top = pile[pile.length - 1];
+        if (!top || !top.suit || !Number.isFinite(top.rank)) continue;
+        ranks[top.suit] = top.rank;
+    }
+    return ranks;
+}
+
+function hasAnyFreecellForwardMove(state) {
+    for (let cellIndex = 0; cellIndex < state.freeCells.length; cellIndex++) {
+        const card = state.freeCells[cellIndex];
+        if (!card) continue;
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+            if (SolitaireLogic.canPlaceOnFoundation(card, state.foundations[foundationIndex])) {
+                return true;
+            }
+        }
+    }
+
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const column = state.tableau[sourceCol];
+        if (!column || column.length === 0) continue;
+        const top = column[column.length - 1];
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex++) {
+            if (SolitaireLogic.canPlaceOnFoundation(top, state.foundations[foundationIndex])) {
+                return true;
+            }
+        }
+    }
+
+    const emptyCellIndex = state.freeCells.findIndex(cell => !cell);
+    if (emptyCellIndex !== -1 && state.tableau.some(column => column && column.length > 0)) {
+        return true;
+    }
+
+    for (let cellIndex = 0; cellIndex < state.freeCells.length; cellIndex++) {
+        const card = state.freeCells[cellIndex];
+        if (!card) continue;
+        for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+            const target = state.tableau[targetCol];
+            if (!target || target.length === 0) return true;
+            const top = target[target.length - 1];
+            if (SolitaireLogic.canPlaceOnTableau(card, top)) return true;
+        }
+    }
+
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol++) {
+        const source = state.tableau[sourceCol];
+        if (!source || source.length === 0) continue;
+        for (let startIndex = source.length - 1; startIndex >= 0; startIndex--) {
+            const sequence = getSolverTableauSequence(source, startIndex);
+            if (!sequence) continue;
+            const movingCount = sequence.length;
+            for (let targetCol = 0; targetCol < state.tableau.length; targetCol++) {
+                if (targetCol === sourceCol) continue;
+                if (!canPlaceSolverSequenceOnTableau(sequence[0], state.tableau[targetCol])) continue;
+                const maxMovable = getSolverMaxMovableCards(state, sourceCol, targetCol, movingCount);
+                if (movingCount <= maxMovable) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function checkFreeCellWin() {
     if (freecellState.foundations.every(pile => pile.length === 13)) {
         freecellState.isGameWon = true;
@@ -1008,6 +1782,14 @@ function setupFreeCellEventListeners() {
     const undoBtn = document.getElementById('freecell-undo');
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastMove);
+    }
+    const hintBtn = document.getElementById('freecell-hint');
+    if (hintBtn) {
+        hintBtn.addEventListener('click', showFreecellHint);
+    }
+    const checkBtn = document.getElementById('freecell-check');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', checkCurrentFreecellSolvability);
     }
 
     const applyTableStyle = () => {
