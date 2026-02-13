@@ -1,0 +1,76 @@
+/* ========================================
+   TRIPEAKS SOLITAIRE STYLES
+   ======================================== */
+
+#table.tripeaks-layout {
+    --table-shell-max-width: 1200px;
+    position: relative;
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
+    height: 80vh;
+    max-height: 80vh;
+    margin-top: calc(20px * var(--ui-scale));
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: calc(24px * var(--ui-scale));
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+#tripeaks-top-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: calc(24px * var(--ui-scale));
+}
+
+.tripeaks-pile {
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
+    border-radius: calc(10px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#tripeaks-waste {
+    justify-content: flex-start;
+}
+
+.pile-placeholder {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    user-select: none;
+}
+
+#tripeaks-area {
+    position: relative;
+    margin: 0 auto;
+    min-height: calc(var(--scaled-card-h) * 2.5);
+}
+
+.tripeaks-card {
+    touch-action: manipulation;
+    margin-left: 0;
+}
+
+.tripeaks-card.blocked {
+    opacity: 0.92;
+    filter: saturate(0.65) brightness(0.92);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    cursor: default;
+}
+
+.tripeaks-card:hover:not(.blocked) {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}

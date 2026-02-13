@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Solitaire</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/mobile.css">
+    <link rel="stylesheet" href="styles/golf.css">
+</head>
+<body>
+    <div id="golf-table" class="table">
+        <header class="game-header">
+            <div class="game-title">Golf Solitaire</div>
+            <div class="game-controls">
+                <button id="golf-new-game" class="btn">New Game</button>
+                <button id="golf-undo" class="btn" disabled>Undo</button>
+                <button id="golf-hint" class="btn">Hint</button>
+                <button id="golf-auto-complete" class="btn">Auto Complete</button>
+            </div>
+            <div class="game-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Moves:</span>
+                    <span id="golf-moves">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Score:</span>
+                    <span id="golf-score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Time:</span>
+                    <span id="golf-time">0:00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Best:</span>
+                    <span id="golf-high-score">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="golf-scroll" class="scroll-container">
+            <div id="golf-top-row" class="top-row">
+                <div id="golf-stock" class="stock-pile"></div>
+                <div id="golf-waste" class="waste-pile"></div>
+                <div id="golf-foundation" class="foundation-pile"></div>
+            </div>
+
+            <div id="golf-tableau-area" class="tableau-area">
+                <div id="golf-tableau" class="tableau">
+                    <!-- Tableau columns will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="golf-win-overlay" class="win-overlay hidden">
+            <div class="win-content">
+                <h2>Congratulations!</h2>
+                <p>You solved Golf Solitaire!</p>
+                <div class="win-stats">
+                    <p>Final Score: <span id="final-score">0</span></p>
+                    <p>Time: <span id="final-time">0:00</span></p>
+                </div>
+                <div class="win-actions">
+                    <button id="new-game-from-win" class="btn primary">New Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="shared/ui-helpers.js"></script>
+    <script src="shared/mobile-controller.js"></script>
+    <script src="solitaire-logic.js"></script>
+    <script src="golf-logic.js"></script>
+    <script src="golf.js"></script>
+</body>
+</html>

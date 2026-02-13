@@ -26,6 +26,8 @@
 - FreeCell: drag/drop works on desktop and touch, and mobile panning works while a card is selected.
 - Spider: drag/drop works on desktop and touch, mobile panning works while a card is selected, and suit-mode options behave correctly.
 - Pyramid: Draw 1/Draw 3 both work, and pyramid+waste layout is usable in portrait and landscape.
+- Golf Solitaire: The new launcher entry loads cleanly, stock/waste/foundation interactions work, and score/time/high-score UI updates match the expected flow.
+- Baker's Dozen Solitaire: The layout loads without console errors, moves/undo/hint/auto-complete behave correctly, and the foundation/tableau rules plus win overlay reset work on desktop and mobile.
 - Table Top Sandbox: new deal and target controls work, and pile/foundation/deck configuration is applied correctly.
 - Solitaire high score displays update correctly and remain scoped to the currently selected ruleset (variant/draw/suit mode).
 

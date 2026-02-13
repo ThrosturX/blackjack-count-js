@@ -1070,6 +1070,10 @@ class StateManager {
         this.scheduleSave(this.minIntervalMs - elapsed);
     }
 
+    save() {
+        this.markDirty();
+    }
+
     scheduleSave(delay) {
         if (this.saveTimer) {
             clearTimeout(this.saveTimer);

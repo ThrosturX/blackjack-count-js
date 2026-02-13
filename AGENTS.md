@@ -11,6 +11,8 @@
 - FreeCell
 - Spider Solitaire
 - Pyramid Solitaire
+- Golf Solitaire
+- Baker's Dozen Solitaire
 - Table Top Sandbox
 - And potentially other card games.
 
@@ -69,6 +71,17 @@
 - For isolated rendering-only adjustments (CSS/layout/markup) that do not change gameplay rules, persistence, shared systems, or input handling, targeted visual validation is sufficient and full logic test runs are optional.
 - Ask to update `QA_SMOKE.md` only when the checklist itself should change due to behavior-impacting work.
 - Ask to update related project docs/files when those docs are made stale by non-trivial behavior or architecture changes.
+
+## Solitaire Refinement Checklist
+- Treat `src/klondike.js` as the interaction baseline; isolate rule differences to game logic, not input/render architecture.
+- On restore, ensure cards remain runtime card objects (use shared hydration/revival helpers and avoid flattening card instances into plain objects).
+- Preserve horizontal scroll positions when rebuilding tableau/foundation DOM and when running adaptive sizing.
+- Avoid forced `window.scrollTo` viewport writes as a first fix for layout jumps; stabilize sizing/anchoring and container scroll instead.
+- Provide desktop convenience parity where applicable (e.g., double-click auto-move to foundation for eligible top cards).
+- Required targeted regression pass after solitaire interaction or persistence changes:
+- `new game -> make moves -> refresh -> continue playing` must preserve valid moves.
+- Verify desktop drag/click and mobile tap-pick/tap-drop both work after restore.
+- Verify horizontal pan/scroll position does not jump after legal moves.
 
 ## Documentation Files
 - `AGENTS.md`: operating constraints, shared systems map, UX rules, and turn hygiene.

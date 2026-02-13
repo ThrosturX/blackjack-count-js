@@ -1,0 +1,283 @@
+#table.bakers-layout {
+    --bakers-tableau-gap: 14px;
+    width: min(1200px, 95vw);
+    margin: 24px auto 48px;
+    padding: clamp(18px, 3vw, 32px);
+    background: var(--table-bg);
+    border: 3px solid var(--table-border);
+    border-radius: 28px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+}
+
+.game-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.game-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--gold);
+    flex: 1 1 240px;
+    margin: 0;
+}
+
+.game-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.game-controls .btn {
+    flex: 0 0 auto;
+}
+
+.game-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.table-scale-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+    border-top: 1px solid rgba(242, 201, 76, 0.23);
+    padding-top: 6px;
+}
+
+.table-scale-strip input[type='range'] {
+    width: min(40vw, 260px);
+}
+
+.scroll-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.foundation-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 0 6px;
+}
+
+.foundation-slot {
+    width: 80px;
+    height: 120px;
+    border-radius: 16px;
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, transform 0.2s ease;
+}
+
+.foundation-slot:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+}
+
+.foundation-suit {
+    font-size: 1.6rem;
+}
+
+.foundation-pile {
+    width: 72px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.18);
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+
+.foundation-slot.foundation-empty .foundation-pile::after {
+    content: 'Empty';
+}
+
+.foundation-slot.hint {
+    border-color: #f2c94c;
+    box-shadow: 0 0 0 4px rgba(242, 201, 76, 0.6);
+}
+
+.tableau-area {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 6px;
+}
+
+.tableau-area::-webkit-scrollbar {
+    height: 6px;
+}
+
+.tableau-area::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tableau-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.tableau-grid {
+    display: flex;
+    gap: var(--bakers-tableau-gap);
+    padding-bottom: 12px;
+    min-height: 190px;
+}
+
+.bakers-column {
+    width: 72px;
+    min-height: 170px;
+    position: relative;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.bakers-column.empty {
+    border: 1px dashed rgba(255, 255, 255, 0.35);
+}
+
+.column-placeholder {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 40%;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+}
+
+.bakers-column .stacked-card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.bakers-column .stacked-card::after {
+    content: '';
+    display: block;
+}
+
+.bakers-column .stacked-card:not(.top-card) {
+    pointer-events: none;
+    filter: brightness(0.94);
+}
+
+.bakers-column .stacked-card.top-card {
+    pointer-events: auto;
+}
+
+.card.selected-card {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+.card.hint {
+    box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.85);
+}
+
+.win-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+}
+
+.win-overlay.hidden {
+    display: none;
+}
+
+.win-card {
+    background: rgba(15, 15, 15, 0.95);
+    border-radius: 18px;
+    padding: 30px;
+    text-align: center;
+    width: min(360px, 90vw);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.win-card h2 {
+    margin-top: 0;
+    font-size: 1.8rem;
+    color: var(--gold);
+}
+
+.win-stats {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 18px 0;
+}
+
+.win-stats p {
+    margin: 6px 0;
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+}
+
+@media (max-width: 900px) {
+    #table.bakers-layout {
+        width: calc(100vw - 32px);
+        margin: 16px auto 40px;
+    }
+    .game-controls {
+        justify-content: center;
+    }
+
+    .tableau-grid {
+        padding-bottom: 6px;
+    }
+}

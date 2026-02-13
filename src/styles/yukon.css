@@ -1,0 +1,152 @@
+/* Yukon Solitaire specific styles */
+.yukon-layout {
+    --table-shell-max-width: 1400px;
+    position: relative;
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
+    height: 80vh;
+    margin: 0px auto;
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    gap: calc(30px * var(--ui-scale));
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+    overflow-anchor: none;
+}
+
+#yukon-scroll {
+    overflow-anchor: none;
+}
+
+#yukon-foundations {
+    display: flex;
+    justify-content: flex-end;
+    gap: calc(15px * var(--ui-scale));
+    flex: 0 0 auto;
+}
+
+.foundation-slot {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: calc(8px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.2);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex: 0 0 auto;
+}
+
+.foundation-slot:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.foundation-slot .empty-slot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    user-select: none;
+}
+
+.foundation-slot[data-suit="♥"] .empty-slot,
+.foundation-slot[data-suit="♦"] .empty-slot {
+    color: rgba(235, 87, 87, 0.5);
+}
+
+#yukon-tableau {
+    display: flex;
+    justify-content: center;
+    gap: var(--yukon-tableau-gap, calc(15px * var(--ui-scale)));
+    flex: 1;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+}
+
+.tableau-column {
+    width: calc(80px * var(--ui-scale));
+    min-height: calc(120px * var(--ui-scale));
+    position: relative;
+    border: 2px dashed transparent;
+    border-radius: calc(8px * var(--ui-scale));
+    transition: all 0.3s;
+    flex: 0 0 auto;
+}
+
+.tableau-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tableau-column .card {
+    position: absolute;
+    left: 0;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-left: 0;
+    top: 0;
+}
+
+.tableau-column .card.card-hovered {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 150;
+}
+
+.tableau-column.drop-target,
+.foundation-slot.drop-target {
+    border: 2px solid var(--gold);
+    background: rgba(242, 201, 76, 0.1);
+}
+
+.tableau-column.drag-over-valid,
+.foundation-slot.drag-over-valid {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: var(--green);
+}
+
+.tableau-column.drag-over-invalid,
+.foundation-slot.drag-over-invalid {
+    background: rgba(235, 87, 87, 0.2);
+    border-color: var(--red);
+}
+
+.drag-layer .card {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.drag-layer {
+    pointer-events: none;
+}
+
+/* Card positioning */
+
+/* Responsive adjustments for Yukon */
+@media (max-width: 1200px) {
+    .yukon-layout {
+        padding: calc(20px * var(--ui-scale));
+    }
+
+    #yukon-tableau {
+        gap: var(--yukon-tableau-gap, calc(10px * var(--ui-scale)));
+    }
+
+    .tableau-column {
+        width: calc(70px * var(--ui-scale));
+    }
+    
+    .card {
+        width: calc(70px * var(--ui-scale));
+        height: calc(100px * var(--ui-scale));
+    }
+}

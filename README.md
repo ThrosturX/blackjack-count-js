@@ -21,6 +21,8 @@ The project is designed to run from both static hosting and `file://`.
 - FreeCell (`src/freecell.html`)
 - Spider Solitaire (`src/spider.html`)
 - Pyramid Solitaire (`src/pyramid.html`)
+- Golf Solitaire (`src/golf.html`)
+- Baker's Dozen Solitaire (`src/bakers-dozen.html`)
 - Table Top Sandbox (`src/tabletop.html`)
 - And potentially other card games.
 
