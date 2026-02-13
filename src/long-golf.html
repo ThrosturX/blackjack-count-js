@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-    <title>Card Playing Suite - Golf Solitaire</title>
+    <title>Card Playing Suite - Long Golf</title>
     <link rel="stylesheet" href="styles/core.css">
     <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
@@ -18,7 +18,7 @@
 <body>
     <header>
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
-        <h1>Golf Solitaire</h1>
+        <h1>Long Golf</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
             <button id="toggle-settings" class="btn-toggle">Settings</button>
@@ -83,7 +83,7 @@
             <div id="golf-win-overlay" class="win-overlay hidden">
                 <div class="win-card">
                     <h2>Congratulations!</h2>
-                    <p class="win-message">You solved Golf Solitaire!</p>
+                    <p class="win-message">You solved Long Golf!</p>
                     <div class="win-stats">
                         <p>Final Score: <span id="final-score">0</span></p>
                         <p>Time: <span id="final-time">0:00</span></p>
@@ -107,6 +107,18 @@
     <script src="shared/mobile-controller.js"></script>
     <script src="solitaire-logic.js"></script>
     <script src="golf-logic.js"></script>
+    <script>
+        window.GolfVariant = {
+            stateGameId: 'long-golf',
+            highScoreGameId: 'golf',
+            highScoreRuleSetKey: 'long-7x6-wrap',
+            tableauCols: 7,
+            tableauRows: 6,
+            allowWrapAround: true,
+            winHeading: 'Great Round!',
+            winMessage: 'You solved Long Golf!'
+        };
+    </script>
     <script src="golf.js"></script>
 </body>
 

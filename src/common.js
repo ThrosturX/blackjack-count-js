@@ -15,6 +15,10 @@
             'spider.html': 'spider-card-scale',
             'pyramid.html': 'pyramid-card-scale',
             'dark-pyramid.html': 'pyramid-card-scale',
+            'golf.html': 'golf-card-scale',
+            'strict-golf.html': 'golf-card-scale',
+            'mini-golf.html': 'golf-card-scale',
+            'long-golf.html': 'golf-card-scale',
             'tabletop.html': 'tabletop-card-scale'
         };
         const keys = [];

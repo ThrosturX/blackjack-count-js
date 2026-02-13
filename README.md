@@ -23,6 +23,9 @@ The project is designed to run from both static hosting and `file://`.
 - Pyramid Solitaire (`src/pyramid.html`)
 - Dark Pyramid (`src/dark-pyramid.html`)
 - Golf Solitaire (`src/golf.html`)
+- Strict Golf (`src/strict-golf.html`)
+- Mini Golf (`src/mini-golf.html`)
+- Long Golf (`src/long-golf.html`)
 - Baker's Dozen Solitaire (`src/bakers-dozen.html`)
 - Table Top Sandbox (`src/tabletop.html`)
 - And potentially other card games.
@@ -33,7 +36,7 @@ The codebase now supports a lightweight launcher profile switch for separate app
 
 - `suite`: full launcher (casino + solitaire + sandbox)
 - `casino`: launcher focused on Blackjack and Texas Hold'em Poker
-- `solitaire`: launcher focused on Klondike, FreeCell, Spider, Pyramid, Dark Pyramid, and Table Top Sandbox (experimental)
+- `solitaire`: launcher focused on solitaire variants (including Klondike, FreeCell, Spider, Pyramid/Dark Pyramid, Golf variants) plus Table Top Sandbox (experimental)
 
 Profile selection writes `src/app-profile.js`, which `src/index.html` reads at runtime.
 The same profile also filters Store listings so split apps avoid out-of-audience add-ons.
@@ -61,6 +64,7 @@ Commands:
 - Spider: 4-Suit, 2-Suit, and 1-Suit modes.
 - Pyramid: Draw 1 / Draw 3.
 - Dark Pyramid: Pyramid rules with blocked cards hidden.
+- Golf: Golf Solitaire (wrap-around), Strict Golf (no wrap), Mini Golf (7x4, no wrap), Long Golf (7x6, wrap-around).
 - Blackjack: seats (1-9), decks (1-8), configurable table minimum bet, and per-seat persona save/load controls.
 - Table Top Sandbox: configurable deck count, deck groups, center piles, and foundation counts.
 

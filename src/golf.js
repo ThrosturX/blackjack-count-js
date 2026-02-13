@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    const GOLF_TABLEAU_COLS = 7;
-    const GOLF_TABLEAU_ROWS = 5;
     const TABLEAU_STACK_Y = 25;
     const TABLEAU_STACK_X = 2.5;
     const MAX_HISTORY = 240;
@@ -16,6 +14,38 @@
         win: ['win.wav'],
         shuffle: ['shuffle.wav']
     };
+
+    const golfVariant = (() => {
+        const defaults = {
+            stateGameId: 'golf',
+            highScoreGameId: 'golf',
+            highScoreRuleSetKey: 'standard',
+            tableauCols: 7,
+            tableauRows: 5,
+            allowWrapAround: true,
+            winHeading: 'Congratulations!',
+            winMessage: 'You solved Golf Solitaire!'
+        };
+        const incoming = (typeof window !== 'undefined' && window.GolfVariant && typeof window.GolfVariant === 'object')
+            ? window.GolfVariant
+            : {};
+        const cols = Math.max(1, Math.min(13, parseInt(incoming.tableauCols, 10) || defaults.tableauCols));
+        const maxRowsForCols = Math.max(1, Math.floor(51 / cols));
+        const rows = Math.max(1, Math.min(maxRowsForCols, parseInt(incoming.tableauRows, 10) || defaults.tableauRows));
+        return {
+            stateGameId: String(incoming.stateGameId || defaults.stateGameId),
+            highScoreGameId: String(incoming.highScoreGameId || defaults.highScoreGameId),
+            highScoreRuleSetKey: String(incoming.highScoreRuleSetKey || defaults.highScoreRuleSetKey),
+            tableauCols: cols,
+            tableauRows: rows,
+            allowWrapAround: incoming.allowWrapAround !== false,
+            winHeading: String(incoming.winHeading || defaults.winHeading),
+            winMessage: String(incoming.winMessage || defaults.winMessage)
+        };
+    })();
+
+    const TABLEAU_COLS = golfVariant.tableauCols;
+    const TABLEAU_ROWS = golfVariant.tableauRows;
 
     const state = {
         tableau: [],
@@ -51,7 +81,7 @@
     }
 
     function isPlayableState() {
-        if (!Array.isArray(state.tableau) || state.tableau.length !== GOLF_TABLEAU_COLS) return false;
+        if (!Array.isArray(state.tableau) || state.tableau.length !== TABLEAU_COLS) return false;
         if (!state.tableau.every((col) => Array.isArray(col))) return false;
         if (!Array.isArray(state.stock) || !Array.isArray(state.waste) || !Array.isArray(state.foundation)) return false;
         if (state.foundation.length < 1) return false;
@@ -84,9 +114,9 @@
         if (!saved || typeof saved !== 'object') return;
 
         state.tableau = Array.isArray(saved.tableau)
-            ? saved.tableau.slice(0, GOLF_TABLEAU_COLS).map((col) => (Array.isArray(col) ? col.map(reviveCard) : []))
+            ? saved.tableau.slice(0, TABLEAU_COLS).map((col) => (Array.isArray(col) ? col.map(reviveCard) : []))
             : [];
-        while (state.tableau.length < GOLF_TABLEAU_COLS) {
+        while (state.tableau.length < TABLEAU_COLS) {
             state.tableau.push([]);
         }
 
@@ -125,7 +155,7 @@
             clearInterval(state.timerInterval);
             state.timerInterval = null;
         }
-        state.tableau = Array.from({ length: GOLF_TABLEAU_COLS }, () => []);
+        state.tableau = Array.from({ length: TABLEAU_COLS }, () => []);
         state.stock = [];
         state.waste = [];
         state.foundation = [];
@@ -139,8 +169,8 @@
     function dealNewGame() {
         const deck = CommonUtils.createShoe(1, GOLF_SUITS, GOLF_VALUES);
 
-        for (let col = 0; col < GOLF_TABLEAU_COLS; col += 1) {
-            for (let row = 0; row < GOLF_TABLEAU_ROWS; row += 1) {
+        for (let col = 0; col < TABLEAU_COLS; col += 1) {
+            for (let row = 0; row < TABLEAU_ROWS; row += 1) {
                 const card = deck.pop();
                 if (!card) continue;
                 card.hidden = false;
@@ -186,12 +216,12 @@
     function syncHighScore() {
         const highEl = document.getElementById('golf-high-score');
         if (!highEl) return;
-        const key = 'standard';
-        const current = CommonUtils.getHighScore('golf', key);
+        const key = golfVariant.highScoreRuleSetKey;
+        const current = CommonUtils.getHighScore(golfVariant.highScoreGameId, key);
         if (state.isGameWon && (current === 0 || state.score < current)) {
-            CommonUtils.saveHighScore('golf', key, state.score);
+            CommonUtils.saveHighScore(golfVariant.highScoreGameId, key, state.score);
         }
-        const latest = CommonUtils.getHighScore('golf', key);
+        const latest = CommonUtils.getHighScore(golfVariant.highScoreGameId, key);
         highEl.textContent = latest === 0 ? '-' : String(latest);
     }
 
@@ -208,7 +238,7 @@
     function ensureTableauColumns() {
         const root = document.getElementById('golf-tableau');
         if (!root) return;
-        for (let i = 0; i < GOLF_TABLEAU_COLS; i += 1) {
+        for (let i = 0; i < TABLEAU_COLS; i += 1) {
             const id = `golf-column-${i}`;
             if (document.getElementById(id)) continue;
             const col = document.createElement('div');
@@ -216,6 +246,14 @@
             col.className = 'tableau-column';
             root.appendChild(col);
         }
+        const extraColumns = Array.from(root.querySelectorAll('.tableau-column'))
+            .filter((el) => {
+                const id = el.id || '';
+                if (!id.startsWith('golf-column-')) return false;
+                const index = parseInt(id.slice('golf-column-'.length), 10);
+                return Number.isFinite(index) && index >= TABLEAU_COLS;
+            });
+        extraColumns.forEach((col) => col.remove());
     }
 
     function getStackOffsets() {
@@ -227,7 +265,7 @@
 
     function ensureGolfSizing() {
         const offsets = getStackOffsets();
-        const maxCards = Math.max(GOLF_TABLEAU_ROWS, ...state.tableau.map((col) => col.length));
+        const maxCards = Math.max(TABLEAU_ROWS, ...state.tableau.map((col) => col.length));
         const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
 
         CommonUtils.ensureTableauMinHeight({
@@ -315,7 +353,7 @@
         ensureTableauColumns();
         const offsets = getStackOffsets();
 
-        for (let col = 0; col < GOLF_TABLEAU_COLS; col += 1) {
+        for (let col = 0; col < TABLEAU_COLS; col += 1) {
             const colEl = document.getElementById(`golf-column-${col}`);
             if (!colEl) continue;
             colEl.innerHTML = '';
@@ -358,7 +396,7 @@
     function canMoveToFoundation(card) {
         if (!card || !GolfRules || typeof GolfRules.canPlaceOnFoundation !== 'function') return false;
         const top = state.foundation.length ? state.foundation[state.foundation.length - 1] : null;
-        return GolfRules.canPlaceOnFoundation(card, top);
+        return GolfRules.canPlaceOnFoundation(card, top, { wrapAround: golfVariant.allowWrapAround });
     }
 
     function getMoveScore(type) {
@@ -474,7 +512,7 @@
             }
         }
 
-        for (let col = 0; col < GOLF_TABLEAU_COLS; col += 1) {
+        for (let col = 0; col < TABLEAU_COLS; col += 1) {
             const column = state.tableau[col];
             if (!column || !column.length) continue;
             const top = column[column.length - 1];
@@ -511,7 +549,7 @@
                 progress = true;
                 continue;
             }
-            for (let col = 0; col < GOLF_TABLEAU_COLS; col += 1) {
+            for (let col = 0; col < TABLEAU_COLS; col += 1) {
                 if (tryMoveTableauToFoundation(col)) {
                     moved += 1;
                     progress = true;
@@ -532,7 +570,7 @@
     }
 
     function checkWinCondition() {
-        if (!Array.isArray(state.tableau) || state.tableau.length !== GOLF_TABLEAU_COLS) return;
+        if (!Array.isArray(state.tableau) || state.tableau.length !== TABLEAU_COLS) return;
         const won = state.tableau.every((col) => Array.isArray(col) && col.length === 0);
         if (!won) return;
 
@@ -546,11 +584,21 @@
         if (stateManager) stateManager.clear();
     }
 
+    function applyVariantText() {
+        const overlay = document.getElementById('golf-win-overlay');
+        if (!overlay) return;
+        const headingEl = overlay.querySelector('h2');
+        const messageEl = overlay.querySelector('.win-message');
+        if (headingEl) headingEl.textContent = golfVariant.winHeading;
+        if (messageEl) messageEl.textContent = golfVariant.winMessage;
+    }
+
     function showWinOverlay() {
         const overlay = document.getElementById('golf-win-overlay');
         if (!overlay) return;
         const finalScore = document.getElementById('final-score');
         const finalTime = document.getElementById('final-time');
+        applyVariantText();
         if (finalScore) finalScore.textContent = String(state.score);
         if (finalTime) finalTime.textContent = formatTime(getElapsedSeconds(state.startTime));
         overlay.classList.remove('hidden');
@@ -622,9 +670,10 @@
         CommonUtils.preloadAudio(soundFiles);
         setupEvents();
         CommonUtils.initCardScaleControls('golf-card-scale', 'golf-card-scale-value');
+        applyVariantText();
 
         stateManager = new CommonUtils.StateManager({
-            gameId: 'golf',
+            gameId: golfVariant.stateGameId,
             getState: getSaveState,
             setState: restoreState,
             isWon: () => state.isGameWon

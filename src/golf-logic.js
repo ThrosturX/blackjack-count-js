@@ -12,7 +12,7 @@ const GolfLogic = {
      * @param {Card} foundationCard - The top card of the foundation pile.
      * @returns {boolean}
      */
-    canPlaceOnFoundation: function (card, foundationCard) {
+    canPlaceOnFoundation: function (card, foundationCard, options = {}) {
         if (!card) return false;
 
         // If foundation is empty, any card can start it.
@@ -23,9 +23,11 @@ const GolfLogic = {
         // One rank higher or lower
         const rankDiff = Math.abs(card.rank - foundationCard.rank);
 
-        // Wrap-around for Ace and King
-        const isWrapAround = (card.rank === 1 && foundationCard.rank === 13) ||
-                             (card.rank === 13 && foundationCard.rank === 1);
+        const allowWrapAround = options.wrapAround !== false;
+        const isWrapAround = allowWrapAround && (
+            (card.rank === 1 && foundationCard.rank === 13) ||
+            (card.rank === 13 && foundationCard.rank === 1)
+        );
 
         return rankDiff === 1 || isWrapAround;
     },
