@@ -58,6 +58,7 @@
     .tableau-column:not(.drag-over-valid):not(.drag-over-invalid),
     .freecell-column:not(.drag-over-valid):not(.drag-over-invalid),
     .spider-column:not(.drag-over-valid):not(.drag-over-invalid),
+    .golf-pile:not(.drag-over-valid):not(.drag-over-invalid),
     .foundation-pile:not(.drag-over-valid):not(.drag-over-invalid),
     .freecell-slot,
     .freecell-foundation,
@@ -68,6 +69,7 @@
     .tableau-column:not(.drag-over-valid):not(.drag-over-invalid),
     .freecell-column:not(.drag-over-valid):not(.drag-over-invalid),
     .spider-column:not(.drag-over-valid):not(.drag-over-invalid),
+    .golf-pile:not(.drag-over-valid):not(.drag-over-invalid),
     .foundation-pile:not(.drag-over-valid):not(.drag-over-invalid) {
         border-color: transparent;
     }

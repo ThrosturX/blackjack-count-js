@@ -14,6 +14,7 @@
             'freecell.html': 'freecell-card-scale',
             'spider.html': 'spider-card-scale',
             'pyramid.html': 'pyramid-card-scale',
+            'dark-pyramid.html': 'pyramid-card-scale',
             'tabletop.html': 'tabletop-card-scale'
         };
         const keys = [];

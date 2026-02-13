@@ -9,6 +9,13 @@
     <script src="app-profile.js"></script>
     <link rel="stylesheet" href="styles/core.css">
     <style>
+        :root {
+            --launcher-card-width: 220px;
+            --launcher-solver-deep: #5f96ff;
+            --launcher-solver-mid: #f2c94c;
+            --launcher-solver-fast: #56cc7a;
+        }
+
         body {
             display: flex;
             flex-direction: column;
@@ -26,7 +33,8 @@
 
         .welcome-container {
             text-align: center;
-            padding: 40px;
+            width: min(1100px, 100%);
+            padding: 32px 24px;
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid var(--gold);
             border-radius: 20px;
@@ -52,71 +60,148 @@
             font-size: clamp(0.95rem, 2.5vw, 1.05rem);
         }
 
-        .game-selection {
+        .launcher-sections {
             display: flex;
-            gap: 40px;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .launcher-section {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 14px;
+        }
+
+        .launcher-section h2 {
+            margin: 0 0 10px;
+            color: var(--gold);
+            font-size: 1.02rem;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        .game-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--launcher-card-width), var(--launcher-card-width)));
+            gap: 14px;
+            grid-auto-rows: 1fr;
+            align-items: stretch;
             justify-content: center;
-            flex-wrap: wrap;
         }
 
         .game-card {
-            width: 250px;
-            padding: 30px;
+            width: var(--launcher-card-width);
+            max-width: 100%;
+            height: 172px;
+            padding: 14px;
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 15px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
             text-decoration: none;
             color: white;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
+            text-align: left;
+            position: relative;
+            box-sizing: border-box;
         }
 
         .game-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-4px);
             border-color: var(--gold);
             background: rgba(242, 201, 76, 0.1);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
         }
 
-        .game-card i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-
-        .game-card h2 {
+        .game-card h3 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.05rem;
             color: var(--gold);
+            line-height: 1.2;
+            padding-right: 24px;
         }
 
         .game-card p {
-            font-size: 0.9rem;
-            color: #aaa;
-            margin-top: 10px;
+            font-size: 0.87rem;
+            color: #c9c9c9;
+            margin: 8px 0 0;
+            line-height: 1.35;
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
         }
 
         .card-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
+            font-size: 1.8rem;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+
+        .solver-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            min-width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #0f0f0f;
+            opacity: 0.95;
+            pointer-events: none;
+        }
+
+        .solver-badge--deep {
+            background: var(--launcher-solver-deep);
+        }
+
+        .solver-badge--mid {
+            background: var(--launcher-solver-mid);
+        }
+
+        .solver-badge--fast {
+            background: var(--launcher-solver-fast);
         }
 
         @media screen and (max-width: 600px) {
             .welcome-container {
-                width: min(100%, 520px);
+                width: min(100%, 560px);
                 padding: 24px 16px;
             }
 
-            .game-selection {
+            .launcher-sections {
                 gap: 14px;
+            }
+
+            .launcher-section {
+                padding: 10px;
+            }
+
+            .game-selection {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                justify-content: stretch;
             }
 
             .game-card {
                 width: 100%;
-                max-width: 320px;
-                padding: 20px 16px;
+                height: 152px;
+                padding: 12px;
             }
         }
     </style>
@@ -126,62 +211,125 @@
     <div class="welcome-container">
         <h1>Card Playing Suite</h1>
         <p id="launcher-tagline" class="launcher-tagline">Choose a game to start playing.</p>
-        <div class="game-selection">
-            <a href="blackjack.html" class="game-card" data-group="casino">
-                <div class="card-icon">♠️♥️</div>
-                <h2>Blackjack</h2>
-                <p>Classic 21. Count cards and beat the dealer!</p>
-            </a>
-            <a href="poker.html" class="game-card" data-group="casino">
-                <div class="card-icon">🃏💰</div>
-                <h2>Texas Hold'em Poker</h2>
-                <p>High stakes poker. Outsmart the table!</p>
-            </a>
-            <a href="klondike.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🎴♦️</div>
-                <h2>Klondike Solitaire</h2>
-                <p>Classic Klondike. Stack 'em up!</p>
-            </a>
-            <a href="freecell.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🟩♣️</div>
-                <h2>FreeCell</h2>
-                <p>Figure out the perfect sequence juggling the free cells.</p>
-            </a>
-            <a href="golf.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">⛳️🃏</div>
-                <h2>Golf Solitaire</h2>
-                <p>Remove cards around the board by following the Golf run rules.</p>
-            </a>
-            <a href="spider.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🕷️♠️</div>
-                <h2>Spider Solitaire</h2>
-                <p>Build descending runs to clear the web.</p>
-            </a>
-            <a href="pyramid.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🔺🃏</div>
-                <h2>Pyramid Solitaire</h2>
-                <p>Pair cards to 13 and clear the pyramid.</p>
-            </a>
-            <a href="yukon.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🏔️♣️</div>
-                <h2>Yukon Solitaire</h2>
-                <p>Move complete sequences of cards to build foundations.</p>
-            </a>
-            <a href="tripeaks.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">⛰️🃏</div>
-                <h2>TriPeaks Solitaire</h2>
-                <p>Clear three peaks of cards in sequence.</p>
-            </a>
-            <a href="bakers-dozen.html" class="game-card" data-group="solitaire">
-                <div class="card-icon">🧁♠️</div>
-                <h2>Baker's Dozen</h2>
-                <p>Sort the tableau by suit after moving exposed kings to the top.</p>
-            </a>
-            <a href="tabletop.html" class="game-card" data-group="sandbox" data-experimental-label="Table Top Sandbox (Experimental)" data-experimental-note="Experimental feature: sandbox table for manual card play and custom layouts.">
-                <div class="card-icon">🃏🧩</div>
-                <h2>Table Top Sandbox</h2>
-                <p>Sandbox table for manual card play and custom layouts.</p>
-            </a>
+        <div class="launcher-sections">
+            <section class="launcher-section" data-section="casino">
+                <h2>Casino Table Games</h2>
+                <div class="game-selection">
+                    <a href="blackjack.html" class="game-card" data-group="casino">
+                        <div class="card-top">
+                            <div class="card-icon">♠️♥️</div>
+                            <h3>Blackjack</h3>
+                        </div>
+                        <p>Classic 21. Count cards and beat the dealer!</p>
+                    </a>
+                    <a href="poker.html" class="game-card" data-group="casino">
+                        <div class="card-top">
+                            <div class="card-icon">🃏💰</div>
+                            <h3>Texas Hold'em Poker</h3>
+                        </div>
+                        <p>High stakes poker. Outsmart the table!</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="launcher-section" data-section="solitaire">
+                <h2>Classic Tableau Solitaire</h2>
+                <div class="game-selection">
+                    <a href="klondike.html" class="game-card" data-group="solitaire">
+                        <span class="solver-badge solver-badge--mid" aria-label="Solver check available" title="Solver check available">S</span>
+                        <div class="card-top">
+                            <div class="card-icon">🎴♦️</div>
+                            <h3>Klondike Solitaire</h3>
+                        </div>
+                        <p>Classic Klondike. Stack 'em up!</p>
+                    </a>
+                    <a href="yukon.html" class="game-card" data-group="solitaire">
+                        <div class="card-top">
+                            <div class="card-icon">🏔️♣️</div>
+                            <h3>Yukon Solitaire</h3>
+                        </div>
+                        <p>Move complete sequences of cards to build foundations.</p>
+                    </a>
+                    <a href="freecell.html" class="game-card" data-group="solitaire">
+                        <span class="solver-badge solver-badge--deep" aria-label="Solver check available" title="Solver check available">S</span>
+                        <div class="card-top">
+                            <div class="card-icon">🟩♣️</div>
+                            <h3>FreeCell</h3>
+                        </div>
+                        <p>Figure out the perfect sequence juggling the free cells.</p>
+                    </a>
+                    <a href="spider.html" class="game-card" data-group="solitaire">
+                        <span class="solver-badge solver-badge--mid" aria-label="Solver check available" title="Solver check available">S</span>
+                        <div class="card-top">
+                            <div class="card-icon">🕷️♠️</div>
+                            <h3>Spider Solitaire</h3>
+                        </div>
+                        <p>Build descending runs to clear the web.</p>
+                    </a>
+                    <a href="bakers-dozen.html" class="game-card" data-group="solitaire">
+                        <div class="card-top">
+                            <div class="card-icon">🧁♠️</div>
+                            <h3>Baker's Dozen</h3>
+                        </div>
+                        <p>Sort the tableau by suit after moving exposed kings to the top.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="launcher-section" data-section="solitaire">
+                <h2>Sequence Clearing Solitaire</h2>
+                <div class="game-selection">
+                    <a href="tripeaks.html" class="game-card" data-group="solitaire">
+                        <div class="card-top">
+                            <div class="card-icon">⛰️🃏</div>
+                            <h3>TriPeaks Solitaire</h3>
+                        </div>
+                        <p>Clear three peaks of cards in sequence.</p>
+                    </a>
+                    <a href="golf.html" class="game-card" data-group="solitaire">
+                        <div class="card-top">
+                            <div class="card-icon">⛳️🃏</div>
+                            <h3>Golf Solitaire</h3>
+                        </div>
+                        <p>Remove cards around the board by following the Golf run rules.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="launcher-section" data-section="solitaire">
+                <h2>Pair and Clear</h2>
+                <div class="game-selection">
+                    <a href="pyramid.html" class="game-card" data-group="solitaire">
+                        <span class="solver-badge solver-badge--fast" aria-label="Solver check available" title="Solver check available">S</span>
+                        <div class="card-top">
+                            <div class="card-icon">🔺🃏</div>
+                            <h3>Pyramid Solitaire</h3>
+                        </div>
+                        <p>Pair cards to 13 and clear the pyramid.</p>
+                    </a>
+                    <a href="dark-pyramid.html" class="game-card" data-group="solitaire">
+                        <span class="solver-badge solver-badge--fast" aria-label="Solver check available" title="Solver check available">S</span>
+                        <div class="card-top">
+                            <div class="card-icon">🌑🔺</div>
+                            <h3>Dark Pyramid</h3>
+                        </div>
+                        <p>Pyramid with hidden blocked cards for a harder read.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="launcher-section" data-section="sandbox">
+                <h2>Sandbox</h2>
+                <div class="game-selection">
+                    <a href="tabletop.html" class="game-card" data-group="sandbox" data-experimental-label="Table Top Sandbox (Experimental)" data-experimental-note="Experimental feature: sandbox table for manual card play and custom layouts.">
+                        <div class="card-top">
+                            <div class="card-icon">🃏🧩</div>
+                            <h3>Table Top Sandbox</h3>
+                        </div>
+                        <p>Sandbox table for manual card play and custom layouts.</p>
+                    </a>
+                </div>
+            </section>
         </div>
     </div>
     <script>
@@ -207,12 +355,19 @@
                 }
             });
 
+            document.querySelectorAll('.launcher-section').forEach((section) => {
+                const visibleCards = section.querySelectorAll('.game-card[data-group]');
+                if (!visibleCards.length) {
+                    section.remove();
+                }
+            });
+
             if ((profile.id || '').toLowerCase() === 'solitaire') {
                 const sandboxCard = document.querySelector('.game-card[data-group="sandbox"]');
                 if (sandboxCard) {
                     const label = sandboxCard.dataset.experimentalLabel;
                     const note = sandboxCard.dataset.experimentalNote;
-                    const title = sandboxCard.querySelector('h2');
+                    const title = sandboxCard.querySelector('h3');
                     const copy = sandboxCard.querySelector('p');
                     if (title && label) title.textContent = label;
                     if (copy && note) copy.textContent = note;

@@ -21,6 +21,7 @@ The project is designed to run from both static hosting and `file://`.
 - FreeCell (`src/freecell.html`)
 - Spider Solitaire (`src/spider.html`)
 - Pyramid Solitaire (`src/pyramid.html`)
+- Dark Pyramid (`src/dark-pyramid.html`)
 - Golf Solitaire (`src/golf.html`)
 - Baker's Dozen Solitaire (`src/bakers-dozen.html`)
 - Table Top Sandbox (`src/tabletop.html`)
@@ -32,7 +33,7 @@ The codebase now supports a lightweight launcher profile switch for separate app
 
 - `suite`: full launcher (casino + solitaire + sandbox)
 - `casino`: launcher focused on Blackjack and Texas Hold'em Poker
-- `solitaire`: launcher focused on Klondike, FreeCell, Spider, Pyramid, and Table Top Sandbox (experimental)
+- `solitaire`: launcher focused on Klondike, FreeCell, Spider, Pyramid, Dark Pyramid, and Table Top Sandbox (experimental)
 
 Profile selection writes `src/app-profile.js`, which `src/index.html` reads at runtime.
 The same profile also filters Store listings so split apps avoid out-of-audience add-ons.
@@ -59,6 +60,7 @@ Commands:
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
 - Spider: 4-Suit, 2-Suit, and 1-Suit modes.
 - Pyramid: Draw 1 / Draw 3.
+- Dark Pyramid: Pyramid rules with blocked cards hidden.
 - Blackjack: seats (1-9), decks (1-8), configurable table minimum bet, and per-seat persona save/load controls.
 - Table Top Sandbox: configurable deck count, deck groups, center piles, and foundation counts.
 

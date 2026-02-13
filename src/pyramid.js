@@ -35,6 +35,24 @@ const pyramidState = {
     drawCount: 1
 };
 
+const pyramidVariant = (() => {
+    const defaults = {
+        stateGameId: 'pyramid',
+        highScoreGameId: 'pyramid',
+        hideBlockedCards: false,
+        winMessage: 'You solved Pyramid!'
+    };
+    const incoming = (typeof window !== 'undefined' && window.PyramidVariant && typeof window.PyramidVariant === 'object')
+        ? window.PyramidVariant
+        : {};
+    return {
+        stateGameId: String(incoming.stateGameId || defaults.stateGameId),
+        highScoreGameId: String(incoming.highScoreGameId || defaults.highScoreGameId),
+        hideBlockedCards: incoming.hideBlockedCards === true,
+        winMessage: String(incoming.winMessage || defaults.winMessage)
+    };
+})();
+
 let pyramidStateManager = null;
 let pyramidCheckWorker = null;
 let pyramidCheckRequestId = 0;
@@ -50,7 +68,7 @@ function getPyramidRuleSetKey() {
 function syncPyramidHighScore() {
     const highScoreEl = document.getElementById('pyramid-high-score');
     if (!highScoreEl) return;
-    const highScore = CommonUtils.updateHighScore('pyramid', getPyramidRuleSetKey(), pyramidState.score);
+    const highScore = CommonUtils.updateHighScore(pyramidVariant.highScoreGameId, getPyramidRuleSetKey(), pyramidState.score);
     highScoreEl.textContent = highScore;
 }
 
@@ -110,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('card-scale:changed', schedulePyramidSizing);
 
     pyramidStateManager = new CommonUtils.StateManager({
-        gameId: 'pyramid',
+        gameId: pyramidVariant.stateGameId,
         getState: getPyramidSaveState,
         setState: restorePyramidState,
         isWon: () => pyramidState.isGameWon
@@ -333,6 +351,9 @@ function updatePyramid() {
             const exposed = isCardExposed(row, col);
             if (!exposed) {
                 cardEl.classList.add('blocked');
+                if (pyramidVariant.hideBlockedCards) {
+                    cardEl.classList.add('hidden');
+                }
             } else {
                 cardEl.style.cursor = 'pointer';
                 cardEl.addEventListener('click', handleCardClick);
@@ -524,7 +545,7 @@ function checkWinCondition() {
     pyramidState.isGameWon = true;
     clearInterval(pyramidState.timerInterval);
     CommonUtils.playSound('win');
-    CommonUtils.showTableToast('You solved Pyramid!', { variant: 'win', duration: 2500 });
+    CommonUtils.showTableToast(pyramidVariant.winMessage, { variant: 'win', duration: 2500 });
     if (pyramidStateManager) {
         pyramidStateManager.clear();
     }
