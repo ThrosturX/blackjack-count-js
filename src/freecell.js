@@ -7,10 +7,87 @@ const freecellSoundFiles = {
     shuffle: ['shuffle.wav']
 };
 
+const freecellVariant = (() => {
+    const defaults = {
+        stateGameId: 'freecell',
+        highScoreGameId: 'freecell',
+        ruleSetKey: 'default',
+        tableauColumns: 8,
+        freeCellCount: 4,
+        foundationCount: 4,
+        foundationTargetSize: 13,
+        deckValues: VALUES,
+        deckSuits: SUITS,
+        winMessage: 'You solved FreeCell!'
+    };
+    const incoming = (typeof window !== 'undefined' && window.FreecellVariant && typeof window.FreecellVariant === 'object')
+        ? window.FreecellVariant
+        : {};
+    const tableauColumns = Math.max(1, parseInt(incoming.tableauColumns, 10) || defaults.tableauColumns);
+    const freeCellCount = Math.max(1, parseInt(incoming.freeCellCount, 10) || defaults.freeCellCount);
+    const foundationCount = Math.max(1, parseInt(incoming.foundationCount, 10) || defaults.foundationCount);
+    const foundationTargetSize = Math.max(1, parseInt(incoming.foundationTargetSize, 10) || defaults.foundationTargetSize);
+    const deckValues = Array.isArray(incoming.deckValues) && incoming.deckValues.length
+        ? incoming.deckValues.slice()
+        : defaults.deckValues.slice();
+    const deckSuits = Array.isArray(incoming.deckSuits) && incoming.deckSuits.length
+        ? incoming.deckSuits.slice()
+        : defaults.deckSuits.slice();
+    return {
+        stateGameId: String(incoming.stateGameId || defaults.stateGameId),
+        highScoreGameId: String(incoming.highScoreGameId || defaults.highScoreGameId),
+        ruleSetKey: String(incoming.ruleSetKey || defaults.ruleSetKey),
+        tableauColumns,
+        freeCellCount,
+        foundationCount,
+        foundationTargetSize,
+        deckValues,
+        deckSuits,
+        winMessage: String(incoming.winMessage || defaults.winMessage)
+    };
+})();
+
+function createRankOverridesFromValues(values) {
+    if (!Array.isArray(values) || !values.length) return null;
+    const map = { A: 1 };
+    let expectedRank = 2;
+    for (const value of values) {
+        if (value === 'A') continue;
+        const numeric = parseInt(value, 10);
+        if (Number.isFinite(numeric) && numeric >= 2 && numeric <= 10) {
+            map[value] = numeric;
+            expectedRank = numeric + 1;
+            continue;
+        }
+        map[value] = expectedRank;
+        expectedRank += 1;
+    }
+    return map;
+}
+
+if (typeof window !== 'undefined' && !window.CardRankOverrides) {
+    const derivedRankMap = createRankOverridesFromValues(freecellVariant.deckValues);
+    if (derivedRankMap && Number.isFinite(derivedRankMap.C)) {
+        window.CardRankOverrides = derivedRankMap;
+    }
+}
+
+function createEmptyFoundations() {
+    return Array.from({ length: freecellVariant.foundationCount }, () => []);
+}
+
+function getFreecellFoundationTargetSize() {
+    return freecellVariant.foundationTargetSize;
+}
+
+function getFreecellFoundationPlaceholderSuit(index) {
+    return FREECELL_FOUNDATION_SUITS[index % FREECELL_FOUNDATION_SUITS.length] || '♠';
+}
+
 const freecellState = {
-    tableau: Array.from({ length: 8 }, () => []),
-    freeCells: Array(4).fill(null),
-    foundations: [[], [], [], []],
+    tableau: Array.from({ length: freecellVariant.tableauColumns }, () => []),
+    freeCells: Array(freecellVariant.freeCellCount).fill(null),
+    foundations: createEmptyFoundations(),
     score: 0,
     moves: 0,
     startTime: null,
@@ -22,13 +99,13 @@ const freecellState = {
 let freecellStateManager = null;
 
 function getFreecellRuleSetKey() {
-    return 'default';
+    return freecellVariant.ruleSetKey;
 }
 
 function syncFreecellHighScore() {
     const highScoreEl = document.getElementById('freecell-high-score');
     if (!highScoreEl) return;
-    const highScore = CommonUtils.updateHighScore('freecell', getFreecellRuleSetKey(), freecellState.score);
+    const highScore = CommonUtils.updateHighScore(freecellVariant.highScoreGameId, getFreecellRuleSetKey(), freecellState.score);
     highScoreEl.textContent = highScore;
 }
 
@@ -86,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFreeCellEventListeners();
     CommonUtils.initCardScaleControls('freecell-card-scale', 'freecell-card-scale-value');
     freecellStateManager = new CommonUtils.StateManager({
-        gameId: 'freecell',
+        gameId: freecellVariant.stateGameId,
         getState: getFreecellSaveState,
         setState: restoreFreecellState,
         isWon: () => freecellState.isGameWon
@@ -232,9 +309,9 @@ function initFreeCellGame() {
     cleanupFreecellCheckWorker();
     resetFreecellCheckAvailability();
 
-    freecellState.tableau = Array.from({ length: 8 }, () => []);
-    freecellState.freeCells = Array(4).fill(null);
-    freecellState.foundations = [[], [], [], []];
+    freecellState.tableau = Array.from({ length: freecellVariant.tableauColumns }, () => []);
+    freecellState.freeCells = Array(freecellVariant.freeCellCount).fill(null);
+    freecellState.foundations = createEmptyFoundations();
     freecellState.score = 0;
     freecellState.moves = 0;
     freecellState.isGameWon = false;
@@ -288,9 +365,9 @@ function restoreFreecellState(saved) {
     cleanupFreecellCheckWorker();
     resetFreecellCheckAvailability();
 
-    freecellState.tableau = saved.tableau || Array.from({ length: 8 }, () => []);
-    freecellState.freeCells = saved.freeCells || Array(4).fill(null);
-    freecellState.foundations = saved.foundations || [[], [], [], []];
+    freecellState.tableau = saved.tableau || Array.from({ length: freecellVariant.tableauColumns }, () => []);
+    freecellState.freeCells = saved.freeCells || Array(freecellVariant.freeCellCount).fill(null);
+    freecellState.foundations = saved.foundations || createEmptyFoundations();
     freecellState.score = Number.isFinite(saved.score) ? saved.score : 0;
     freecellState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     freecellState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
@@ -310,7 +387,7 @@ function restoreFreecellState(saved) {
 function dealFreeCellLayout() {
     let discardedDeals = 0;
     for (let attempt = 1; attempt <= FREECELL_MAX_SOLVABLE_DEAL_ATTEMPTS; attempt++) {
-        const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+        const deck = CommonUtils.createShoe(1, freecellVariant.deckSuits, freecellVariant.deckValues);
         const candidateTableau = buildFreecellTableauFromDeck(deck);
         if (isFreecellDealRapidlyInsolvable(candidateTableau)) {
             discardedDeals++;
@@ -322,16 +399,18 @@ function dealFreeCellLayout() {
     }
 
     // Fallback: keep gameplay non-blocking even if all sampled deals are rejected.
-    const fallbackDeck = CommonUtils.createShoe(1, SUITS, VALUES);
+    const fallbackDeck = CommonUtils.createShoe(1, freecellVariant.deckSuits, freecellVariant.deckValues);
     freecellState.tableau = buildFreecellTableauFromDeck(fallbackDeck);
     console.log(`FreeCell: discarded ${discardedDeals} candidate deals via rapid deadlock detection.`);
     console.warn(`FreeCell: Unable to find a clear rapid-solvable deal after ${FREECELL_MAX_SOLVABLE_DEAL_ATTEMPTS} attempts.`);
 }
 
 function buildFreecellTableauFromDeck(deck) {
-    const tableau = Array.from({ length: 8 }, () => []);
-    for (let col = 0; col < 8; col++) {
-        const cardsInColumn = col < 4 ? 7 : 6;
+    const tableau = Array.from({ length: freecellVariant.tableauColumns }, () => []);
+    const baseCardsPerColumn = Math.floor(deck.length / freecellVariant.tableauColumns);
+    const remainder = deck.length % freecellVariant.tableauColumns;
+    for (let col = 0; col < freecellVariant.tableauColumns; col++) {
+        const cardsInColumn = baseCardsPerColumn + (col < remainder ? 1 : 0);
         for (let row = 0; row < cardsInColumn; row++) {
             const card = deck.pop();
             card.hidden = false;
@@ -345,18 +424,42 @@ function isFreecellDealRapidlyInsolvable(tableau) {
     if (!freecellInsolvabilityDetector) return false;
     const result = freecellInsolvabilityDetector.evaluate({
         tableau,
-        freeCells: Array(4).fill(null),
-        foundations: [[], [], [], []]
+        freeCells: Array(freecellVariant.freeCellCount).fill(null),
+        foundations: createEmptyFoundations()
     });
     return result.isLikelyInsolvable;
 }
 
 function updateUI() {
+    configureFreecellLayout();
     updateTableau();
     updateFreeCells();
     updateFoundations();
     updateStats();
     scheduleTableauSizing();
+}
+
+function configureFreecellLayout() {
+    const topRowEl = document.getElementById('freecell-top-row');
+    const tableauEl = document.getElementById('freecell-tableau');
+    const freeCellsEl = document.getElementById('freecell-freecells');
+    const foundationsEl = document.getElementById('freecell-foundations');
+    if (!topRowEl || !tableauEl || !freeCellsEl || !foundationsEl) return;
+
+    const colTemplate = 'calc(var(--scaled-card-w) + var(--freecell-fan-x, 18px))';
+    topRowEl.style.gridTemplateColumns = `repeat(${freecellVariant.tableauColumns}, ${colTemplate})`;
+    tableauEl.style.gridTemplateColumns = `repeat(${freecellVariant.tableauColumns}, ${colTemplate})`;
+    freeCellsEl.style.gridTemplateColumns = `repeat(${freecellVariant.freeCellCount}, ${colTemplate})`;
+    foundationsEl.style.gridTemplateColumns = `repeat(${freecellVariant.foundationCount}, ${colTemplate})`;
+
+    const occupiedColumns = freecellVariant.freeCellCount + freecellVariant.foundationCount;
+    const middleGapColumns = Math.max(0, freecellVariant.tableauColumns - occupiedColumns);
+    const freeCellStart = 1;
+    const freeCellEnd = freeCellStart + freecellVariant.freeCellCount;
+    const foundationStart = freeCellEnd + middleGapColumns;
+    const foundationEnd = foundationStart + freecellVariant.foundationCount;
+    freeCellsEl.style.gridColumn = `${freeCellStart} / ${freeCellEnd}`;
+    foundationsEl.style.gridColumn = `${foundationStart} / ${foundationEnd}`;
 }
 
 function getMaxTableauLength() {
@@ -401,11 +504,11 @@ function applyAdaptiveTableauSpacing() {
         currentGap,
         baseGap,
         minGap: FREECELL_MIN_TABLEAU_GAP,
-        gapSlots: 7,
+        gapSlots: Math.max(0, freecellState.tableau.length - 1),
         currentFan,
         baseFan,
         minFan: FREECELL_MIN_FAN_X,
-        fanSlots: 8
+        fanSlots: freecellState.tableau.length
     });
 
     tableEl.style.setProperty('--freecell-tableau-gap', `${spacing.gap}px`);
@@ -522,7 +625,7 @@ function updateFoundations() {
         foundationEl.className = 'freecell-foundation pile';
         foundationEl.id = `freecell-foundation-${index}`;
         foundationEl.dataset.foundationIndex = index;
-        foundationEl.dataset.suit = FREECELL_FOUNDATION_SUITS[index] || '';
+        foundationEl.dataset.suit = getFreecellFoundationPlaceholderSuit(index);
 
         if (pile.length > 0) {
             const topCard = pile[pile.length - 1];
@@ -530,7 +633,7 @@ function updateFoundations() {
             cardEl.style.cursor = 'default';
             foundationEl.appendChild(cardEl);
         } else {
-            const suit = FREECELL_FOUNDATION_SUITS[index] || '';
+            const suit = getFreecellFoundationPlaceholderSuit(index);
             const placeholder = document.createElement('div');
             placeholder.className = 'freecell-foundation-placeholder';
             placeholder.textContent = suit;
@@ -1434,7 +1537,9 @@ function createFreecellSolvabilitySnapshot() {
     return {
         tableau: freecellState.tableau.map(column => column.map(cloneCardForSolvability)),
         freeCells: freecellState.freeCells.map(card => (card ? cloneCardForSolvability(card) : null)),
-        foundations: freecellState.foundations.map(pile => pile.map(cloneCardForSolvability))
+        foundations: freecellState.foundations.map(pile => pile.map(cloneCardForSolvability)),
+        foundationTargetSize: getFreecellFoundationTargetSize(),
+        foundationCount: freecellVariant.foundationCount
     };
 }
 
@@ -1450,8 +1555,12 @@ function cloneCardForSolvability(card) {
 }
 
 function parseCardRank(value) {
+    if (typeof window !== 'undefined' && window.CardRankOverrides && Number.isFinite(window.CardRankOverrides[value])) {
+        return window.CardRankOverrides[value];
+    }
     if (value === 'A') return 1;
     if (value === 'J') return 11;
+    if (value === 'C') return 12;
     if (value === 'Q') return 12;
     if (value === 'K') return 13;
     const parsed = parseInt(value, 10);
@@ -1463,14 +1572,15 @@ function getCardColor(suit) {
 }
 
 function createFreecellSolvabilityAdapter() {
+    const foundationTargetSize = getFreecellFoundationTargetSize();
     return {
-        isSolved: (state) => state.foundations.every(pile => pile.length === 13),
+        isSolved: (state) => state.foundations.every(pile => pile.length === foundationTargetSize),
         prepareState: (state) => {
             applyForcedSafeFoundationClosure(state);
             return state;
         },
         shouldPrune: (state) => {
-            if (state.foundations.every(pile => pile.length === 13)) return false;
+            if (state.foundations.every(pile => pile.length === foundationTargetSize)) return false;
             return !hasAnyFreecellForwardMove(state);
         },
         normalizeState: (state) => {
@@ -1807,11 +1917,11 @@ function hasAnyFreecellForwardMove(state) {
 }
 
 function checkFreeCellWin() {
-    if (freecellState.foundations.every(pile => pile.length === 13)) {
+    if (freecellState.foundations.every(pile => pile.length === getFreecellFoundationTargetSize())) {
         freecellState.isGameWon = true;
         clearInterval(freecellState.timerInterval);
         CommonUtils.playSound('win');
-        CommonUtils.showTableToast('You solved FreeCell!', { variant: 'win', duration: 2500 });
+        CommonUtils.showTableToast(freecellVariant.winMessage, { variant: 'win', duration: 2500 });
         if (freecellStateManager) {
             freecellStateManager.clear();
         }

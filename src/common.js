@@ -12,8 +12,10 @@
             'blackjack.html': 'blackjack-card-scale',
             'klondike.html': 'klondike-card-scale',
             'freecell.html': 'freecell-card-scale',
+            'cavalier-freecell.html': 'freecell-card-scale',
             'spider.html': 'spider-card-scale',
             'simple-simon.html': 'spider-card-scale',
+            'royal-simon.html': 'spider-card-scale',
             'tripeaks.html': 'tripeaks-card-scale',
             'pyramid.html': 'pyramid-card-scale',
             'dark-pyramid.html': 'pyramid-card-scale',
@@ -610,11 +612,14 @@ const CommonUtils = {
 
         return {
             ...cardData,
-            rank: cardData.val === 'A' ? 1
-                : cardData.val === 'J' ? 11
-                    : cardData.val === 'Q' ? 12
-                        : cardData.val === 'K' ? 13
-                            : parseInt(cardData.val, 10),
+            rank: (typeof window !== 'undefined' && window.CardRankOverrides && Number.isFinite(window.CardRankOverrides[cardData.val]))
+                ? window.CardRankOverrides[cardData.val]
+                : cardData.val === 'A' ? 1
+                    : cardData.val === 'J' ? 11
+                        : cardData.val === 'C' ? 12
+                            : cardData.val === 'Q' ? 12
+                                : cardData.val === 'K' ? 13
+                                    : parseInt(cardData.val, 10),
             color: (cardData.suit === '♥' || cardData.suit === '♦') ? 'red' : 'black'
         };
     },

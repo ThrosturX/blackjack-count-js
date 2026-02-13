@@ -21,8 +21,12 @@ class Card {
         this.rotation = getRandomRotation();
     }
     get rank() {
+        if (typeof window !== 'undefined' && window.CardRankOverrides && Number.isFinite(window.CardRankOverrides[this.val])) {
+            return window.CardRankOverrides[this.val];
+        }
         if (this.val === 'A') return 1;
         if (this.val === 'J') return 11;
+        if (this.val === 'C') return 12;
         if (this.val === 'Q') return 12;
         if (this.val === 'K') return 13;
         return parseInt(this.val);

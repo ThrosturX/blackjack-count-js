@@ -38,8 +38,11 @@ const spiderVariant = (() => {
         foundationSlots: 8,
         deckCount: null,
         suits: null,
+        values: null,
         tableauDealCounts: null,
         faceUpAllDealt: false,
+        completeRunLength: 13,
+        completeStartValue: 'K',
         enableCheck: true,
         winMessage: 'You solved Spider Solitaire!',
         stockPlaceholderLabel: 'Stock'
@@ -61,8 +64,11 @@ const spiderVariant = (() => {
         foundationSlots: normalizedFoundationSlots,
         deckCount: Number.isFinite(parseInt(incoming.deckCount, 10)) ? parseInt(incoming.deckCount, 10) : defaults.deckCount,
         suits: Array.isArray(incoming.suits) && incoming.suits.length ? incoming.suits.slice() : defaults.suits,
+        values: Array.isArray(incoming.values) && incoming.values.length ? incoming.values.slice() : defaults.values,
         tableauDealCounts: (tableauDealCounts && tableauDealCounts.length === 10) ? tableauDealCounts : defaults.tableauDealCounts,
         faceUpAllDealt: incoming.faceUpAllDealt === true,
+        completeRunLength: Math.max(1, parseInt(incoming.completeRunLength, 10) || defaults.completeRunLength),
+        completeStartValue: String(incoming.completeStartValue || defaults.completeStartValue),
         enableCheck: incoming.enableCheck !== false,
         winMessage: String(incoming.winMessage || defaults.winMessage),
         stockPlaceholderLabel: String(incoming.stockPlaceholderLabel || defaults.stockPlaceholderLabel)
@@ -74,7 +80,8 @@ function getSpiderSuitConfig() {
         return {
             label: 'Custom',
             suits: spiderVariant.suits,
-            deckCount: spiderVariant.deckCount
+            deckCount: spiderVariant.deckCount,
+            values: Array.isArray(spiderVariant.values) && spiderVariant.values.length ? spiderVariant.values : VALUES
         };
     }
     const key = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
@@ -371,7 +378,8 @@ function restoreSpiderState(saved) {
 
 function dealSpiderLayout() {
     const config = getSpiderSuitConfig();
-    const deck = CommonUtils.createShoe(config.deckCount, config.suits, VALUES);
+    const deckValues = Array.isArray(config.values) && config.values.length ? config.values : VALUES;
+    const deck = CommonUtils.createShoe(config.deckCount, config.suits, deckValues);
     spiderState.tableau = Array.from({ length: 10 }, () => []);
 
     for (let col = 0; col < 10; col++) {
@@ -961,13 +969,13 @@ function attemptTableauMove(targetCol) {
 
 function checkForCompletedSequence(columnIndex) {
     const column = spiderState.tableau[columnIndex];
-    if (column.length < 13) return;
+    if (column.length < spiderVariant.completeRunLength) return;
 
-    const startIndex = column.length - 13;
+    const startIndex = column.length - spiderVariant.completeRunLength;
     const sequence = column.slice(startIndex);
     const first = sequence[0];
 
-    if (first.hidden || first.val !== 'K') return;
+    if (first.hidden || first.val !== spiderVariant.completeStartValue) return;
     for (let i = 0; i < sequence.length - 1; i++) {
         const current = sequence[i];
         const next = sequence[i + 1];
@@ -976,7 +984,7 @@ function checkForCompletedSequence(columnIndex) {
     if (current.rank !== next.rank + 1) return;
     }
 
-    const removed = column.splice(startIndex, 13);
+    const removed = column.splice(startIndex, spiderVariant.completeRunLength);
     spiderState.foundations.push(removed[0].suit);
     spiderState.score += SPIDER_COMPLETE_BONUS;
     const newTop = column[column.length - 1];
@@ -1344,8 +1352,12 @@ function cloneSpiderCardForCheck(card) {
 }
 
 function parseSpiderRankForCheck(value) {
+    if (typeof window !== 'undefined' && window.CardRankOverrides && Number.isFinite(window.CardRankOverrides[value])) {
+        return window.CardRankOverrides[value];
+    }
     if (value === 'A') return 1;
     if (value === 'J') return 11;
+    if (value === 'C') return 12;
     if (value === 'Q') return 12;
     if (value === 'K') return 13;
     const parsed = parseInt(value, 10);
@@ -1622,11 +1634,11 @@ function completeSpiderSequences(state) {
     for (let col = 0; col < state.tableau.length; col++) {
         while (true) {
             const column = state.tableau[col];
-            if (!column || column.length < 13) break;
-            const start = column.length - 13;
+            if (!column || column.length < spiderVariant.completeRunLength) break;
+            const start = column.length - spiderVariant.completeRunLength;
             const seq = column.slice(start);
             const first = seq[0];
-            if (!first || first.hidden || first.rank !== 13) break;
+            if (!first || first.hidden || first.val !== spiderVariant.completeStartValue) break;
             let valid = true;
             for (let i = 0; i < seq.length - 1; i++) {
                 const current = seq[i];
@@ -1637,7 +1649,7 @@ function completeSpiderSequences(state) {
                 }
             }
             if (!valid) break;
-            const removed = column.splice(start, 13);
+            const removed = column.splice(start, spiderVariant.completeRunLength);
             state.foundations.push(removed[0].suit);
             const newTop = column[column.length - 1];
             if (newTop && newTop.hidden) {
@@ -2018,7 +2030,7 @@ function getStoredSpiderHint() {
 
 function formatSpiderHintMove(move) {
     if (!move || !move.type) return 'Try improving a descending run and revealing a hidden card.';
-    if (move.type === 'complete-sequence') return 'Complete a full K-to-A same-suit run.';
+    if (move.type === 'complete-sequence') return 'Complete a full same-suit run.';
     if (move.type === 'tableau-to-tableau') return `Move a run from column ${move.from + 1} to column ${move.to + 1}.`;
     if (move.type === 'deal-row') return 'Deal a new row from stock.';
     return 'Try the next legal forward move.';
@@ -2037,7 +2049,7 @@ function showSpiderHint() {
         foundations: snapshot.foundations.slice()
     };
     if (completeSpiderSequences(state) > 0) {
-        CommonUtils.showTableToast('Hint: Complete a full K-to-A same-suit run.', { variant: 'warn', containerId: 'table', duration: 2400 });
+        CommonUtils.showTableToast('Hint: Complete a full same-suit run.', { variant: 'warn', containerId: 'table', duration: 2400 });
         return;
     }
     const move = findSpiderHintMove(state);

@@ -26,9 +26,17 @@
         return card.rank === top.rank + 1;
     }
 
-    function isWon(foundations) {
-        return Array.isArray(foundations) && foundations.length === 4
-            && foundations.every((pile) => Array.isArray(pile) && pile.length === 13);
+    function isWon(foundations, options) {
+        var foundationCount = options && Number.isFinite(options.foundationCount)
+            ? Math.max(1, options.foundationCount)
+            : 4;
+        var foundationTargetSize = options && Number.isFinite(options.foundationTargetSize)
+            ? Math.max(1, options.foundationTargetSize)
+            : 13;
+        return Array.isArray(foundations) && foundations.length === foundationCount
+            && foundations.every(function (pile) {
+                return Array.isArray(pile) && pile.length === foundationTargetSize;
+            });
     }
 
     function normalizeFreecellState(state) {
@@ -297,9 +305,13 @@
         let prunedStates = 0;
         let statesExplored = 0;
 
+        var winOptions = {
+            foundationCount: Number.isFinite(snapshot.foundationCount) ? snapshot.foundationCount : 4,
+            foundationTargetSize: Number.isFinite(snapshot.foundationTargetSize) ? snapshot.foundationTargetSize : 13
+        };
         const start = cloneState(snapshot);
         applyForcedSafeFoundationClosure(start);
-        if (!hasAnyFreecellForwardMove(start) && !isWon(start.foundations)) {
+        if (!hasAnyFreecellForwardMove(start) && !isWon(start.foundations, winOptions)) {
             return {
                 solved: false,
                 reason: 'exhausted',
@@ -329,7 +341,7 @@
             const state = current.state;
             const stateKey = current.key;
             statesExplored++;
-            if (isWon(state.foundations)) {
+            if (isWon(state.foundations, winOptions)) {
                 const path = reconstructSolutionPath(stateKey, parentByKey, moveByKey);
                 return {
                     solved: true,
@@ -354,7 +366,7 @@
                 const next = applyFreecellMove(state, move);
                 if (!next) continue;
                 applyForcedSafeFoundationClosure(next);
-                if (!hasAnyFreecellForwardMove(next) && !isWon(next.foundations)) {
+                if (!hasAnyFreecellForwardMove(next) && !isWon(next.foundations, winOptions)) {
                     prunedStates++;
                     continue;
                 }
