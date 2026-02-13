@@ -42,6 +42,12 @@ const FREECELL_BASE_TABLEAU_GAP = 12;
 const FREECELL_MIN_TABLEAU_GAP = 4;
 const FREECELL_BASE_FAN_X = 18;
 const FREECELL_MIN_FAN_X = 6;
+const FREECELL_TABLEAU_DROP_PADDING = 24;
+const FREECELL_SLOT_DROP_PADDING = 18;
+const FREECELL_FOUNDATION_DROP_PADDING = 18;
+const FREECELL_MOBILE_TABLEAU_DROP_PADDING = 12;
+const FREECELL_MOBILE_SLOT_DROP_PADDING = 10;
+const FREECELL_MOBILE_FOUNDATION_DROP_PADDING = 10;
 const FREECELL_TOP_LABEL = ['F', 'R', 'E', 'E'];
 const FREECELL_BOTTOM_LABEL = ['C', 'E', 'L', 'L'];
 const FREECELL_FOUNDATION_SUITS = ['♥', '♠', '♦', '♣'];
@@ -785,24 +791,63 @@ function updateDragLayerPosition(clientX, clientY) {
     freecellDragState.dragLayer.style.top = `${clientY - freecellDragState.pointerOffsetY}px`;
 }
 
+function getDirectDropTarget(clientX, clientY) {
+    return UIHelpers.getTargetFromPoint(clientX, clientY, [
+        {
+            selector: '.freecell-slot',
+            resolve: (el) => ({ type: 'freecell', index: parseInt(el.dataset.freecellIndex, 10) })
+        },
+        {
+            selector: '.freecell-foundation',
+            resolve: (el) => ({ type: 'foundation', index: parseInt(el.dataset.foundationIndex, 10) })
+        },
+        {
+            selector: '.freecell-column',
+            resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
+        }
+    ]);
+}
+
+function buildDropTargetCandidates(clientX, clientY) {
+    const candidates = [];
+    const seen = new Set();
+    const addCandidate = (target) => {
+        if (!target || !target.type || !Number.isFinite(target.index)) return;
+        const key = `${target.type}:${target.index}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        candidates.push(target);
+    };
+
+    addCandidate(getDirectDropTarget(clientX, clientY));
+    const freeCellIndex = findFreeCellDropTarget(clientX, clientY);
+    if (freeCellIndex !== null) addCandidate({ type: 'freecell', index: freeCellIndex });
+    const foundationIndex = findFoundationDropPile(clientX, clientY);
+    if (foundationIndex !== null) addCandidate({ type: 'foundation', index: foundationIndex });
+    const tableauIndex = findTableauDropColumn(clientX, clientY);
+    if (tableauIndex !== null) addCandidate({ type: 'tableau', index: tableauIndex });
+    return candidates;
+}
+
 function finishDrag(clientX, clientY) {
-    const targetFreeCell = findFreeCellDropTarget(clientX, clientY);
-    const targetFoundation = findFoundationDropPile(clientX, clientY);
-    const targetColumn = findTableauDropColumn(clientX, clientY);
     let handled = false;
     let moveResult = null;
     const scoreBefore = freecellState.score;
     const movesBefore = freecellState.moves;
+    const targets = buildDropTargetCandidates(clientX, clientY);
 
-    if (targetFreeCell !== null) {
-        moveResult = attemptMoveToFreeCell(targetFreeCell);
-        handled = moveResult.success;
-    } else if (targetFoundation !== null) {
-        moveResult = attemptFoundationMove(targetFoundation);
-        handled = moveResult.success;
-    } else if (targetColumn !== null) {
-        moveResult = attemptTableauMove(targetColumn);
-        handled = moveResult.success;
+    for (const target of targets) {
+        if (target.type === 'freecell') {
+            moveResult = attemptMoveToFreeCell(target.index);
+        } else if (target.type === 'foundation') {
+            moveResult = attemptFoundationMove(target.index);
+        } else {
+            moveResult = attemptTableauMove(target.index);
+        }
+        if (moveResult && moveResult.success) {
+            handled = true;
+            break;
+        }
     }
 
     cleanupDragVisuals();
@@ -980,37 +1025,32 @@ function removeDraggedCardsFromSource() {
 function findTableauDropColumn(clientX, clientY) {
     const offsets = getStackOffsets();
     let bestColumn = null;
-    let bestDistance = Infinity;
+    let bestCenterDistance = Infinity;
+    const padding = CommonUtils.isMobile() ? FREECELL_MOBILE_TABLEAU_DROP_PADDING : FREECELL_TABLEAU_DROP_PADDING;
 
     document.querySelectorAll('.freecell-column').forEach(column => {
         const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, offsets.y);
-        const paddedRect = UIHelpers.getRectWithPadding(rect, 30);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
+        if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;
 
-        if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
-            bestColumn = column;
-            bestDistance = -1;
-            return;
-        }
-
-        const dist = UIHelpers.distanceToRect(clientX, clientY, rect);
-        if (dist < bestDistance) {
-            bestDistance = dist;
+        const centerX = (rect.left + rect.right) / 2;
+        const dist = Math.abs(centerX - clientX);
+        if (dist < bestCenterDistance) {
+            bestCenterDistance = dist;
             bestColumn = column;
         }
     });
 
     if (!bestColumn) return null;
-    if (bestDistance <= 30) {
-        return parseInt(bestColumn.id.split('-')[2], 10);
-    }
-    return null;
+    return parseInt(bestColumn.id.split('-')[2], 10);
 }
 
 function findFreeCellDropTarget(clientX, clientY) {
+    const padding = CommonUtils.isMobile() ? FREECELL_MOBILE_SLOT_DROP_PADDING : FREECELL_SLOT_DROP_PADDING;
     let target = null;
     document.querySelectorAll('.freecell-slot').forEach(slot => {
         const rect = slot.getBoundingClientRect();
-        const paddedRect = UIHelpers.getRectWithPadding(rect, 20);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
         if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
             target = parseInt(slot.dataset.freecellIndex, 10);
         }
@@ -1019,10 +1059,11 @@ function findFreeCellDropTarget(clientX, clientY) {
 }
 
 function findFoundationDropPile(clientX, clientY) {
+    const padding = CommonUtils.isMobile() ? FREECELL_MOBILE_FOUNDATION_DROP_PADDING : FREECELL_FOUNDATION_DROP_PADDING;
     let target = null;
     document.querySelectorAll('.freecell-foundation').forEach(pile => {
         const rect = pile.getBoundingClientRect();
-        const paddedRect = UIHelpers.getRectWithPadding(rect, 20);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
         if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
             target = parseInt(pile.dataset.foundationIndex, 10);
         }

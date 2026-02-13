@@ -4,6 +4,7 @@
  */
 
 const SolitaireLogic = {
+    FOUNDATION_SUIT_ORDER: ['♥', '♠', '♦', '♣'],
     /**
      * Checks if a card can be placed on a tableau pile
      * Rules: Alternating colors, descending rank
@@ -80,15 +81,13 @@ const SolitaireLogic = {
         // Check waste pile
         if (gameState.waste.length > 0) {
             const wasteCard = gameState.waste[gameState.waste.length - 1];
-            for (let i = 0; i < 4; i++) {
-                if (this.canPlaceOnFoundation(wasteCard, gameState.foundations[i])) {
-                    autoMoves.push({
-                        card: wasteCard,
-                        fromPile: 'waste',
-                        toPile: `foundation-${i}`
-                    });
-                    break;
-                }
+            const foundationIndex = this.findAutoFoundationTarget(wasteCard, gameState.foundations);
+            if (foundationIndex !== -1) {
+                autoMoves.push({
+                    card: wasteCard,
+                    fromPile: 'waste',
+                    toPile: `foundation-${foundationIndex}`
+                });
             }
         }
 
@@ -98,21 +97,37 @@ const SolitaireLogic = {
             if (tableau.length > 0) {
                 const topCard = tableau[tableau.length - 1];
                 if (!topCard.hidden) {
-                    for (let i = 0; i < 4; i++) {
-                        if (this.canPlaceOnFoundation(topCard, gameState.foundations[i])) {
-                            autoMoves.push({
-                                card: topCard,
-                                fromPile: `tableau-${col}`,
-                                toPile: `foundation-${i}`
-                            });
-                            break;
-                        }
+                    const foundationIndex = this.findAutoFoundationTarget(topCard, gameState.foundations);
+                    if (foundationIndex !== -1) {
+                        autoMoves.push({
+                            card: topCard,
+                            fromPile: `tableau-${col}`,
+                            toPile: `foundation-${foundationIndex}`
+                        });
                     }
                 }
             }
         }
 
         return autoMoves;
+    },
+
+    findAutoFoundationTarget: function (card, foundations) {
+        if (!card || !Array.isArray(foundations) || foundations.length !== 4) return -1;
+        const candidates = [];
+        for (let i = 0; i < 4; i++) {
+            if (this.canPlaceOnFoundation(card, foundations[i])) {
+                candidates.push(i);
+            }
+        }
+        if (candidates.length === 0) return -1;
+        if (candidates.length === 1) return candidates[0];
+
+        const preferredIndex = this.FOUNDATION_SUIT_ORDER.indexOf(card.suit);
+        if (preferredIndex !== -1 && candidates.includes(preferredIndex)) {
+            return preferredIndex;
+        }
+        return candidates[0];
     },
 
     /**

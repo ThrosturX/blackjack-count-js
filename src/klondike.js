@@ -85,6 +85,9 @@ const STACK_OFFSET = 25;
 const STACK_X_OFFSET = 2.5;
 const TABLEAU_DROP_PADDING = 40;
 const FOUNDATION_DROP_PADDING = 30;
+const MOBILE_TABLEAU_DROP_PADDING = 16;
+const MOBILE_FOUNDATION_DROP_PADDING = 16;
+const MOBILE_AUTO_MOVE_DOUBLE_TAP_WINDOW_MS = 380;
 const MAX_HISTORY = 200;
 const MAX_SOLVABLE_DEAL_ATTEMPTS = 12;
 const MAX_SIMULATION_ITERATIONS = 1200;
@@ -125,6 +128,10 @@ const dragState = {
     activePointerId: null,
     hoveredCard: null,
     mobileController: null
+};
+const mobileAutoMoveTapState = {
+    key: '',
+    at: 0
 };
 
 // Sound files
@@ -833,6 +840,9 @@ function updateDragLayerPosition(clientX, clientY) {
 }
 
 function getDropPoint(clientX, clientY) {
+    if (CommonUtils.isMobile()) {
+        return { x: clientX, y: clientY };
+    }
     if (!dragState.dragLayer) {
         return { x: clientX, y: clientY };
     }
@@ -840,6 +850,44 @@ function getDropPoint(clientX, clientY) {
     const x = rect.left + rect.width / 2;
     const y = rect.top + Math.min(CARD_HEIGHT / 2, rect.height - 1);
     return { x, y };
+}
+
+function getDirectDropTarget(clientX, clientY) {
+    return UIHelpers.getTargetFromPoint(clientX, clientY, [
+        {
+            selector: '.tableau-column',
+            resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[1], 10) })
+        },
+        {
+            selector: '.foundation-pile',
+            resolve: (el) => ({ type: 'foundation', index: parseInt(el.id.split('-')[1], 10) })
+        }
+    ]);
+}
+
+function buildDropTargetCandidates(clientX, clientY) {
+    const direct = getDirectDropTarget(clientX, clientY);
+    const candidates = [];
+    const seen = new Set();
+    const addCandidate = (target) => {
+        if (!target || !Number.isFinite(target.index) || !target.type) return;
+        const key = `${target.type}:${target.index}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        candidates.push(target);
+    };
+
+    addCandidate(direct);
+    const targetColIndex = findTableauDropColumn(clientX, clientY);
+    if (targetColIndex !== null) {
+        addCandidate({ type: 'tableau', index: targetColIndex });
+    }
+    const foundationIndex = findFoundationDropPile(clientX, clientY);
+    if (foundationIndex !== null) {
+        addCandidate({ type: 'foundation', index: foundationIndex });
+    }
+
+    return candidates;
 }
 
 function finishDrag(clientX, clientY) {
@@ -850,10 +898,11 @@ function finishDrag(clientX, clientY) {
     let moveResult = { success: false };
 
     const dropPoint = getDropPoint(clientX, clientY);
-    const targetColIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
-    if (targetColIndex !== null) {
-        moveResult = attemptTableauMove(targetColIndex);
-        if (moveResult.success) {
+    const targetCandidates = buildDropTargetCandidates(dropPoint.x, dropPoint.y);
+    for (const target of targetCandidates) {
+        if (target.type === 'tableau') {
+            moveResult = attemptTableauMove(target.index);
+            if (!moveResult.success) continue;
             if (dragState.sourcePile === 'waste') {
                 moveType = 'waste-to-tableau';
             } else if (dragState.sourcePile === 'foundation') {
@@ -862,24 +911,20 @@ function finishDrag(clientX, clientY) {
                 moveType = 'tableau-to-tableau';
             }
             movePayload = moveResult.payload;
+            break;
         }
-    }
 
-    if (!moveResult.success) {
-        const foundationIndex = findFoundationDropPile(dropPoint.x, dropPoint.y);
-        if (foundationIndex !== null) {
-            moveResult = attemptFoundationMove(foundationIndex);
-            if (moveResult.success) {
-                if (dragState.sourcePile === 'waste') {
-                    moveType = 'waste-to-foundation';
-                } else if (dragState.sourcePile === 'foundation') {
-                    moveType = 'foundation-to-foundation';
-                } else {
-                    moveType = 'tableau-to-foundation';
-                }
-                movePayload = moveResult.payload;
-            }
+        moveResult = attemptFoundationMove(target.index);
+        if (!moveResult.success) continue;
+        if (dragState.sourcePile === 'waste') {
+            moveType = 'waste-to-foundation';
+        } else if (dragState.sourcePile === 'foundation') {
+            moveType = 'foundation-to-foundation';
+        } else {
+            moveType = 'tableau-to-foundation';
         }
+        movePayload = moveResult.payload;
+        break;
     }
 
     cleanupDragVisuals();
@@ -1056,6 +1101,25 @@ function handleCardClick(e) {
     // If mobile controller is active, this click might be part of a tap-to-select/drop, so don't auto-move.
     // The mobile controller handles drop and will call executeMove which includes foundation moves.
     if (CommonUtils.isMobile() && dragState.mobileController && dragState.mobileController.state === "SELECTED") {
+        const selectedCardEl = e.target.closest(".card");
+        if (selectedCardEl) {
+            const selectedCard = selectedCardEl.dataset.waste
+                ? gameState.waste[gameState.waste.length - 1]
+                : null;
+            const selectedCol = selectedCardEl.dataset.column !== undefined
+                ? parseInt(selectedCardEl.dataset.column, 10)
+                : null;
+            const selectedCardInCol = selectedCol !== null && gameState.tableau[selectedCol]
+                ? gameState.tableau[selectedCol][parseInt(selectedCardEl.dataset.index, 10)]
+                : null;
+            const sourcePile = selectedCardEl.dataset.waste ? 'waste' : (selectedCol !== null ? 'tableau' : null);
+            const sourceIndex = selectedCol !== null ? selectedCol : -1;
+            const card = selectedCard || selectedCardInCol;
+            if (sourcePile && card) {
+                mobileAutoMoveTapState.key = `${sourcePile}:${sourceIndex}:${card.val}${card.suit}`;
+                mobileAutoMoveTapState.at = Date.now();
+            }
+        }
         return; // Let the mobile controller handle it
     }
 
@@ -1089,38 +1153,48 @@ function handleCardClick(e) {
 
     if (!card) return;
 
-    // Try to auto-move to foundation
-    for (let i = 0; i < 4; i++) {
-        if (SolitaireLogic.canPlaceOnFoundation(card, gameState.foundations[i])) {
-            // Remove from source
-            if (sourcePile === "waste") {
-                gameState.waste.pop();
-            } else if (sourcePile === "tableau") {
-                gameState.tableau[sourceIndex].pop();
-
-                // Flip top card if hidden
-                if (gameState.tableau[sourceIndex].length > 0) {
-                    const topCard = gameState.tableau[sourceIndex][gameState.tableau[sourceIndex].length - 1];
-                if (topCard.hidden) {
-                    topCard.hidden = false;
-                    applyVariantScore("flip-card");
-                }
-                }
-            }
-
-            // Add to foundation
-            gameState.foundations[i].push(card);
-
-            const moveType = sourcePile === "waste" ? "waste-to-foundation" : "tableau-to-foundation";
-            applyVariantScore(moveType);
-            gameState.moves++;
-
-            CommonUtils.playSound("card");
-            updateUI();
-            checkWinCondition();
+    if (CommonUtils.isMobile()) {
+        const now = Date.now();
+        const tapKey = `${sourcePile}:${sourceIndex ?? -1}:${card.val}${card.suit}`;
+        const isSecondTap = mobileAutoMoveTapState.key === tapKey
+            && (now - mobileAutoMoveTapState.at) <= MOBILE_AUTO_MOVE_DOUBLE_TAP_WINDOW_MS;
+        mobileAutoMoveTapState.key = tapKey;
+        mobileAutoMoveTapState.at = now;
+        if (!isSecondTap) {
             return;
         }
     }
+
+    // Try to auto-move to foundation using preferred suit-order targeting.
+    const targetFoundation = SolitaireLogic.findAutoFoundationTarget(card, gameState.foundations);
+    if (targetFoundation === -1) return;
+
+    // Remove from source
+    if (sourcePile === "waste") {
+        gameState.waste.pop();
+    } else if (sourcePile === "tableau") {
+        gameState.tableau[sourceIndex].pop();
+
+        // Flip top card if hidden
+        if (gameState.tableau[sourceIndex].length > 0) {
+            const topCard = gameState.tableau[sourceIndex][gameState.tableau[sourceIndex].length - 1];
+            if (topCard.hidden) {
+                topCard.hidden = false;
+                applyVariantScore("flip-card");
+            }
+        }
+    }
+
+    // Add to foundation
+    gameState.foundations[targetFoundation].push(card);
+
+    const moveType = sourcePile === "waste" ? "waste-to-foundation" : "tableau-to-foundation";
+    applyVariantScore(moveType);
+    gameState.moves++;
+
+    CommonUtils.playSound("card");
+    updateUI();
+    checkWinCondition();
 }
 
 /**
@@ -2026,10 +2100,11 @@ function findTableauDropColumn(clientX, clientY) {
     const offsets = getStackOffsets();
     let bestColumn = null;
     let bestCenterDistance = Infinity;
+    const padding = CommonUtils.isMobile() ? MOBILE_TABLEAU_DROP_PADDING : TABLEAU_DROP_PADDING;
 
     document.querySelectorAll('.tableau-column').forEach(column => {
         const rect = UIHelpers.getStackBounds(column, CARD_HEIGHT, offsets.y);
-        const paddedRect = UIHelpers.getRectWithPadding(rect, TABLEAU_DROP_PADDING);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
 
         if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;
 
@@ -2048,10 +2123,11 @@ function findTableauDropColumn(clientX, clientY) {
 function findFoundationDropPile(clientX, clientY) {
     let bestPile = null;
     let bestDistance = Infinity;
+    const padding = CommonUtils.isMobile() ? MOBILE_FOUNDATION_DROP_PADDING : FOUNDATION_DROP_PADDING;
 
     document.querySelectorAll('.foundation-pile').forEach(pile => {
         const rect = pile.getBoundingClientRect();
-        const paddedRect = UIHelpers.getRectWithPadding(rect, FOUNDATION_DROP_PADDING);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
 
         if (UIHelpers.isPointInRect(clientX, clientY, paddedRect)) {
             bestPile = pile;
@@ -2067,7 +2143,7 @@ function findFoundationDropPile(clientX, clientY) {
     });
 
     if (!bestPile) return null;
-    if (bestDistance <= FOUNDATION_DROP_PADDING) {
+    if (bestDistance <= padding) {
         return parseInt(bestPile.id.split('-')[1], 10);
     }
     return null;

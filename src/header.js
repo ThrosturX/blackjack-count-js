@@ -12,6 +12,16 @@
     const controls = new Map();
     let initialized = false;
 
+    const syncSettingsOpenState = () => {
+        const settingsControl = controls.get('settings');
+        const isOpen = !!(settingsControl && settingsControl.area && !settingsControl.area.classList.contains('collapsed'));
+        document.body.classList.toggle('settings-open', isOpen);
+        const headerEl = document.querySelector('header');
+        if (headerEl) {
+            headerEl.classList.toggle('settings-open', isOpen);
+        }
+    };
+
     const setCollapsed = (control, collapsed) => {
         if (!control) return;
         const { button, area } = control;
@@ -19,6 +29,9 @@
         if (button) {
             button.classList.toggle('active', !collapsed);
             button.setAttribute('aria-expanded', (!collapsed).toString());
+        }
+        if (control.key === 'settings') {
+            syncSettingsOpenState();
         }
     };
 
@@ -43,6 +56,7 @@
             const shouldOpen = openKeys.has(control.key);
             setCollapsed(control, !shouldOpen);
         });
+        syncSettingsOpenState();
     };
 
     const toggle = (key, force) => {

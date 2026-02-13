@@ -92,6 +92,33 @@
     transition: all 0.3s ease-in-out;
 }
 
+.table-scale-strip {
+    display: none;
+    width: 100%;
+    flex: 1 0 100%;
+    justify-content: center;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(242, 201, 76, 0.2);
+    order: 99;
+}
+
+.table-scale-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(640px, 100%);
+    white-space: nowrap;
+}
+
+.table-scale-control input[type="range"] {
+    width: min(42vw, 320px);
+}
+
+body.settings-open .table-scale-strip {
+    display: flex;
+}
+
 .controls-section {
     display: flex;
     gap: 15px;
@@ -167,6 +194,21 @@
     header {
         padding: calc(6px + var(--header-safe-top)) 10px 6px;
         justify-content: flex-start;
+    }
+
+    .table-scale-strip {
+        margin-top: 6px;
+        padding-top: 6px;
+    }
+
+    .table-scale-control {
+        width: min(96vw, 560px);
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .table-scale-control input[type="range"] {
+        width: min(56vw, 320px);
     }
 
     h1 {

@@ -47,10 +47,6 @@
                     <select id="variant-select"></select>
                 </div>
                 <div class="stats variant-description" id="variant-description"></div>
-                <label class="stats">Table Scale:
-                    <input id="klondike-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
-                    <span id="klondike-card-scale-value">100%</span>
-                </label>
             </div>
 
             <div class="controls-section collapsed" id="addons-area">
@@ -76,6 +72,12 @@
                 <div class="stats">Moves: <span id="moves-display">0</span></div>
                 <div class="stats">Time: <span id="time-display">0:00</span></div>
             </div>
+        </div>
+        <div class="table-scale-strip">
+            <label class="stats table-scale-control">Table Scale:
+                <input id="klondike-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
+                <span id="klondike-card-scale-value">100%</span>
+            </label>
         </div>
     </header>
 

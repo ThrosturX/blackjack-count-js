@@ -63,12 +63,47 @@
     justify-self: center;
 }
 
+.spider-foundation-placeholder {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(10px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(10px * var(--ui-scale)) 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    color: rgba(255, 255, 255, 0.42);
+    pointer-events: none;
+}
+
+.spider-foundation-rank {
+    font-size: clamp(0.7rem, calc(0.56rem + 0.35vw), 0.95rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.spider-foundation-rank-bottom {
+    transform: rotate(180deg);
+}
+
+.spider-foundation-suit {
+    font-size: clamp(1rem, calc(0.86rem + 0.45vw), 1.45rem);
+    color: rgba(255, 255, 255, 0.3);
+    transform: translateY(calc(-1px * var(--ui-scale)));
+}
+
+.spider-foundation-suit.is-red {
+    color: rgba(235, 87, 87, 0.42);
+}
+
 #spider-stock .card,
 .spider-foundation .card {
     position: absolute;
     top: 0;
     left: 0;
     margin-left: 0;
+    transform-origin: top left;
 }
 
 .spider-stock-stack {

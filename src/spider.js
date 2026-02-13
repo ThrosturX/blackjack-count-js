@@ -26,6 +26,7 @@ const SPIDER_SUIT_MODES = {
     2: { label: '2 Suits', suits: ['♠', '♥'], deckCount: 4 },
     1: { label: '1 Suit', suits: ['♠'], deckCount: 8 }
 };
+const SPIDER_FOUNDATION_PLACEHOLDER_SUITS = ['♥', '♠', '♦', '♣', '♥', '♠', '♦', '♣'];
 
 function getSpiderSuitConfig() {
     const key = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
@@ -62,6 +63,7 @@ const SPIDER_STACK_OFFSET = 24;
 const SPIDER_STACK_X_OFFSET = 2.5;
 const SPIDER_STACK_X_OFFSET_MAX = 18;
 const SPIDER_DROP_PADDING = 40;
+const SPIDER_MOBILE_DROP_PADDING = 14;
 const SPIDER_COMPLETE_BONUS = 100;
 const SPIDER_MAX_HISTORY = 200;
 const SPIDER_MIN_TABLEAU_CARDS = 26;
@@ -497,9 +499,26 @@ function updateFoundations() {
             const cardEl = CommonUtils.createCardEl(card);
             pile.appendChild(cardEl);
         } else {
+            const placeholderSuit = SPIDER_FOUNDATION_PLACEHOLDER_SUITS[i] || '♠';
             const placeholder = document.createElement('div');
-            placeholder.className = 'pile-placeholder';
-            placeholder.textContent = 'K-A';
+            placeholder.className = 'spider-foundation-placeholder';
+
+            const topRank = document.createElement('span');
+            topRank.className = 'spider-foundation-rank spider-foundation-rank-top';
+            topRank.textContent = 'K';
+
+            const suitGlyph = document.createElement('span');
+            suitGlyph.className = 'spider-foundation-suit';
+            suitGlyph.textContent = placeholderSuit;
+            if (placeholderSuit === '♥' || placeholderSuit === '♦') {
+                suitGlyph.classList.add('is-red');
+            }
+
+            const bottomRank = document.createElement('span');
+            bottomRank.className = 'spider-foundation-rank spider-foundation-rank-bottom';
+            bottomRank.textContent = 'A';
+
+            placeholder.append(topRank, suitGlyph, bottomRank);
             pile.appendChild(placeholder);
         }
         foundationArea.appendChild(pile);
@@ -737,6 +756,9 @@ function updateDragLayerPosition(clientX, clientY) {
 }
 
 function getDropPoint(clientX, clientY) {
+    if (CommonUtils.isMobile()) {
+        return { x: clientX, y: clientY };
+    }
     if (!spiderDragState.dragLayer) {
         return { x: clientX, y: clientY };
     }
@@ -747,15 +769,43 @@ function getDropPoint(clientX, clientY) {
     };
 }
 
+function getDirectDropTarget(clientX, clientY) {
+    return UIHelpers.getTargetFromPoint(clientX, clientY, [
+        {
+            selector: '.spider-column',
+            resolve: (el) => ({ type: 'tableau', index: parseInt(el.id.split('-')[2], 10) })
+        }
+    ]);
+}
+
+function buildDropTargetCandidates(clientX, clientY) {
+    const candidates = [];
+    const seen = new Set();
+    const addCandidate = (target) => {
+        if (!target || target.type !== 'tableau' || !Number.isFinite(target.index)) return;
+        const key = `${target.type}:${target.index}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        candidates.push(target);
+    };
+
+    addCandidate(getDirectDropTarget(clientX, clientY));
+    const columnIndex = findTableauDropColumn(clientX, clientY);
+    if (columnIndex !== null) addCandidate({ type: 'tableau', index: columnIndex });
+    return candidates;
+}
+
 function finishDrag(clientX, clientY) {
     const dropPoint = getDropPoint(clientX, clientY);
-    const targetColIndex = findTableauDropColumn(dropPoint.x, dropPoint.y);
     let moveResult = null;
     const scoreBefore = spiderState.score;
     const movesBefore = spiderState.moves;
-
-    if (targetColIndex !== null) {
-        moveResult = attemptTableauMove(targetColIndex);
+    const targets = buildDropTargetCandidates(dropPoint.x, dropPoint.y);
+    for (const target of targets) {
+        moveResult = attemptTableauMove(target.index);
+        if (moveResult && moveResult.success) {
+            break;
+        }
     }
 
     cleanupDragVisuals();
@@ -982,10 +1032,11 @@ function findTableauDropColumn(clientX, clientY) {
     const offsets = getStackOffsets();
     let bestColumn = null;
     let bestCenterDistance = Infinity;
+    const padding = CommonUtils.isMobile() ? SPIDER_MOBILE_DROP_PADDING : SPIDER_DROP_PADDING;
 
     document.querySelectorAll('.spider-column').forEach(column => {
         const rect = UIHelpers.getStackBounds(column, SPIDER_CARD_HEIGHT, offsets.y);
-        const paddedRect = UIHelpers.getRectWithPadding(rect, SPIDER_DROP_PADDING);
+        const paddedRect = UIHelpers.getRectWithPadding(rect, padding);
 
         if (!UIHelpers.isPointInRect(clientX, clientY, paddedRect)) return;
 
