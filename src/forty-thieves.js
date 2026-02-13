@@ -761,7 +761,7 @@
         if (!state.waste.length) {
             const placeholder = document.createElement('div');
             placeholder.className = 'forty-foundation-placeholder';
-            placeholder.textContent = 'Waste';
+            placeholder.textContent = '';
             wasteEl.appendChild(placeholder);
             return;
         }

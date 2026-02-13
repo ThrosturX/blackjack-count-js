@@ -508,11 +508,11 @@ function updateTableau() {
             // Only allow interaction with face-up cards
             if (!card.hidden) {
                 /* Stop attaching pointerdown to individual cards on mobile
-                 * (so the container can catch everything) ; Credit: Grok 
+                 * (so the container can catch everything) ; Credit: Grok
                  */
                 if (!CommonUtils.isMobile() || !dragState.mobileController) {
                     cardEl.addEventListener('pointerdown', handlePointerDown);
-                } 
+                }
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
             }
@@ -538,7 +538,7 @@ function updateFoundations() {
             cardEl.dataset.foundation = i;
             if (!CommonUtils.isMobile() || !dragState.mobileController) {
                 cardEl.addEventListener('pointerdown', handlePointerDown);
-            } 
+            }
             cardEl.style.cursor = 'pointer';
             foundationEl.appendChild(cardEl);
         } else {
@@ -613,7 +613,7 @@ function updateWaste() {
     } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'pile-placeholder';
-        placeholder.textContent = 'Waste';
+        placeholder.textContent = '';
         wasteEl.appendChild(placeholder);
     }
 }

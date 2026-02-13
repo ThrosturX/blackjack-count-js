@@ -379,7 +379,7 @@ function updateWaste() {
     } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'pile-placeholder';
-        placeholder.textContent = 'Waste';
+        placeholder.textContent = '';
         wasteEl.appendChild(placeholder);
     }
 }
