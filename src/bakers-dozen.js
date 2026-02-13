@@ -3,6 +3,7 @@ const BAKERS_VALUES = (typeof VALUES !== 'undefined') ? VALUES : ['2', '3', '4',
 
 const BAKERS_COLUMNS = 13;
 const FOUNDATION_SUITS = ['♥', '♦', '♣', '♠'];
+const BAKERS_MIN_TABLEAU_CARDS = 4;
 const STACKED_OFFSET = 16;
 const HISTORY_LIMIT = 320;
 const FOUNDATION_SCORE = 10;
@@ -36,6 +37,7 @@ let scheduleBakerSizing = null;
 let bakerSolvabilityChecker = null;
 let bakerCheckSolvedLocked = false;
 let bakerCheckUnsolvableLocked = false;
+let bakerSessionMaxTableauCards = BAKERS_MIN_TABLEAU_CARDS;
 
 function getBakerTotalCardCount() {
     const tableauCount = Array.isArray(bakerState.tableau)
@@ -74,9 +76,21 @@ function getBakerStackOffset() {
     return STACKED_OFFSET;
 }
 
+function getBakerCurrentMaxTableauCards() {
+    return Math.max(
+        BAKERS_MIN_TABLEAU_CARDS,
+        ...bakerState.tableau.map((column) => (Array.isArray(column) ? column.length : 0))
+    );
+}
+
+function updateBakerSessionMaxTableauCards() {
+    bakerSessionMaxTableauCards = Math.max(bakerSessionMaxTableauCards, getBakerCurrentMaxTableauCards());
+    return bakerSessionMaxTableauCards;
+}
+
 function ensureBakerSizing() {
     const stackOffset = getBakerStackOffset();
-    const maxCards = Math.max(4, ...bakerState.tableau.map((column) => (Array.isArray(column) ? column.length : 0)));
+    const maxCards = updateBakerSessionMaxTableauCards();
     const stackHeight = CommonUtils.getStackHeight(maxCards, stackOffset);
 
     CommonUtils.preserveHorizontalScroll({
@@ -256,6 +270,7 @@ function restoreBakersState(saved) {
     clearSelection();
     clearHint();
     startTimer();
+    bakerSessionMaxTableauCards = getBakerCurrentMaxTableauCards();
 
     if (!isBakerStatePlayable()) {
         if (bakerStateManager) bakerStateManager.clear();
@@ -664,11 +679,13 @@ function updateTableau() {
     const root = document.getElementById('bakers-tableau');
     if (!root) return;
     const stackOffset = getBakerStackOffset();
+    const stackHeight = CommonUtils.getStackHeight(updateBakerSessionMaxTableauCards(), stackOffset);
     root.innerHTML = '';
     bakerState.tableau.forEach((column, columnIndex) => {
         const columnEl = document.createElement('div');
         columnEl.className = 'bakers-column';
         columnEl.dataset.column = String(columnIndex);
+        columnEl.style.minHeight = `${Math.ceil(stackHeight)}px`;
         columnEl.addEventListener('click', () => {
             handleColumnClick(columnIndex);
         });
@@ -968,6 +985,7 @@ function initBakerGame() {
     if (bakerStateManager) bakerStateManager.clear();
     bakerState.startTime = Date.now();
     dealBakerLayout();
+    bakerSessionMaxTableauCards = getBakerCurrentMaxTableauCards();
     startTimer();
     updateUI();
     hideWinOverlay();

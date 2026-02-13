@@ -334,9 +334,11 @@ const CommonUtils = {
         const stackHeight = this.getStackHeight(maxCards, stackOffset, cardHeight);
         const topRowHeight = topRowEl ? topRowEl.getBoundingClientRect().height : 0;
         const extraBottom = Number.isFinite(options.extraBottom) ? options.extraBottom : 0;
-        const minHeight = paddingTop + paddingBottom + topRowHeight + gap + stackHeight + extraBottom;
-
-        tableEl.style.minHeight = `${Math.ceil(minHeight)}px`;
+        const minHeight = Math.ceil(paddingTop + paddingBottom + topRowHeight + gap + stackHeight + extraBottom);
+        const nextValue = `${minHeight}px`;
+        if (tableEl.style.minHeight !== nextValue) {
+            tableEl.style.minHeight = nextValue;
+        }
     },
 
     createRafScheduler: function (fn) {
