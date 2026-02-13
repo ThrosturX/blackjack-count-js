@@ -344,6 +344,43 @@ const CommonUtils = {
         };
     },
 
+    /**
+     * Preserve horizontal scroll positions for one or more containers while a UI update runs.
+     * Useful for solitaire re-renders that toggle scroll-active classes during layout.
+     * @param {Object} options
+     * @param {Array<string|HTMLElement>} options.targets - Elements (or IDs) to preserve.
+     * @param {Function} options.update - Synchronous UI update function.
+     * @param {Function} [options.beforeNextFrame] - Optional callback before next-frame restore.
+     */
+    preserveHorizontalScroll: function (options = {}) {
+        const targets = Array.isArray(options.targets) ? options.targets : [];
+        const update = typeof options.update === 'function' ? options.update : null;
+        if (!update) return;
+
+        const resolved = targets
+            .map((target) => (typeof target === 'string' ? document.getElementById(target) : target))
+            .filter((el) => !!el);
+        const captures = resolved.map((el) => ({ el, left: el.scrollLeft || 0 }));
+
+        const restore = () => {
+            captures.forEach(({ el, left }) => {
+                const maxLeft = Math.max(0, (el.scrollWidth || 0) - (el.clientWidth || 0));
+                const clamped = Math.max(0, Math.min(left, maxLeft));
+                el.scrollLeft = clamped;
+            });
+        };
+
+        update();
+        restore();
+
+        requestAnimationFrame(() => {
+            if (typeof options.beforeNextFrame === 'function') {
+                options.beforeNextFrame();
+            }
+            restore();
+        });
+    },
+
     ensureScrollableWidth: function (options = {}) {
         const tableEl = typeof options.table === 'string'
             ? document.getElementById(options.table)

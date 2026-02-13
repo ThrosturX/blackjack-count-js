@@ -40,6 +40,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Blackjack table height must grow when scaled content exceeds the default table cap so seat controls remain reachable.
 - Headers should prevent overlap between back button, title, and toggle buttons.
 - Mobile overrides are loaded last (`src/styles/mobile.css`).
+- For games that rebuild DOM after moves, preserve horizontal scroll state with `CommonUtils.preserveHorizontalScroll(...)` around update passes to avoid snap-to-left regressions when `scroll-active` toggles during layout.
 - Launcher card exposure is profile-driven by `window.AppProfile.launcherGroups` so split bundles can target different audiences without forking game pages.
 - Store add-on exposure is profile-driven by `window.AppProfile.storeGameFilter` so split bundles can hide out-of-audience content (for example, blackjack counting packs in solitaire-only builds).
 

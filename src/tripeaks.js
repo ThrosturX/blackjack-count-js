@@ -22,6 +22,7 @@ const tripeaksState = {
 };
 
 let tripeaksStateManager = null;
+let scheduleTriPeaksSizing = null;
 
 function syncTriPeaksHighScore() {
     const highScoreEl = document.getElementById('tripeaks-high-score');
@@ -29,16 +30,6 @@ function syncTriPeaksHighScore() {
     const highScore = CommonUtils.updateHighScore('tripeaks', 'default', tripeaksState.score);
     highScoreEl.textContent = highScore;
 }
-
-function ensureTriPeaksSizing() {
-    CommonUtils.ensureScrollableWidth({
-        table: 'table',
-        wrapper: 'tripeaks-scroll',
-        contentSelectors: ['#tripeaks-top-row', '#tripeaks-area']
-    });
-}
-
-const scheduleTriPeaksSizing = CommonUtils.createRafScheduler(ensureTriPeaksSizing);
 
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(tripeaksSoundFiles);
@@ -51,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', () => updateUI());
+    scheduleTriPeaksSizing = CommonUtils.createRafScheduler(ensureTriPeaksSizing);
     window.addEventListener('card-scale:changed', scheduleTriPeaksSizing);
 
     tripeaksStateManager = new CommonUtils.StateManager({
@@ -66,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initTriPeaksGame() {
+    ensureTriPeaksSizing();
+
     tripeaksState.peaks = [];
     tripeaksState.stock = [];
     tripeaksState.waste = [];
@@ -114,14 +108,41 @@ function getTriPeaksSaveState() {
     };
 }
 
+function reviveTriPeaksCard(card) {
+    if (!card) return card;
+    if (typeof CommonUtils !== 'undefined' && typeof CommonUtils.reviveCardObject === 'function') {
+        return CommonUtils.reviveCardObject(card);
+    }
+    if (typeof Card === 'function' && card.suit && card.val) {
+        const revived = new Card(card.suit, card.val);
+        revived.hidden = !!card.hidden;
+        revived.isSplitCard = !!card.isSplitCard;
+        if (Number.isFinite(card.rotation)) revived.rotation = card.rotation;
+        return revived;
+    }
+    return card;
+}
+
 function restoreTriPeaksState(saved) {
     if (!saved || typeof saved !== 'object') return;
-    tripeaksState.peaks = saved.peaks || [];
-    tripeaksState.stock = saved.stock || [];
-    tripeaksState.waste = saved.waste || [];
+    tripeaksState.peaks = Array.isArray(saved.peaks)
+        ? saved.peaks.map(card => reviveTriPeaksCard(card))
+        : [];
+    tripeaksState.stock = Array.isArray(saved.stock)
+        ? saved.stock.map(card => reviveTriPeaksCard(card))
+        : [];
+    tripeaksState.waste = Array.isArray(saved.waste)
+        ? saved.waste.map(card => reviveTriPeaksCard(card))
+        : [];
     tripeaksState.score = Number.isFinite(saved.score) ? saved.score : 0;
     tripeaksState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
-    tripeaksState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
+    tripeaksState.moveHistory = Array.isArray(saved.moveHistory)
+        ? saved.moveHistory.map(entry => (
+            typeof CommonUtils !== 'undefined' && typeof CommonUtils.hydrateSavedValue === 'function'
+                ? CommonUtils.hydrateSavedValue(entry)
+                : entry
+        ))
+        : [];
     tripeaksState.isGameWon = false;
 
     if (tripeaksState.timerInterval) {
@@ -163,11 +184,28 @@ function dealTriPeaks() {
 }
 
 function updateUI() {
-    updateStock();
-    updateWaste();
-    updatePeaks();
-    updateStats();
-    scheduleTriPeaksSizing();
+    CommonUtils.preserveHorizontalScroll({
+        targets: ['tripeaks-scroll', 'tripeaks-area'],
+        update: () => {
+            updateStock();
+            updateWaste();
+            updatePeaks();
+            updateStats();
+            ensureTriPeaksSizing();
+            if (scheduleTriPeaksSizing) scheduleTriPeaksSizing();
+        },
+        beforeNextFrame: () => {
+            ensureTriPeaksSizing();
+        }
+    });
+}
+
+function ensureTriPeaksSizing() {
+    CommonUtils.ensureScrollableWidth({
+        table: 'table',
+        wrapper: 'tripeaks-scroll',
+        contentSelectors: ['#tripeaks-top-row', '#tripeaks-area']
+    });
 }
 
 function updateStock() {

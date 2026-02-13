@@ -22,6 +22,11 @@
     gap: calc(24px * var(--ui-scale));
     overflow: visible;
     transition: background 0.5s, border-color 0.5s;
+    overflow-anchor: none;
+}
+
+#tripeaks-scroll {
+    overflow-anchor: none;
 }
 
 #tripeaks-top-row {
