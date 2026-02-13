@@ -606,10 +606,33 @@ function showTriPeaksHint() {
     CommonUtils.showTableToast('Hint: Draw from stock', { variant: 'warn', duration: 2000 });
 }
 
+function showTriPeaksHelp() {
+    const variant = getActiveTriPeaksVariant();
+    const variantNotes = {
+        classic: 'Classic mode allows wrap-around (A and K are adjacent).',
+        strict: 'Strict mode does not allow wrap-around.',
+        relaxed: 'Relaxed mode allows wrap-around and matching the same rank.',
+        open: 'Open mode starts with all peak cards visible.'
+    };
+    const message = [
+        'Goal: Clear all peak cards.',
+        'Move rule: You may remove an exposed peak card if it is one rank above or below the waste top card.',
+        variantNotes[variant.id] || '',
+        'Stock: Draw a new waste card from stock when needed.',
+        'Winning: The game is won when every peak card is removed.'
+    ].filter(Boolean).join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title: 'TriPeaks Rules', message });
+        return;
+    }
+    alert(`TriPeaks Rules\n\n${message}`);
+}
+
 function setupTriPeaksEventListeners() {
     document.getElementById('tripeaks-new-game').addEventListener('click', initTriPeaksGame);
     document.getElementById('tripeaks-undo').addEventListener('click', undoLastMove);
     document.getElementById('tripeaks-hint').addEventListener('click', showTriPeaksHint);
+    document.getElementById('tripeaks-help')?.addEventListener('click', showTriPeaksHelp);
     document.getElementById('tripeaks-variant-select')?.addEventListener('change', (event) => {
         applyTriPeaksVariant(event.target.value, { startNewGame: true });
         if (tripeaksStateManager) {

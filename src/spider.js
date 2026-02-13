@@ -1132,6 +1132,36 @@ function clearDropIndicators() {
     });
 }
 
+function showSpiderHelp() {
+    const suitConfig = getSpiderSuitConfig();
+    let title = 'Spider Rules';
+    let variantLine = `${suitConfig.label} mode: build down in rank; complete a full same-suit run to clear it.`;
+
+    if (spiderVariant.ruleSetKey === 'simple-simon') {
+        title = 'Simple Simon Rules';
+        variantLine = 'Simple Simon has no stock deals: build down in rank and clear complete suit runs to foundation.';
+    } else if (spiderVariant.ruleSetKey === 'royal-simon') {
+        title = 'Royal Simon Rules';
+        variantLine = 'Royal Simon uses a 14-rank deck with Knights; complete full same-suit runs from Ace through King to clear.';
+    }
+
+    const message = [
+        'Goal: Move every card into completed runs.',
+        'Tableau: Build cards down by rank.',
+        variantLine,
+        spiderVariant.allowDealFromStock
+            ? 'Stock: Deal one card to each tableau column when no immediate move is available.'
+            : 'Stock: This variant does not use stock deals.',
+        'Empty columns can hold any card or valid run.'
+    ].join('\n');
+
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title, message });
+        return;
+    }
+    alert(`${title}\n\n${message}`);
+}
+
 function setupSpiderEventListeners() {
     const newGameBtn = document.getElementById('spider-new-game');
     if (newGameBtn) {
@@ -1165,6 +1195,10 @@ function setupSpiderEventListeners() {
     const hintBtn = document.getElementById('spider-hint');
     if (hintBtn) {
         hintBtn.addEventListener('click', showSpiderHint);
+    }
+    const helpBtn = document.getElementById('spider-help');
+    if (helpBtn) {
+        helpBtn.addEventListener('click', showSpiderHelp);
     }
     const checkBtn = document.getElementById('spider-check');
     if (checkBtn) {

@@ -22,6 +22,7 @@ The project is designed to run from both static hosting and `file://`.
 - Spider Solitaire (`src/spider.html`)
 - Simple Simon (`src/simple-simon.html`)
 - Forty Thieves / Napoleon at St. Helena (`src/forty-thieves.html`)
+- Rush Hour Patience (`src/rush-hour-patience.html`)
 - Pyramid Solitaire (`src/pyramid.html`)
 - Dark Pyramid (`src/dark-pyramid.html`)
 - Golf Solitaire (`src/golf.html`)
@@ -63,6 +64,7 @@ Commands:
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
 - Spider: 4-Suit, 2-Suit, and 1-Suit modes, plus Simple Simon as a dedicated variant page.
 - Forty Thieves: Napoleon (Forty Thieves), Josephine, Alibaba, Thieves of Egypt, Rank and File selectable in game settings.
+- Rush Hour Patience: Taxi-contract variant with short/long suit contracts, rush-hour draw escalation, optional taxi stands, and optional Joker rule toggles.
 - TriPeaks: Classic, Strict (no wrap), Relaxed (wrap + same-rank), Open (all peaks face-up) selectable in game settings.
 - Pyramid: Draw 1 / Draw 3.
 - Dark Pyramid: Pyramid rules with blocked cards hidden.
@@ -76,6 +78,7 @@ Commands:
 - `src/header.js`: shared header toggle/collapse behavior.
 - `src/shared/mobile-controller.js`: shared mobile touch logic for pick-up and panning coordination.
 - `src/shared/ui-helpers.js`: shared hit-testing and pointer utility helpers.
+- `src/shared/solitaire-ui-feedback.js`: shared solitaire help/hint/outcome feedback wrapper (modal-first with toast fallback).
 - `src/shared/entitlements.js`: canonical local entitlement store with claim metadata and authoritative-merge APIs.
 - `src/shared/entitlement-sync.js`: lifecycle-aware entitlement sync runner (native bridge first, debug mock fallback).
 - `src/addons.js` + `src/addons/manifest.js`: add-on loading and add-on catalog registration.

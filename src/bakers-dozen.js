@@ -909,12 +909,28 @@ function undoLastMove() {
     if (bakerStateManager) bakerStateManager.markDirty();
 }
 
+function showBakersHelp() {
+    const message = [
+        "Goal: Build four foundations up by suit from Ace to King.",
+        'Tableau: Build cards down by rank only (suit/color do not matter).',
+        'Movement: Only one exposed top card may be moved at a time.',
+        'Empty columns: Not refillable in Baker\'s Dozen.',
+        'Tip: Prioritize exposing Aces and low cards early.'
+    ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title: "Baker's Dozen Rules", message });
+        return;
+    }
+    alert(`Baker's Dozen Rules\n\n${message}`);
+}
+
 function setupBakersEventListeners() {
     document.getElementById('bakers-new-game')?.addEventListener('click', initBakerGame);
     document.getElementById('bakers-undo')?.addEventListener('click', undoLastMove);
     document.getElementById('bakers-hint')?.addEventListener('click', showBakerHint);
     document.getElementById('bakers-autocomplete')?.addEventListener('click', autoCompleteBaker);
     document.getElementById('bakers-check')?.addEventListener('click', checkCurrentBakerSolvability);
+    document.getElementById('bakers-help')?.addEventListener('click', showBakersHelp);
     document.getElementById('bakers-win-new-game')?.addEventListener('click', initBakerGame);
     document.querySelectorAll('.foundation-slot').forEach(slot => {
         slot.addEventListener('click', handleFoundationClick);

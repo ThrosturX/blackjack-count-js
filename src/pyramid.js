@@ -713,6 +713,28 @@ function getPyramidMetrics() {
     };
 }
 
+function showPyramidHelp() {
+    const gameName = document.querySelector('header h1')?.textContent || 'Pyramid';
+    const drawMode = pyramidState.drawCount === 3 ? 'Draw 3' : 'Draw 1';
+    const layoutText = {
+        classic: 'Classic single-pyramid layout.',
+        'double-peak': 'Double-peak layout with two overlapping pyramids.',
+        'double-peak-v': 'Double-peak V layout with mirrored spacing.'
+    }[pyramidVariant.layout] || 'Custom layout.';
+    const message = [
+        `Goal: Remove all pyramid cards by matching the target sum of ${getPyramidTargetSum()}.`,
+        `Pairs: Remove two exposed cards that add up to ${getPyramidTargetSum()}.`,
+        `Single-card rule: Any exposed card worth ${getPyramidTargetSum()} can be removed by itself.`,
+        `Stock mode: ${drawMode}.`,
+        layoutText
+    ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title: `${gameName} Rules`, message });
+        return;
+    }
+    alert(`${gameName} Rules\n\n${message}`);
+}
+
 function setupPyramidEventListeners() {
     const newGameBtn = document.getElementById('pyramid-new-game');
     if (newGameBtn) {
@@ -740,6 +762,10 @@ function setupPyramidEventListeners() {
     const hintBtn = document.getElementById('pyramid-hint');
     if (hintBtn) {
         hintBtn.addEventListener('click', showPyramidHint);
+    }
+    const helpBtn = document.getElementById('pyramid-help');
+    if (helpBtn) {
+        helpBtn.addEventListener('click', showPyramidHelp);
     }
     const checkBtn = document.getElementById('pyramid-check');
     if (checkBtn) {

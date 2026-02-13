@@ -105,6 +105,28 @@
         return getActiveVariant().tableauRows;
     }
 
+    function showGolfHelp() {
+        const variant = getActiveVariant();
+        const variantSpecific = {
+            standard: 'Classic mode allows wrap-around ranks (A<->K).',
+            strict: 'Strict mode disables wrap-around (A and K are not adjacent).',
+            mini: 'Mini mode uses a smaller 7x4 tableau and no wrap-around.',
+            long: 'Long mode uses a larger 7x6 tableau with wrap-around enabled.'
+        };
+        const message = [
+            'Goal: Clear all tableau cards by moving playable cards to the waste/foundation pile.',
+            'Move rule: A card is playable if it is exactly one rank higher or lower than the top waste card.',
+            variantSpecific[variant.id] || '',
+            'Stock: Draw from stock when no tableau move is available.',
+            'Winning: You win when every tableau card has been removed.'
+        ].filter(Boolean).join('\n');
+        if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+            SolitaireUiFeedback.showInfo({ title: `${variant.label} Golf Rules`, message });
+            return;
+        }
+        alert(`${variant.label} Golf Rules\n\n${message}`);
+    }
+
     function syncVariantSelect() {
         const select = document.getElementById('golf-variant-select');
         if (!select) return;
@@ -735,6 +757,7 @@
         document.getElementById('golf-undo')?.addEventListener('click', undoLastMove);
         document.getElementById('golf-hint')?.addEventListener('click', showHint);
         document.getElementById('golf-auto-complete')?.addEventListener('click', autoComplete);
+        document.getElementById('golf-help')?.addEventListener('click', showGolfHelp);
         document.getElementById('golf-variant-select')?.addEventListener('change', (event) => {
             applyVariant(event.target.value, { startNewGame: true });
             if (stateManager) stateManager.markDirty();

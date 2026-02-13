@@ -119,7 +119,18 @@
 }
 
 .card.forty-selected {
+    transform: scale(calc(var(--card-scale) * 1.08)) translateY(-10px) !important;
     box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.8), 2px 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.forty-column.drag-over-valid,
+.forty-foundation.drag-over-valid {
+    border-color: rgba(115, 255, 162, 0.75);
+}
+
+.forty-column.drag-over-invalid,
+.forty-foundation.drag-over-invalid {
+    border-color: rgba(255, 120, 120, 0.8);
 }
 
 #table.forty-layout.scroll-active #forty-top-row,

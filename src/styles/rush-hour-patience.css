@@ -1,0 +1,221 @@
+#table.rush-layout {
+    --rush-fan-x: calc(14px * var(--ui-scale));
+    --table-shell-max-width: 1240px;
+    position: relative;
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
+    height: 80vh;
+    max-height: 80vh;
+    margin-top: calc(20px * var(--ui-scale));
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: calc(16px * var(--ui-scale));
+    overflow: visible;
+    overflow-anchor: none;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+#rush-scroll {
+    overflow-anchor: none;
+}
+
+#rush-stock,
+#rush-waste,
+.rush-stand,
+.rush-backseat-slot,
+.rush-contract {
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
+    border-radius: calc(10px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.03);
+    position: relative;
+}
+
+#rush-top-row {
+    display: grid;
+    grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    align-items: flex-start;
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    width: max-content;
+    margin: 0 auto;
+}
+
+#rush-contracts-panel {
+    grid-column: 3 / span 8;
+    display: flex;
+    flex-direction: column;
+    gap: calc(6px * var(--ui-scale));
+}
+
+.rush-contract-subheaders {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: calc(8px * var(--ui-scale));
+}
+
+.rush-contract-grid {
+    display: grid;
+    grid-template-columns: repeat(8, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+}
+
+#rush-lane-row {
+    display: grid;
+    grid-template-columns: repeat(11, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    align-items: flex-start;
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    width: max-content;
+    margin: 0 auto;
+}
+
+#rush-backseat-panel {
+    grid-column: 1 / span 2;
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: calc(6px * var(--ui-scale));
+}
+
+#rush-stands-panel {
+    grid-column: 3 / span 2;
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: calc(6px * var(--ui-scale));
+}
+
+#rush-backseat,
+#rush-stands {
+    display: grid;
+    grid-template-columns: repeat(2, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+}
+
+#rush-tableau {
+    grid-column: 5 / span 7;
+    display: grid;
+    grid-template-columns: repeat(7, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    width: max-content;
+    min-width: fit-content;
+}
+
+.rush-subheader {
+    margin: 0;
+    padding-left: calc(4px * var(--ui-scale));
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: clamp(0.62rem, calc(0.6rem + 0.16vw), 0.78rem);
+    color: rgba(236, 242, 255, 0.7);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.rush-subheader.rush-subtle {
+    color: rgba(206, 214, 226, 0.48);
+}
+
+.rush-subheader.rush-active {
+    color: rgba(255, 214, 122, 0.92);
+}
+
+.rush-pile-placeholder {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(10px * var(--ui-scale));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(0.75rem, calc(0.65rem + 0.25vw), 1rem);
+    color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    text-align: center;
+    line-height: 1.15;
+    white-space: pre-line;
+}
+
+#rush-stock .card,
+#rush-waste .card,
+.rush-stand .card,
+.rush-backseat-slot .card,
+.rush-contract .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin-left: 0;
+    transform-origin: top left;
+}
+
+.rush-column {
+    width: calc(var(--scaled-card-w) + var(--rush-fan-x, 14px));
+    min-height: 210px;
+    border-radius: calc(10px * var(--ui-scale));
+    border: 2px dashed transparent;
+    position: relative;
+    transition: border 0.2s;
+}
+
+.rush-column:hover,
+.rush-contract:hover,
+.rush-stand:hover,
+#rush-waste:hover,
+#rush-stock:hover {
+    border-color: rgba(255, 255, 255, 0.24);
+}
+
+.rush-column .card,
+#rush-waste .card,
+.rush-contract .card,
+.rush-stand .card,
+.rush-backseat-slot .card {
+    margin-left: 0;
+}
+
+#rush-stock.is-disabled,
+#rush-draw:disabled {
+    opacity: 0.55;
+}
+
+.card.rush-selected {
+    transform: scale(calc(var(--card-scale) * 1.08)) translateY(-10px) !important;
+    box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.8), 2px 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.rush-column.drag-over-valid,
+.rush-contract.drag-over-valid,
+.rush-stand.drag-over-valid,
+#rush-waste.drag-over-valid {
+    border-color: rgba(115, 255, 162, 0.75);
+}
+
+.rush-column.drag-over-invalid,
+.rush-contract.drag-over-invalid,
+.rush-stand.drag-over-invalid,
+#rush-waste.drag-over-invalid {
+    border-color: rgba(255, 120, 120, 0.8);
+}
+
+.rush-contract.complete {
+    border-color: rgba(115, 255, 162, 0.75);
+    box-shadow: 0 0 0 2px rgba(115, 255, 162, 0.35);
+}
+
+#rush-backseat.has-waiting .rush-backseat-slot {
+    border-color: rgba(255, 177, 74, 0.65);
+}
+
+#table.rush-layout.scroll-active #rush-top-row,
+#table.rush-layout.scroll-active #rush-lane-row,
+#table.rush-layout.scroll-active #rush-tableau,
+#table.rush-layout.scroll-active #rush-contracts-panel,
+#table.rush-layout.scroll-active #rush-contracts,
+#table.rush-layout.scroll-active #rush-stands,
+#table.rush-layout.scroll-active #rush-backseat {
+    margin-inline: 0;
+}

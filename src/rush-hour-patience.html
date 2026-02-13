@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+    <title>Card Playing Suite - Rush Hour Patience</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/card.css">
+    <link rel="stylesheet" href="styles/rush-hour-patience.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/mobile.css">
+</head>
+
+<body>
+    <header>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <h1>Rush Hour Patience</h1>
+        <div class="header-toggles">
+            <button id="toggle-game" class="btn-toggle active">Game</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="game-area">
+                <button id="rush-new-game" class="game-btn">New Game</button>
+                <button id="rush-draw" class="game-btn">Draw</button>
+                <button id="rush-undo" class="game-btn" disabled>Undo</button>
+                <button id="rush-hint" class="game-btn">Hint</button>
+                <button id="rush-help" class="game-btn">Help</button>
+            </div>
+
+            <div class="controls-section collapsed" id="settings-area">
+                <label class="stats">Taxi Stands:
+                    <select id="rush-stand-count">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                    </select>
+                </label>
+                <label class="stats" for="rush-knights-enabled">
+                    <input id="rush-knights-enabled" type="checkbox" checked>
+                    Include Knights
+                </label>
+                <label class="stats" for="rush-jokers-enabled">
+                    <input id="rush-jokers-enabled" type="checkbox">
+                    Include Jokers
+                </label>
+                <label class="stats">Joker Count:
+                    <select id="rush-joker-count" disabled>
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </label>
+                <label class="stats">Joker Pass Mode:
+                    <select id="rush-joker-pass-mode" disabled>
+                        <option value="consume" selected>+1 Pass Then Consume</option>
+                        <option value="parked-unlimited">Ignore Limit While Parked</option>
+                    </select>
+                </label>
+                <label class="stats">Table Scale:
+                    <input id="rush-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
+                    <span id="rush-card-scale-value">100%</span>
+                </label>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area">
+                <div class="stats">Add-ons:
+                    <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                    <button type="button" id="toggle-addons-all" class="btn-toggle btn-mini">Toggle</button>
+                    <button type="button" id="clear-addon-storage" class="btn-toggle btn-mini" title="Reset saved settings">Reset</button>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="stats-area">
+                <div class="stats">Moves: <span id="rush-moves">0</span></div>
+                <div class="stats">Time: <span id="rush-time">0:00</span></div>
+                <div class="stats">Score: <span id="rush-score">0</span></div>
+                <div class="stats">High Score: <span id="rush-high-score">0</span></div>
+                <div class="stats">Stock Pass: <span id="rush-stock-pass">1/3</span></div>
+                <div class="stats">Rush Hour: <span id="rush-hour-state">No</span></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="table-scroll" id="rush-scroll">
+        <main id="table" class="rush-layout">
+            <div id="rush-top-row">
+                <div id="rush-stock" class="rush-pile"></div>
+                <div id="rush-waste" class="rush-pile"></div>
+                <div id="rush-contracts-panel" class="rush-panel">
+                    <div class="rush-contract-subheaders">
+                        <h3 class="rush-subheader">Short Fares</h3>
+                        <h3 class="rush-subheader">Cross-town (8+)</h3>
+                    </div>
+                    <div id="rush-contracts" class="rush-contract-grid"></div>
+                </div>
+            </div>
+            <div id="rush-lane-row">
+                <div id="rush-backseat-panel" class="rush-panel">
+                    <h3 id="rush-hour-heading" class="rush-subheader rush-subtle">rush hour</h3>
+                    <div id="rush-backseat"></div>
+                </div>
+                <div id="rush-stands-panel" class="rush-panel">
+                    <h3 class="rush-subheader">Taxi Stands</h3>
+                    <div id="rush-stands"></div>
+                </div>
+                <div id="rush-tableau"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="assets.js"></script>
+    <script src="addons/manifest.js"></script>
+    <script src="shared/entitlements.js"></script>
+    <script src="shared/entitlement-sync.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="header.js"></script>
+    <script src="shared/solitaire-check-modal.js"></script>
+    <script src="shared/solitaire-ui-feedback.js"></script>
+    <script>window.CardRankOverrides = { A: 1, J: 11, C: 12, Q: 13, K: 14 };</script>
+    <script src="rush-hour-patience.js"></script>
+</body>
+
+</html>

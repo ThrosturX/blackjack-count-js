@@ -24,7 +24,15 @@
             emptyFill: 'any',
             drawCount: 1,
             redeals: 0,
-            highScoreRuleSetKey: 'napoleon'
+            highScoreRuleSetKey: 'napoleon',
+            helpText: [
+                'Goal: Build all foundations up by suit from Ace to King.',
+                'Setup: Two decks, ten tableau columns, and one-card draws from stock.',
+                'Tableau: Build down by suit only.',
+                'Moves: Only one tableau card can be moved at a time.',
+                'Empty columns: Any single card can fill an empty tableau column.',
+                'Stock: No redeals in this ruleset.'
+            ].join('\n')
         }),
         josephine: Object.freeze({
             id: 'josephine',
@@ -38,7 +46,14 @@
             emptyFill: 'any',
             drawCount: 1,
             redeals: 0,
-            highScoreRuleSetKey: 'josephine'
+            highScoreRuleSetKey: 'josephine',
+            helpText: [
+                'Goal: Build all foundations up by suit from Ace to King.',
+                'Tableau: Build down by suit only.',
+                'Moves: You may move full suit sequences between tableau columns.',
+                'Empty columns: Any card or valid sequence can move to an empty column.',
+                'Stock: Draw one card at a time, with no redeals.'
+            ].join('\n')
         }),
         alibaba: Object.freeze({
             id: 'alibaba',
@@ -52,7 +67,15 @@
             emptyFill: 'any',
             drawCount: 1,
             redeals: 0,
-            highScoreRuleSetKey: 'alibaba'
+            highScoreRuleSetKey: 'alibaba',
+            helpText: [
+                'Goal: Build 4 foundations up by suit from Ace to King.',
+                'Setup: One deck with ten tableau columns.',
+                'Tableau: Build down by suit only.',
+                'Moves: Suit sequences can be moved together.',
+                'Empty columns: Any card or valid suit run may fill an empty column.',
+                'Stock: Draw one card, no redeals.'
+            ].join('\n')
         }),
         'thieves-of-egypt': Object.freeze({
             id: 'thieves-of-egypt',
@@ -66,7 +89,14 @@
             emptyFill: 'king',
             drawCount: 1,
             redeals: 1,
-            highScoreRuleSetKey: 'thieves-of-egypt'
+            highScoreRuleSetKey: 'thieves-of-egypt',
+            helpText: [
+                'Goal: Build all 8 foundations up by suit from Ace to King.',
+                'Tableau: Build down in alternating colors.',
+                'Moves: Valid alternating-color sequences can move together.',
+                'Empty columns: Only Kings can be placed in empty tableau columns.',
+                'Stock: Draw one card at a time and you get one redeal.'
+            ].join('\n')
         }),
         'rank-and-file': Object.freeze({
             id: 'rank-and-file',
@@ -80,7 +110,15 @@
             emptyFill: 'any',
             drawCount: 1,
             redeals: 0,
-            highScoreRuleSetKey: 'rank-and-file'
+            highScoreRuleSetKey: 'rank-and-file',
+            helpText: [
+                'Goal: Build all foundations up by suit from Ace to King.',
+                'Setup: Two decks with partial face-down tableau stacks.',
+                'Tableau: Build down in alternating colors.',
+                'Moves: Alternating-color sequences can move together.',
+                'Empty columns: Any card or valid sequence can fill an empty column.',
+                'Stock: Draw one card at a time, no redeals.'
+            ].join('\n')
         })
     });
 
@@ -119,6 +157,9 @@
     };
 
     let stateManager = null;
+    const dragState = {
+        active: null
+    };
     const scheduleSizing = CommonUtils.createRafScheduler(() => {
         CommonUtils.preserveHorizontalScroll({
             targets: ['forty-scroll'],
@@ -128,6 +169,22 @@
 
     function getRules() {
         return RULES[normalizeVariantId(state.variantId)];
+    }
+
+    function showInfoDialog(title, message) {
+        if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+            SolitaireUiFeedback.showInfo({ title, message });
+            return;
+        }
+        alert(`${title}\n\n${message}`);
+    }
+
+    function showHintToast(message) {
+        if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showToast === 'function') {
+            SolitaireUiFeedback.showToast(message, { variant: 'warn', duration: 2200, containerId: 'table' });
+            return;
+        }
+        alert(message);
     }
 
     function getElapsedSeconds() {
@@ -700,6 +757,103 @@
         commitMove(true);
     }
 
+    function clearDropIndicators() {
+        document.querySelectorAll('.forty-column, .forty-foundation').forEach((el) => {
+            el.classList.remove('drag-over-valid', 'drag-over-invalid');
+        });
+    }
+
+    function clearDragState() {
+        dragState.active = null;
+        clearDropIndicators();
+    }
+
+    function markDropIndicator(targetEl, valid) {
+        if (!targetEl) return;
+        targetEl.classList.remove('drag-over-valid', 'drag-over-invalid');
+        targetEl.classList.add(valid ? 'drag-over-valid' : 'drag-over-invalid');
+    }
+
+    function startDragFromWaste(event) {
+        if (CommonUtils.isMobile() || state.isGameWon || !state.waste.length) {
+            event.preventDefault();
+            return;
+        }
+        const card = state.waste[state.waste.length - 1];
+        dragState.active = {
+            source: 'waste',
+            cards: [card]
+        };
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', 'forty-waste');
+        }
+    }
+
+    function startDragFromTableau(event, columnIndex, cardIndex) {
+        if (CommonUtils.isMobile() || state.isGameWon) {
+            event.preventDefault();
+            return;
+        }
+        const cards = getMovableCardsFromTableau(columnIndex, cardIndex);
+        if (!cards || !cards.length) {
+            event.preventDefault();
+            return;
+        }
+        dragState.active = {
+            source: 'tableau',
+            columnIndex,
+            cardIndex,
+            cards
+        };
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', `forty-tableau:${columnIndex}:${cardIndex}`);
+        }
+    }
+
+    function canDragDropToTableau(targetColumn) {
+        if (!dragState.active || !dragState.active.cards.length) return false;
+        if (dragState.active.source === 'tableau' && dragState.active.columnIndex === targetColumn) return false;
+        return canMoveToTableau(dragState.active.cards, targetColumn);
+    }
+
+    function canDragDropToFoundation(targetFoundation) {
+        if (!dragState.active || dragState.active.cards.length !== 1) return false;
+        return canMoveSingleCardToFoundation(dragState.active.cards[0], targetFoundation);
+    }
+
+    function executeDragDropToTableau(targetColumn) {
+        if (!canDragDropToTableau(targetColumn)) return false;
+        pushHistoryEntry();
+        if (dragState.active.source === 'waste') {
+            const card = state.waste.pop();
+            state.tableau[targetColumn].push(card);
+        } else if (dragState.active.source === 'tableau') {
+            const moved = removeFromTableau(dragState.active.columnIndex, dragState.active.cards.length);
+            state.tableau[targetColumn].push(...moved);
+        } else {
+            return false;
+        }
+        commitMove(true);
+        return true;
+    }
+
+    function executeDragDropToFoundation(targetFoundation) {
+        if (!canDragDropToFoundation(targetFoundation)) return false;
+        pushHistoryEntry();
+        if (dragState.active.source === 'waste') {
+            state.waste.pop();
+        } else if (dragState.active.source === 'tableau') {
+            removeFromTableau(dragState.active.columnIndex, 1);
+        } else {
+            return false;
+        }
+        state.foundations[targetFoundation].push(dragState.active.cards[0]);
+        commitMove(true);
+        return true;
+    }
+
     function undoMove() {
         if (!state.moveHistory.length || state.isGameWon) return;
         const entry = state.moveHistory.pop();
@@ -722,7 +876,7 @@
         CommonUtils.updateHighScore('forty-thieves', getRules().highScoreRuleSetKey, state.score);
         if (stateManager) stateManager.clear();
         window.setTimeout(() => {
-            alert(`You solved ${getRules().label}!`);
+            showInfoDialog('Victory', `You solved ${getRules().label}!`);
         }, 30);
     }
 
@@ -769,6 +923,12 @@
         const top = state.waste[state.waste.length - 1];
         const cardEl = CommonUtils.createCardEl(top);
         cardEl.classList.toggle('forty-selected', !!state.selected && state.selected.source === 'waste');
+        cardEl.classList.toggle('picked-up', !!state.selected && state.selected.source === 'waste' && CommonUtils.isMobile());
+        if (!CommonUtils.isMobile()) {
+            cardEl.draggable = true;
+            cardEl.addEventListener('dragstart', startDragFromWaste);
+            cardEl.addEventListener('dragend', clearDragState);
+        }
         cardEl.addEventListener('click', (event) => {
             event.stopPropagation();
             handleWasteClick(event);
@@ -789,6 +949,21 @@
             pileEl.innerHTML = '';
 
             const pile = state.foundations[i];
+            pileEl.addEventListener('dragover', (event) => {
+                if (!dragState.active) return;
+                const valid = canDragDropToFoundation(i);
+                if (valid) event.preventDefault();
+                markDropIndicator(pileEl, valid);
+            });
+            pileEl.addEventListener('dragleave', () => {
+                pileEl.classList.remove('drag-over-valid', 'drag-over-invalid');
+            });
+            pileEl.addEventListener('drop', (event) => {
+                if (!dragState.active) return;
+                event.preventDefault();
+                executeDragDropToFoundation(i);
+                clearDragState();
+            });
             if (!pile.length) {
                 const placeholder = document.createElement('div');
                 placeholder.className = 'forty-foundation-placeholder';
@@ -815,6 +990,21 @@
             columnEl.className = 'forty-column';
             columnEl.id = `forty-column-${colIndex}`;
             columnEl.dataset.index = String(colIndex);
+            columnEl.addEventListener('dragover', (event) => {
+                if (!dragState.active) return;
+                const valid = canDragDropToTableau(colIndex);
+                if (valid) event.preventDefault();
+                markDropIndicator(columnEl, valid);
+            });
+            columnEl.addEventListener('dragleave', () => {
+                columnEl.classList.remove('drag-over-valid', 'drag-over-invalid');
+            });
+            columnEl.addEventListener('drop', (event) => {
+                if (!dragState.active) return;
+                event.preventDefault();
+                executeDragDropToTableau(colIndex);
+                clearDragState();
+            });
             columnEl.addEventListener('click', (event) => {
                 if (event.target === columnEl) {
                     handleTableauColumnClick(colIndex);
@@ -838,8 +1028,16 @@
                     && cardIndex >= state.selected.cardIndex;
                 if (isSelected) {
                     cardEl.classList.add('forty-selected');
+                    if (CommonUtils.isMobile()) {
+                        cardEl.classList.add('picked-up');
+                    }
                 }
 
+                if (!CommonUtils.isMobile()) {
+                    cardEl.draggable = !!getMovableCardsFromTableau(colIndex, cardIndex);
+                    cardEl.addEventListener('dragstart', (event) => startDragFromTableau(event, colIndex, cardIndex));
+                    cardEl.addEventListener('dragend', clearDragState);
+                }
                 cardEl.addEventListener('click', (event) => {
                     event.stopPropagation();
                     handleTableauCardClick(colIndex, cardIndex);
@@ -915,6 +1113,7 @@
         CommonUtils.preserveHorizontalScroll({
             targets: ['forty-scroll'],
             update: () => {
+                clearDropIndicators();
                 renderStock();
                 renderWaste();
                 renderFoundations();
@@ -980,10 +1179,15 @@
         if (state.isGameWon) return;
         const hints = gatherHintMoves();
         if (!hints.length) {
-            alert('No obvious moves found.');
+            showHintToast('Hint: No obvious moves found.');
             return;
         }
-        alert(`Hint: ${hints[0]}`);
+        showHintToast(`Hint: ${hints[0]}`);
+    }
+
+    function showHelp() {
+        const rules = getRules();
+        showInfoDialog(`${rules.label} Rules`, rules.helpText || 'Build foundations from Ace to King by suit.');
     }
 
     function setupEventListeners() {
@@ -991,6 +1195,7 @@
         const drawBtn = document.getElementById('forty-draw');
         const undoBtn = document.getElementById('forty-undo');
         const hintBtn = document.getElementById('forty-hint');
+        const helpBtn = document.getElementById('forty-help');
         const stockEl = document.getElementById('forty-stock');
         const wasteEl = document.getElementById('forty-waste');
         const variantSelect = document.getElementById('forty-variant-select');
@@ -999,6 +1204,7 @@
         if (drawBtn) drawBtn.addEventListener('click', drawFromStock);
         if (undoBtn) undoBtn.addEventListener('click', undoMove);
         if (hintBtn) hintBtn.addEventListener('click', showHint);
+        if (helpBtn) helpBtn.addEventListener('click', showHelp);
         if (stockEl) stockEl.addEventListener('click', drawFromStock);
         if (wasteEl) wasteEl.addEventListener('click', handleWasteClick);
 
@@ -1013,6 +1219,15 @@
 
         window.addEventListener('card-scale:changed', scheduleSizing);
         window.addEventListener('resize', scheduleSizing);
+        document.addEventListener('dragover', (event) => {
+            if (!dragState.active) return;
+            event.preventDefault();
+        });
+        document.addEventListener('drop', (event) => {
+            if (!dragState.active) return;
+            event.preventDefault();
+            clearDragState();
+        });
 
         document.addEventListener('click', (event) => {
             if (!state.selected) return;

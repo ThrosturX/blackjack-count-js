@@ -45,6 +45,11 @@ const KLONDIKE_VARIANTS = {
         }
     }
 };
+const KLONDIKE_HELP_RULES = {
+    classic: 'Classic: Build tableau down by alternating colors, and only Kings may fill empty columns.',
+    vegas: 'Vegas: Draw 1 only, start at -52 score, and foundation moves pay out.',
+    'open-towers': 'Open Towers: Any rank may fill empty columns and tableau moves score higher.'
+};
 
 // Game state
 const gameState = {
@@ -1977,6 +1982,26 @@ function showHint() {
     );
 }
 
+function showKlondikeHelp() {
+    const variantId = gameState.variantId || DEFAULT_VARIANT_ID;
+    const variant = getActiveVariantConfig();
+    const drawCount = Number.isFinite(gameState.drawCount) ? gameState.drawCount : variant.drawCount;
+    const message = [
+        'Goal: Move all cards to the foundations from Ace to King by suit.',
+        'Tableau: Build down in alternating colors.',
+        variant.allowAnyCardOnEmpty
+            ? 'Empty columns: Any card can be placed on an empty tableau column.'
+            : 'Empty columns: Only Kings can be placed on an empty tableau column.',
+        `Stock: Draw ${drawCount} card${drawCount === 1 ? '' : 's'} at a time.`,
+        KLONDIKE_HELP_RULES[variantId] || ''
+    ].filter(Boolean).join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title: `${variant.label} Rules`, message });
+        return;
+    }
+    alert(`${variant.label} Rules\n\n${message}`);
+}
+
 /**
  * Setup event listeners
  */
@@ -1991,6 +2016,10 @@ function setupEventListeners() {
     const checkBtn = document.getElementById('klondike-check');
     if (checkBtn) {
         checkBtn.addEventListener('click', checkCurrentKlondikeSolvability);
+    }
+    const helpBtn = document.getElementById('klondike-help');
+    if (helpBtn) {
+        helpBtn.addEventListener('click', showKlondikeHelp);
     }
 
     const applyTableStyle = () => {

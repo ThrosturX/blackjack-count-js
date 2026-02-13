@@ -1928,6 +1928,26 @@ function checkFreeCellWin() {
     }
 }
 
+function showFreecellHelp() {
+    const isCavalier = freecellVariant.ruleSetKey === 'cavalier';
+    const title = isCavalier ? 'Cavalier FreeCell Rules' : 'FreeCell Rules';
+    const message = [
+        'Goal: Build all foundations up by suit, starting from Ace.',
+        'Tableau: Build down in alternating colors.',
+        'Free cells: Each open free cell can hold one card.',
+        isCavalier
+            ? 'Cavalier uses a 56-card deck (2-A plus Knight), 10 tableau columns, and 14-card foundations.'
+            : 'Classic FreeCell uses 8 tableau columns and standard 13-card foundations.',
+        'Any card may move to an empty tableau column.',
+        'You can move ordered sequences when enough free cells/empty columns are available.'
+    ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title, message });
+        return;
+    }
+    alert(`${title}\n\n${message}`);
+}
+
 function setupFreeCellEventListeners() {
     document.getElementById('freecell-new-game').addEventListener('click', initFreeCellGame);
     const undoBtn = document.getElementById('freecell-undo');
@@ -1941,6 +1961,10 @@ function setupFreeCellEventListeners() {
     const checkBtn = document.getElementById('freecell-check');
     if (checkBtn) {
         checkBtn.addEventListener('click', checkCurrentFreecellSolvability);
+    }
+    const helpBtn = document.getElementById('freecell-help');
+    if (helpBtn) {
+        helpBtn.addEventListener('click', showFreecellHelp);
     }
 
     const applyTableStyle = () => {

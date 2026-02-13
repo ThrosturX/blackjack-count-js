@@ -396,6 +396,7 @@ input:checked+.slider:before {
     font-size: 0.95rem;
     color: #d8e7f8;
     min-height: 74px;
+    white-space: pre-line;
 }
 
 .solitaire-check-modal-actions {

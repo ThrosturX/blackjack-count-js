@@ -88,6 +88,7 @@ function setupYukonEventListeners() {
     
     // Hint button
     document.getElementById('yukon-hint').addEventListener('click', showYukonHint);
+    document.getElementById('yukon-help')?.addEventListener('click', showYukonHelp);
     
     // Card scale controls
     document.getElementById('yukon-card-scale').addEventListener('input', function() {
@@ -882,6 +883,21 @@ function showYukonHint() {
     } else {
         CommonUtils.showTableToast('No obvious moves available. Look for possible sequences.', { variant: 'warn' });
     }
+}
+
+function showYukonHelp() {
+    const message = [
+        'Goal: Build all four foundations from Ace to King by suit.',
+        'Tableau: Build down in alternating colors.',
+        'Yukon rule: Move any face-up group, even when cards inside that group are not in sequence.',
+        'Empty columns: Only Kings can fill an empty tableau column.',
+        'Tip: Expose face-down cards quickly to open up new moves.'
+    ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
+        SolitaireUiFeedback.showInfo({ title: 'Yukon Rules', message });
+        return;
+    }
+    alert(`Yukon Rules\n\n${message}`);
 }
 
 function getYukonHintMessage() {

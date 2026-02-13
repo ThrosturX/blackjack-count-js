@@ -13,7 +13,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 
 ## Entry Points
 - `src/index.html`: launcher page.
-- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/simple-simon.html`, `src/forty-thieves.html`, `src/tripeaks.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/tabletop.html`.
+- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/simple-simon.html`, `src/forty-thieves.html`, `src/rush-hour-patience.html`, `src/tripeaks.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/tabletop.html`.
 - Additional card game pages may be added over time.
 
 ## Shared Systems
@@ -24,6 +24,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - `src/shared/solitaire-insolvability.js`: shared rapid insolvability detector for solitaire deal filtering, with variant-specific forbidden-subgraph matchers.
 - `src/shared/solitaire-solvability.js`: shared bounded forward-search solvability checker that evaluates if a current solitaire state can still reach a win.
 - `src/shared/solitaire-check-modal.js`: shared solitaire modal primitive for long-running check progress, result presentation, and confirmation prompts.
+- `src/shared/solitaire-ui-feedback.js`: shared wrapper that routes solitaire help/hint/outcome messaging through modal-first UI with toast/fallback handling.
 - `src/shared/solitaire-check-worker.js`: dedicated worker runtime for FreeCell and Klondike check flows so long searches do not block the main thread.
 - `src/shared/entitlements.js`: canonical local entitlement store with claim metadata (`ownership`, `source`, timestamps) and authoritative merge hooks.
 - `src/shared/entitlement-sync.js`: app lifecycle sync runner that pulls authoritative claims from a native bridge (or debug mock) and applies them through the entitlement store.

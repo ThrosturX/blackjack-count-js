@@ -22,6 +22,7 @@
             'cavaliers-castle.html': 'pyramid-card-scale',
             'golf.html': 'golf-card-scale',
             'forty-thieves.html': 'forty-card-scale',
+            'rush-hour-patience.html': 'rush-card-scale',
             'tabletop.html': 'tabletop-card-scale'
         };
         const keys = [];
