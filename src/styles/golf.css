@@ -1,179 +1,133 @@
-/* Golf Solitaire Styles */
-#golf-table {
-    --golf-tableau-gap: var(--ui-scale-tableau-gap, 12px);
-    --golf-foundation-y: 0;
-    --golf-waste-fan-x: var(--ui-scale-waste-fan-x, 20px);
-}
+/* ========================================
+   GOLF SOLITAIRE STYLES
+   ======================================== */
 
-#golf-table.portrait-phone {
-    --golf-tableau-gap: var(--ui-scale-tableau-gap-phone, 8px);
-}
-
-#golf-table.wide-screen {
-    --golf-tableau-gap: var(--ui-scale-tableau-gap-wide, 16px);
-}
-
-#golf-table .game-header {
-    padding: 10px;
-}
-
-#golf-table .game-controls {
+#golf-table.golf-layout {
+    --table-shell-max-width: 1200px;
+    --golf-tableau-gap: calc(15px * var(--ui-scale));
+    position: relative;
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
+    min-height: calc(480px * var(--ui-scale));
+    margin-top: calc(20px * var(--ui-scale));
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: calc(30px * var(--ui-scale));
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: calc(24px * var(--ui-scale));
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
 }
 
-/* Top Row Layout */
 #golf-top-row {
     display: flex;
-    justify-content: space-around;
-    margin-bottom: var(--spacing-md);
-    padding: 0 var(--spacing-sm);
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: calc(16px * var(--ui-scale));
+    min-height: calc(110px * var(--ui-scale));
 }
 
-#golf-stock,
-#golf-waste,
-#golf-foundation {
+.golf-pile {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
     position: relative;
-    width: var(--card-width);
-    height: var(--card-height);
-    background-color: var(--pile-background-color);
-    border-radius: var(--card-border-radius);
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border-radius: calc(8px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.16);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9em;
-    color: var(--pile-text-color);
-    box-shadow: var(--pile-shadow);
+    flex: 0 0 auto;
 }
 
-/* Tableau Layout */
+#golf-waste {
+    width: calc((80px * var(--ui-scale)) + (2 * var(--golf-waste-fan-x, 20px)));
+    justify-content: flex-start;
+}
+
 #golf-tableau-area {
-    padding: 0 var(--spacing-sm);
-    overflow-x: auto; /* Enable horizontal scrolling if content overflows */
-    padding-bottom: 20px; /* Space for scrollbar */
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
 }
 
 #golf-tableau {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     gap: var(--golf-tableau-gap);
-    padding-top: var(--spacing-md);
-    min-width: fit-content; /* Ensure tableau doesn't shrink below content size */
+    min-width: fit-content;
+    width: 100%;
+    padding-bottom: calc(8px * var(--ui-scale));
 }
 
 #golf-tableau .tableau-column {
+    width: calc(80px * var(--ui-scale));
+    min-height: calc(120px * var(--ui-scale));
     position: relative;
-    min-height: var(--card-height-lg);
-    width: var(--card-width);
-    background-color: var(--pile-background-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--pile-shadow);
+    border: 2px dashed transparent;
+    border-radius: calc(8px * var(--ui-scale));
+    transition: border-color 0.2s ease;
+    flex: 0 0 auto;
+}
+
+#golf-tableau .tableau-column:hover {
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 #golf-tableau .tableau-column .card {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    cursor: grab;
+    margin-left: 0;
+    cursor: pointer;
 }
 
-/* Card Styling (common styles from card.css will apply, only overrides here) */
-#golf-foundation .card {
-    width: 100%;
-    height: 100%;
+#golf-foundation .card,
+#golf-stock .card,
+#golf-waste .card {
+    margin-left: 0;
 }
 
-/* Drag and Drop Indicators */
-.drag-over-valid {
-    box-shadow: 0 0 10px 2px var(--color-success-light);
-    transition: box-shadow 0.2s ease-in-out;
+#golf-table.golf-layout.scroll-active #golf-top-row {
+    justify-content: flex-start;
 }
 
-.drag-over-invalid {
-    box-shadow: 0 0 10px 2px var(--color-error-light);
-    transition: box-shadow 0.2s ease-in-out;
+#golf-table.golf-layout.scroll-active #golf-tableau {
+    justify-content: flex-start;
 }
 
-.drag-layer {
-    will-change: transform;
+#golf-win-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: calc(28px * var(--ui-scale));
 }
 
-/* Win Overlay - Use common overlay styles */
-#golf-win-overlay .win-content {
-    max-width: 90%;
+#golf-win-overlay.hidden {
+    display: none;
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    #golf-top-row {
-        margin-bottom: var(--spacing-sm);
-        padding: 0 var(--spacing-xs);
-        gap: var(--spacing-xs);
-    }
-
-    #golf-stock,
-    #golf-waste,
-    #golf-foundation {
-        width: var(--card-width-sm);
-        height: var(--card-height-sm);
-    }
-
-    #golf-tableau .tableau-column {
-        width: var(--card-width-sm);
-        min-height: var(--card-height-md);
-    }
-
-    #golf-table .game-header {
-        padding: var(--spacing-xs);
-    }
-
-    #golf-table .game-controls {
-        gap: var(--spacing-xs);
-    }
+.drag-layer .card {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
-/* Card animations */
-@keyframes cardReveal {
-    from {
-        transform: translateY(0);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-#golf-tableau .card.revealing {
-    animation: cardReveal 0.2s ease-out;
-}
-
-/* Hint highlighting */
 .card.card-hovered {
-    box-shadow: 0 0 0 3px var(--color-highlight-yellow);
-    transform: translateY(-5px) scale(var(--card-scale)); /* Lift effect on hover */
-    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75);
 }
 
-.card.hint {
-    box-shadow: 0 0 0 3px var(--color-warning);
-    animation: pulse 1s infinite;
-}
+@media (max-width: 900px) {
+    #golf-table.golf-layout {
+        padding: calc(18px * var(--ui-scale));
+        gap: calc(18px * var(--ui-scale));
+    }
 
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 3px var(--color-warning);
-    }
-    50% {
-        box-shadow: 0 0 0 6px var(--color-warning);
-    }
-    100% {
-        box-shadow: 0 0 0 3px var(--color-warning);
+    #golf-top-row {
+        gap: calc(12px * var(--ui-scale));
     }
 }

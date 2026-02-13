@@ -37,7 +37,7 @@ const GolfLogic = {
      * @returns {boolean}
      */
     isGameWon: function (tableau) {
-        if (!Array.isArray(tableau)) return false;
+        if (!Array.isArray(tableau) || tableau.length === 0) return false;
         return tableau.every(column => column.length === 0);
     },
 
@@ -55,6 +55,10 @@ const GolfLogic = {
         return scores[moveType] || 0;
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.GolfLogic = GolfLogic;
+}
 
 // Export for Node.js environments (for testing)
 if (typeof module !== 'undefined' && module.exports) {

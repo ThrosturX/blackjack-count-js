@@ -654,40 +654,34 @@ function clearDropIndicators() {
 }
 
 function ensureYukonSizing() {
-    const offsets = getStackOffsets();
-    yukonSessionMaxTableauCards = Math.max(yukonSessionMaxTableauCards, getMaxYukonLength());
-    const maxCards = Math.max(YUKON_MIN_TABLEAU_CARDS, yukonSessionMaxTableauCards);
-    const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
-    const wrapperEl = document.getElementById('yukon-scroll');
-    const previousScrollLeft = wrapperEl ? wrapperEl.scrollLeft : 0;
+    CommonUtils.preserveHorizontalScroll({
+        targets: ['yukon-scroll'],
+        update: () => {
+            const offsets = getStackOffsets();
+            yukonSessionMaxTableauCards = Math.max(yukonSessionMaxTableauCards, getMaxYukonLength());
+            const maxCards = Math.max(YUKON_MIN_TABLEAU_CARDS, yukonSessionMaxTableauCards);
+            const stackHeight = CommonUtils.getStackHeight(maxCards, offsets.y);
 
-    CommonUtils.ensureTableauMinHeight({
-        table: 'table',
-        topRow: 'yukon-foundations',
-        stackOffset: offsets.y,
-        maxCards,
-        cardHeight: CARD_HEIGHT,
-        extraBottom: 40
+            CommonUtils.ensureTableauMinHeight({
+                table: 'table',
+                topRow: 'yukon-foundations',
+                stackOffset: offsets.y,
+                maxCards,
+                cardHeight: CARD_HEIGHT,
+                extraBottom: 40
+            });
+
+            document.querySelectorAll('.tableau-column').forEach(column => {
+                column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+            });
+
+            CommonUtils.ensureScrollableWidth({
+                table: 'table',
+                wrapper: 'yukon-scroll',
+                contentSelectors: ['#yukon-foundations', '#yukon-tableau']
+            });
+        }
     });
-
-    document.querySelectorAll('.tableau-column').forEach(column => {
-        column.style.minHeight = `${Math.ceil(stackHeight)}px`;
-    });
-
-    CommonUtils.ensureScrollableWidth({
-        table: 'table',
-        wrapper: 'yukon-scroll',
-        contentSelectors: ['#yukon-foundations', '#yukon-tableau']
-    });
-
-    if (wrapperEl) {
-        const clamped = Math.max(0, Math.min(previousScrollLeft, wrapperEl.scrollWidth - wrapperEl.clientWidth));
-        wrapperEl.scrollLeft = clamped;
-        requestAnimationFrame(() => {
-            const nextClamped = Math.max(0, Math.min(previousScrollLeft, wrapperEl.scrollWidth - wrapperEl.clientWidth));
-            wrapperEl.scrollLeft = nextClamped;
-        });
-    }
 }
 
 const scheduleYukonSizing = CommonUtils.createRafScheduler(ensureYukonSizing);

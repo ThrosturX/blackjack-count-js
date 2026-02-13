@@ -1,3 +1,6 @@
+const BAKERS_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♦', '♣', '♠'];
+const BAKERS_VALUES = (typeof VALUES !== 'undefined') ? VALUES : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
 const BAKERS_COLUMNS = 13;
 const FOUNDATION_SUITS = ['♥', '♦', '♣', '♠'];
 const STACKED_OFFSET = 16;
@@ -27,6 +30,24 @@ let selectedCard = null;
 let currentHint = null;
 let scheduleBakerSizing = null;
 
+function getBakerTotalCardCount() {
+    const tableauCount = Array.isArray(bakerState.tableau)
+        ? bakerState.tableau.reduce((sum, col) => sum + (Array.isArray(col) ? col.length : 0), 0)
+        : 0;
+    const foundationsCount = Array.isArray(bakerState.foundations)
+        ? bakerState.foundations.reduce((sum, pile) => sum + (Array.isArray(pile) ? pile.length : 0), 0)
+        : 0;
+    return tableauCount + foundationsCount;
+}
+
+function isBakerStatePlayable() {
+    if (!Array.isArray(bakerState.tableau) || bakerState.tableau.length !== BAKERS_COLUMNS) return false;
+    if (!bakerState.tableau.every((column) => Array.isArray(column))) return false;
+    if (!Array.isArray(bakerState.foundations) || bakerState.foundations.length !== FOUNDATION_SUITS.length) return false;
+    if (!bakerState.foundations.every((pile) => Array.isArray(pile))) return false;
+    return getBakerTotalCardCount() === 52;
+}
+
 function getElapsedSeconds(startTime) {
     if (!Number.isFinite(startTime)) return 0;
     return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
@@ -39,18 +60,42 @@ function formatTime(seconds) {
     return `${minutes}:${String(remainder).padStart(2, '0')}`;
 }
 
-function ensureBakerSizing() {
-    const tableauArea = document.getElementById('bakers-tableau-area');
-    const previousTableauScrollLeft = tableauArea ? tableauArea.scrollLeft : 0;
-    CommonUtils.ensureScrollableWidth({
-        table: 'bakers-tableau',
-        wrapper: 'bakers-tableau-area',
-        contentSelectors: ['#bakers-foundations', '#bakers-tableau']
-    });
-    if (tableauArea) {
-        const clamped = Math.max(0, Math.min(previousTableauScrollLeft, tableauArea.scrollWidth - tableauArea.clientWidth));
-        tableauArea.scrollLeft = clamped;
+function getBakerStackOffset() {
+    if (typeof CommonUtils !== 'undefined' && typeof CommonUtils.getSolitaireStackOffset === 'function') {
+        return CommonUtils.getSolitaireStackOffset(STACKED_OFFSET, { minFactor: 0.45 });
     }
+    return STACKED_OFFSET;
+}
+
+function ensureBakerSizing() {
+    const stackOffset = getBakerStackOffset();
+    const maxCards = Math.max(4, ...bakerState.tableau.map((column) => (Array.isArray(column) ? column.length : 0)));
+    const stackHeight = CommonUtils.getStackHeight(maxCards, stackOffset);
+
+    CommonUtils.preserveHorizontalScroll({
+        targets: ['bakers-scroll', 'bakers-tableau-area'],
+        update: () => {
+            CommonUtils.ensureTableauMinHeight({
+                table: 'table',
+                topRow: 'bakers-foundations',
+                stackOffset,
+                maxCards
+            });
+            document.querySelectorAll('.bakers-column').forEach((column) => {
+                column.style.minHeight = `${Math.ceil(stackHeight)}px`;
+            });
+            CommonUtils.ensureScrollableWidth({
+                table: 'bakers-tableau',
+                wrapper: 'bakers-tableau-area',
+                contentSelectors: ['#bakers-foundations', '#bakers-tableau']
+            });
+            CommonUtils.ensureScrollableWidth({
+                table: 'table',
+                wrapper: 'bakers-scroll',
+                contentSelectors: ['#bakers-foundations', '#bakers-tableau-area']
+            });
+        }
+    });
 }
 
 function clearSelection() {
@@ -101,6 +146,7 @@ function updateUndoButtonState() {
 
 function checkForWin() {
     if (bakerState.isGameWon) return;
+    if (!Array.isArray(bakerState.foundations) || bakerState.foundations.length !== FOUNDATION_SUITS.length) return;
     const finished = bakerState.foundations.every(pile => pile.length === 13);
     if (!finished) return;
 
@@ -201,11 +247,18 @@ function restoreBakersState(saved) {
     clearSelection();
     clearHint();
     startTimer();
+
+    if (!isBakerStatePlayable()) {
+        if (bakerStateManager) bakerStateManager.clear();
+        initBakerGame();
+        return;
+    }
+
     updateUI();
 }
 
 function dealBakerLayout() {
-    const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+    const deck = CommonUtils.createShoe(1, BAKERS_SUITS, BAKERS_VALUES);
     for (let row = 0; row < 4; row += 1) {
         for (let column = 0; column < BAKERS_COLUMNS; column += 1) {
             const card = deck.pop();
@@ -237,10 +290,10 @@ function canStackOnColumn(card, column) {
     if (!card) return false;
     if (!Array.isArray(column)) return false;
     if (column.length === 0) {
-        return card.val === 'K';
+        return false;
     }
     const top = column[column.length - 1];
-    return card.suit === top.suit && card.rank === top.rank - 1;
+    return card.rank === top.rank - 1;
 }
 
 function recordMove(entry) {
@@ -335,6 +388,7 @@ function updateFoundations() {
 function updateTableau() {
     const root = document.getElementById('bakers-tableau');
     if (!root) return;
+    const stackOffset = getBakerStackOffset();
     root.innerHTML = '';
     bakerState.tableau.forEach((column, columnIndex) => {
         const columnEl = document.createElement('div');
@@ -358,7 +412,7 @@ function updateTableau() {
             cardEl.dataset.column = String(columnIndex);
             cardEl.dataset.index = String(cardIndex);
             cardEl.style.setProperty('--stack-index', String(cardIndex));
-            cardEl.style.setProperty('top', `calc(var(--stack-index) * ${STACKED_OFFSET}px)`);
+            cardEl.style.setProperty('top', `calc(var(--stack-index) * ${stackOffset}px)`);
             cardEl.style.zIndex = String(cardIndex + 1);
             if (selectedCard && selectedCard.column === columnIndex && selectedCard.index === cardIndex) {
                 cardEl.classList.add('selected-card');
@@ -384,38 +438,33 @@ function updateTableau() {
 }
 
 function updateUI() {
-    const scrollContainer = document.getElementById('bakers-scroll');
-    const tableauArea = document.getElementById('bakers-tableau-area');
-    const previousContainerScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
-    const previousTableauScrollLeft = tableauArea ? tableauArea.scrollLeft : 0;
-
-    clearHint();
-    updateFoundations();
-    updateTableau();
-    updateStats();
-    updateUndoButtonState();
-    if (scheduleBakerSizing) scheduleBakerSizing();
-
-    if (scrollContainer) {
-        const clamped = Math.max(0, Math.min(previousContainerScrollLeft, scrollContainer.scrollWidth - scrollContainer.clientWidth));
-        scrollContainer.scrollLeft = clamped;
-    }
-    if (tableauArea) {
-        const clamped = Math.max(0, Math.min(previousTableauScrollLeft, tableauArea.scrollWidth - tableauArea.clientWidth));
-        tableauArea.scrollLeft = clamped;
-        requestAnimationFrame(() => {
-            const nextClamped = Math.max(0, Math.min(previousTableauScrollLeft, tableauArea.scrollWidth - tableauArea.clientWidth));
-            tableauArea.scrollLeft = nextClamped;
-        });
-    }
-
-    checkForWin();
+    CommonUtils.preserveHorizontalScroll({
+        targets: ['bakers-scroll', 'bakers-tableau-area'],
+        update: () => {
+            clearHint();
+            updateFoundations();
+            updateTableau();
+            updateStats();
+            updateUndoButtonState();
+            if (scheduleBakerSizing) scheduleBakerSizing();
+            checkForWin();
+        }
+    });
 }
 
 function handleTableauCardClick(columnIndex, cardIndex) {
     if (bakerState.isGameWon) return;
     const column = bakerState.tableau[columnIndex];
     if (!column || cardIndex !== column.length - 1) return;
+
+    if (selectedCard && selectedCard.column !== columnIndex) {
+        const destination = bakerState.tableau[columnIndex];
+        if (canStackOnColumn(selectedCard.card, destination)) {
+            moveCardBetweenTableau(selectedCard.column, columnIndex);
+            return;
+        }
+    }
+
     if (selectedCard && selectedCard.column === columnIndex && selectedCard.index === cardIndex) {
         selectedCard = null;
         updateTableau();
@@ -581,6 +630,46 @@ function setupBakersEventListeners() {
             if (event.target === overlay) hideWinOverlay();
         });
     }
+
+    const syncThemeClasses = () => {
+        const tableSelect = document.getElementById('table-style-select');
+        if (tableSelect) {
+            Array.from(document.body.classList).forEach(cls => {
+                if (cls.startsWith('table-')) document.body.classList.remove(cls);
+            });
+            if (tableSelect.value) {
+                document.body.classList.add(`table-${tableSelect.value}`);
+            }
+        }
+
+        const deckSelect = document.getElementById('deck-style-select');
+        if (deckSelect) {
+            Array.from(document.body.classList).forEach(cls => {
+                if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+            });
+            if (deckSelect.value) {
+                document.body.classList.add(`deck-${deckSelect.value}`);
+            }
+        }
+    };
+
+    const tableSelect = document.getElementById('table-style-select');
+    if (tableSelect) {
+        tableSelect.addEventListener('change', syncThemeClasses);
+    }
+    const deckSelect = document.getElementById('deck-style-select');
+    if (deckSelect) {
+        deckSelect.addEventListener('change', syncThemeClasses);
+    }
+
+    const scheduleThemeSync = () => requestAnimationFrame(syncThemeClasses);
+    scheduleThemeSync();
+    if (window.AddonLoader && window.AddonLoader.ready) {
+        window.AddonLoader.ready.then(scheduleThemeSync);
+    } else {
+        scheduleThemeSync();
+    }
+    window.addEventListener('addons:changed', syncThemeClasses);
 }
 
 function initBakerGame() {
@@ -621,7 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isWon: () => bakerState.isGameWon
     });
     const restored = bakerStateManager.load();
-    if (!restored) {
+    if (!restored || !isBakerStatePlayable()) {
+        if (bakerStateManager) bakerStateManager.clear();
         initBakerGame();
     }
 });

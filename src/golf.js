@@ -2,11 +2,13 @@
  * Golf Solitaire Game Controller
  */
 
-// Import card constants
-const { SUITS, VALUES } = (typeof Card !== 'undefined') ? Card : { SUITS: ['♥', '♦', '♣', '♠'], VALUES: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'] };
+const GOLF_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♦', '♣', '♠'];
+const GOLF_VALUES = (typeof VALUES !== 'undefined') ? VALUES : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
 // Import game logic
-const GolfLogic = (typeof module !== 'undefined' && module.exports) ? require('./golf-logic') : window.GolfLogic;
+const GolfRules = (typeof module !== 'undefined' && module.exports)
+    ? require('./golf-logic')
+    : (window.GolfLogic || (typeof GolfLogic !== 'undefined' ? GolfLogic : null));
 
 // Import shared utilities for drag and drop
 const UIHelpers = (typeof module !== 'undefined' && module.exports) ? require('./shared/ui-helpers') : window.UIHelpers;
@@ -70,6 +72,24 @@ const mobileAutoMoveTapState = {
     at: 0,
 };
 
+function getGolfTotalCardCount() {
+    const tableauCount = Array.isArray(golfState.tableau)
+        ? golfState.tableau.reduce((sum, col) => sum + (Array.isArray(col) ? col.length : 0), 0)
+        : 0;
+    const stockCount = Array.isArray(golfState.stock) ? golfState.stock.length : 0;
+    const wasteCount = Array.isArray(golfState.waste) ? golfState.waste.length : 0;
+    const foundationCount = Array.isArray(golfState.foundation) ? golfState.foundation.length : 0;
+    return tableauCount + stockCount + wasteCount + foundationCount;
+}
+
+function isGolfStatePlayable() {
+    if (!Array.isArray(golfState.tableau) || golfState.tableau.length !== GOLF_TABLEAU_COLS) return false;
+    if (!golfState.tableau.every((column) => Array.isArray(column))) return false;
+    if (!Array.isArray(golfState.stock) || !Array.isArray(golfState.waste) || !Array.isArray(golfState.foundation)) return false;
+    if (golfState.foundation.length < 1) return false;
+    return getGolfTotalCardCount() === 52;
+}
+
 function getGolfRuleSetKey() {
     return 'standard';
 }
@@ -98,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isWon: () => golfState.isGameWon
     });
     const restored = golfStateManager.load();
-    if (!restored) {
+    if (!restored || !isGolfStatePlayable()) {
+        if (golfStateManager) golfStateManager.clear();
         initGolfGame();
     }
 });
@@ -309,13 +330,19 @@ function restoreGolfState(saved) {
     golfState.startTime = Date.now() - elapsed * 1000;
     startTimer();
 
+    if (!isGolfStatePlayable()) {
+        if (golfStateManager) golfStateManager.clear();
+        initGolfGame();
+        return;
+    }
+
     updateUI();
     hideWinOverlay();
     updateUndoButtonState();
 }
 
 function dealGolfLayout() {
-    const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+    const deck = CommonUtils.createShoe(1, GOLF_SUITS, GOLF_VALUES);
     golfState.tableau = [];
     golfState.stock = [];
     golfState.waste = [];
@@ -348,31 +375,33 @@ function dealGolfLayout() {
  */
 const scheduleTableauSizing = CommonUtils.createRafScheduler(ensureTableauSizing);
 
+function ensureTableauColumns() {
+    const tableauEl = document.getElementById('golf-tableau');
+    if (!tableauEl) return;
+    for (let col = 0; col < GOLF_TABLEAU_COLS; col += 1) {
+        const id = `golf-column-${col}`;
+        let columnEl = document.getElementById(id);
+        if (columnEl) continue;
+        columnEl = document.createElement('div');
+        columnEl.id = id;
+        columnEl.className = 'tableau-column';
+        tableauEl.appendChild(columnEl);
+    }
+}
+
 function updateUI() {
-    const scrollContainer = document.getElementById('golf-scroll');
-    const tableauArea = document.getElementById('golf-tableau-area');
-    const previousContainerScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
-    const previousTableauScrollLeft = tableauArea ? tableauArea.scrollLeft : 0;
-
-    updateTableau();
-    updateFoundation();
-    updateStock();
-    updateWaste();
-    updateStats();
-    scheduleTableauSizing();
-
-    if (scrollContainer) {
-        const clamped = Math.max(0, Math.min(previousContainerScrollLeft, scrollContainer.scrollWidth - scrollContainer.clientWidth));
-        scrollContainer.scrollLeft = clamped;
-    }
-    if (tableauArea) {
-        const clamped = Math.max(0, Math.min(previousTableauScrollLeft, tableauArea.scrollWidth - tableauArea.clientWidth));
-        tableauArea.scrollLeft = clamped;
-        requestAnimationFrame(() => {
-            const nextClamped = Math.max(0, Math.min(previousTableauScrollLeft, tableauArea.scrollWidth - tableauArea.clientWidth));
-            tableauArea.scrollLeft = nextClamped;
-        });
-    }
+    CommonUtils.preserveHorizontalScroll({
+        targets: ['golf-scroll', 'golf-tableau-area'],
+        update: () => {
+            ensureTableauColumns();
+            updateTableau();
+            updateFoundation();
+            updateStock();
+            updateWaste();
+            updateStats();
+            scheduleTableauSizing();
+        }
+    });
 }
 
 function getMaxTableauLength() {
@@ -465,6 +494,7 @@ function updateWaste() {
     if (golfState.waste.length > 0) {
         const card = golfState.waste[golfState.waste.length - 1];
         const cardEl = CommonUtils.createCardEl(card);
+        cardEl.dataset.waste = 'true';
         cardEl.style.cursor = 'pointer';
         if (!CommonUtils.isMobile() || !dragState.mobileController) {
             cardEl.addEventListener('pointerdown', handlePointerDown);
@@ -502,9 +532,11 @@ function updateFoundation() {
 }
 
 function updateTableau() {
+    ensureTableauColumns();
     const offsets = getStackOffsets();
     for (let col = 0; col < GOLF_TABLEAU_COLS; col++) {
         const columnEl = document.getElementById(`golf-column-${col}`);
+        if (!columnEl) continue;
         columnEl.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
@@ -548,7 +580,7 @@ function drawFromStock() {
     recordMove({
         type: 'draw-stock',
         payload: { card },
-        scoreDelta: GolfLogic.scoreMove('draw-stock'),
+        scoreDelta: GolfRules.scoreMove('draw-stock'),
         movesDelta: 1,
     });
 
@@ -766,7 +798,7 @@ function finishDrag(clientX, clientY) {
     cleanupDragVisuals();
 
     if (moveResult.success) {
-        golfState.score += GolfLogic.scoreMove(moveType);
+        golfState.score += GolfRules.scoreMove(moveType);
         golfState.moves++;
         const scoreDelta = golfState.score - scoreBeforeDrag;
         recordMove({
@@ -817,7 +849,7 @@ function attemptFoundationMove() {
     const movingCard = dragState.draggedCards[0];
     const foundationPile = golfState.foundation;
 
-    const isValid = GolfLogic.canPlaceOnFoundation(movingCard, foundationPile[foundationPile.length - 1]);
+    const isValid = GolfRules.canPlaceOnFoundation(movingCard, foundationPile[foundationPile.length - 1]);
 
     if (isValid) {
         // Remove card from source
@@ -906,7 +938,7 @@ function handleCardClick(e) {
     }
 
     // Attempt to move to foundation
-    if (GolfLogic.canPlaceOnFoundation(card, golfState.foundation[golfState.foundation.length - 1])) {
+    if (GolfRules.canPlaceOnFoundation(card, golfState.foundation[golfState.foundation.length - 1])) {
         const scoreBeforeMove = golfState.score;
         // Remove from source
         if (sourcePile === "waste") {
@@ -919,7 +951,7 @@ function handleCardClick(e) {
         golfState.foundation.push(card);
 
         const moveType = sourcePile === "waste" ? "waste-to-foundation" : "tableau-to-foundation";
-        golfState.score += GolfLogic.scoreMove(moveType);
+        golfState.score += GolfRules.scoreMove(moveType);
         golfState.moves++;
 
         const scoreDelta = golfState.score - scoreBeforeMove;
@@ -937,7 +969,8 @@ function handleCardClick(e) {
 }
 
 function checkWinCondition() {
-    if (GolfLogic.isGameWon(golfState.tableau)) {
+    if (!Array.isArray(golfState.tableau) || golfState.tableau.length !== GOLF_TABLEAU_COLS) return;
+    if (GolfRules.isGameWon(golfState.tableau)) {
         golfState.isGameWon = true;
         clearInterval(golfState.timerInterval);
         CommonUtils.playSound('win');
@@ -973,7 +1006,7 @@ function autoComplete() {
         // Check waste pile first
         if (golfState.waste.length > 0) {
             const wasteCard = golfState.waste[golfState.waste.length - 1];
-            if (GolfLogic.canPlaceOnFoundation(wasteCard, golfState.foundation[golfState.foundation.length - 1])) {
+            if (GolfRules.canPlaceOnFoundation(wasteCard, golfState.foundation[golfState.foundation.length - 1])) {
                 cardToMove = wasteCard;
                 source = 'waste';
             }
@@ -985,7 +1018,7 @@ function autoComplete() {
                 const column = golfState.tableau[col];
                 if (column.length > 0) {
                     const topCard = column[column.length - 1];
-                    if (GolfLogic.canPlaceOnFoundation(topCard, golfState.foundation[golfState.foundation.length - 1])) {
+                    if (GolfRules.canPlaceOnFoundation(topCard, golfState.foundation[golfState.foundation.length - 1])) {
                         cardToMove = topCard;
                         source = 'tableau';
                         sourceCol = col;
@@ -1008,7 +1041,7 @@ function autoComplete() {
             golfState.foundation.push(cardToMove);
 
             const moveType = source === 'waste' ? 'waste-to-foundation' : 'tableau-to-foundation';
-            golfState.score += GolfLogic.scoreMove(moveType);
+            golfState.score += GolfRules.scoreMove(moveType);
             golfState.moves++;
             movesMade++;
 
@@ -1106,7 +1139,7 @@ function canDropOnFoundation() {
     if (dragState.draggedCards.length !== 1) return false;
     const movingCard = dragState.draggedCards[0];
     const foundationPile = golfState.foundation;
-    return GolfLogic.canPlaceOnFoundation(movingCard, foundationPile[foundationPile.length - 1]);
+    return GolfRules.canPlaceOnFoundation(movingCard, foundationPile[foundationPile.length - 1]);
 }
 
 function clearDropIndicators() {
@@ -1151,7 +1184,7 @@ function showHint() {
     // Check waste pile first
     if (golfState.waste.length > 0) {
         const wasteCard = golfState.waste[golfState.waste.length - 1];
-        if (GolfLogic.canPlaceOnFoundation(wasteCard, golfState.foundation[golfState.foundation.length - 1])) {
+        if (GolfRules.canPlaceOnFoundation(wasteCard, golfState.foundation[golfState.foundation.length - 1])) {
             CommonUtils.showTableToast(
                 `Hint: Move ${wasteCard.val}${wasteCard.suit} from waste to foundation!`,
                 { variant: 'warn', duration: 2200, containerId: 'golf-table' }
@@ -1165,7 +1198,7 @@ function showHint() {
         const column = golfState.tableau[col];
         if (column.length > 0) {
             const topCard = column[column.length - 1];
-            if (GolfLogic.canPlaceOnFoundation(topCard, golfState.foundation[golfState.foundation.length - 1])) {
+            if (GolfRules.canPlaceOnFoundation(topCard, golfState.foundation[golfState.foundation.length - 1])) {
                 CommonUtils.showTableToast(
                     `Hint: Move ${topCard.val}${topCard.suit} from column ${col + 1} to foundation!`,
                     { variant: 'warn', duration: 2200, containerId: 'golf-table' }
@@ -1223,6 +1256,15 @@ function setupGolfEventListeners() {
     const scheduleThemeSync = () => {
         requestAnimationFrame(syncThemeClasses);
     };
+
+    const tableSelect = document.getElementById('table-style-select');
+    if (tableSelect) {
+        tableSelect.addEventListener('change', syncThemeClasses);
+    }
+    const deckSelect = document.getElementById('deck-style-select');
+    if (deckSelect) {
+        deckSelect.addEventListener('change', syncThemeClasses);
+    }
 
     // Initial sync
     scheduleThemeSync();
