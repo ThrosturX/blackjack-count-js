@@ -4,7 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+FLAVOR="${1:-suite}"
+
+case "$FLAVOR" in
+  suite|casino|solitaire) ;;
+  *)
+    echo "Usage: bash scripts/android_install_connected.sh <suite|casino|solitaire>"
+    exit 1
+    ;;
+esac
+
+APK_PATH="android/app/build/outputs/apk/$FLAVOR/debug/app-$FLAVOR-debug.apk"
 
 if ! command -v adb >/dev/null 2>&1; then
   echo "ERROR: adb not found on PATH."
@@ -13,7 +23,7 @@ fi
 
 if [[ ! -f "$APK_PATH" ]]; then
   echo "ERROR: APK not found at $APK_PATH"
-  echo "Run: npm run android:build:debug"
+  echo "Run: npm run android:$FLAVOR:build:debug"
   exit 1
 fi
 

@@ -9,6 +9,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Must work from `file://` and static hosting.
 - No server/runtime dependency required for core gameplay.
 - Android native wrapper support is provided via Capacitor with `src/` as `webDir`.
+- Android audience split is implemented through flavors with distinct app IDs (`suite`, `casino`, `solitaire`) while sharing one web codebase.
 
 ## Entry Points
 - `src/index.html`: launcher page.
@@ -27,6 +28,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - `src/shared/entitlements.js`: canonical local entitlement store with claim metadata (`ownership`, `source`, timestamps) and authoritative merge hooks.
 - `src/shared/entitlement-sync.js`: app lifecycle sync runner that pulls authoritative claims from a native bridge (or debug mock) and applies them through the entitlement store.
 - `src/addons.js` + `src/addons/manifest.js`: addon manifest ingestion and addon loading/toggling.
+- `src/app-profile.js`: build-selected app profile consumed by launcher/store flows to expose audience-specific game groups for split app packaging.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base/layout/mobile styles.
 
 ## Layout and Responsiveness Contract
@@ -38,6 +40,8 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Blackjack table height must grow when scaled content exceeds the default table cap so seat controls remain reachable.
 - Headers should prevent overlap between back button, title, and toggle buttons.
 - Mobile overrides are loaded last (`src/styles/mobile.css`).
+- Launcher card exposure is profile-driven by `window.AppProfile.launcherGroups` so split bundles can target different audiences without forking game pages.
+- Store add-on exposure is profile-driven by `window.AppProfile.storeGameFilter` so split bundles can hide out-of-audience content (for example, blackjack counting packs in solitaire-only builds).
 
 ## Test Scope Guidance
 - Gameplay and persistence tests are required when rule logic, save-state behavior, shared systems, or input handling changes.

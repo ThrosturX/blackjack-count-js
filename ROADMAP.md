@@ -12,6 +12,7 @@ For Card Playing Suite (working name) in repository `bj_table` (subject to renam
 - Prepare a WebView wrapper strategy with offline asset packaging.
 - Status: Capacitor Android wrapper baseline is working with local `src/` asset sync and debug APK build/install workflow.
 - Status: shared entitlement sync boundary is in place (`src/shared/entitlements.js` + `src/shared/entitlement-sync.js`) and ready for native Play/backend bridge integration.
+- Status: launcher app-profile split foundation is in place (`src/app-profile.js` + `scripts/set_app_profile.sh`) for suite/casino/solitaire packaging.
 - Define storage/version migration strategy for saved games.
 - Validate input behavior in Android WebView for touch-heavy interactions.
 - Add release profile checks for performance on mid-range devices.
@@ -26,6 +27,12 @@ For Card Playing Suite (working name) in repository `bj_table` (subject to renam
 - Add mini-store UX and purchase restoration flow.
 - Split free vs premium addon packs cleanly.
 - Add telemetry hooks for conversion and retention analysis.
+
+## Phase 5: Multi-Listing Play Store Rollout (Audience Split)
+- Status: distinct Android application IDs are wired via flavors (`com.antisthenes.bundle`, `com.antisthenes.casino`, `com.antisthenes.solitaire`).
+- Status: automated profile + app-id build commands are in place for debug and release bundle flows.
+- Add per-listing brand assets (name, icon, feature graphic, screenshots, privacy metadata).
+- Verify entitlement and add-on policy parity across split listings.
 
 ## Ongoing Engineering Rules
 - Favor shared modules over page-specific forks.

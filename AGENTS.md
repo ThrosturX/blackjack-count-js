@@ -42,6 +42,7 @@
 - `src/shared/entitlements.js`: shared local entitlement storage with claim ownership/source metadata and future authoritative sync hooks.
 - `src/shared/entitlement-sync.js`: lifecycle-aware authoritative entitlement sync bridge (native bridge first, debug mock fallback).
 - `src/addons/manifest.js` and `src/addons.js`: add-on catalog and registration.
+- `src/app-profile.js`: build-selected app profile (`suite`, `casino`, `solitaire`) used by launcher/store filtering and split packaging workflows.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared style layers (base, layout, mobile overrides loaded last).
 - If new shared systems are introduced during a turn, update this section in the same turn, or explicitly propose the update at the end of the turn.
 

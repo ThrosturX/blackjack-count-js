@@ -122,6 +122,7 @@
         <section class="store-grid" id="store-grid" aria-live="polite"></section>
     </main>
 
+    <script src="app-profile.js"></script>
     <script src="addons/manifest.js"></script>
     <script src="shared/entitlements.js"></script>
     <script src="shared/entitlement-sync.js"></script>
@@ -130,6 +131,7 @@
             const SETTINGS_KEY = 'bj_table.settings';
             const entitlements = window.EntitlementStore;
             if (!entitlements) return;
+            const profile = window.AppProfile || null;
 
             const loadSettings = () => {
                 try {
@@ -185,6 +187,15 @@
             const addons = (window.AddonManifest && Array.isArray(window.AddonManifest.addons))
                 ? window.AddonManifest.addons
                 : [];
+            const allowedGames = Array.isArray(profile && profile.storeGameFilter)
+                ? new Set(profile.storeGameFilter.map((name) => String(name).toLowerCase()))
+                : null;
+
+            const isAddonVisible = (addon) => {
+                if (!allowedGames || !allowedGames.size) return true;
+                if (!Array.isArray(addon.games) || !addon.games.length) return true;
+                return addon.games.some((name) => allowedGames.has(String(name).toLowerCase()));
+            };
 
             backLink.addEventListener('click', (event) => {
                 if (window.history.length > 1) {
@@ -196,6 +207,7 @@
             const render = () => {
                 grid.innerHTML = '';
                 addons.forEach((addon) => {
+                    if (!isAddonVisible(addon)) return;
                     const claimed = entitlements.isClaimed(addon.id);
                     const claim = entitlements.getClaim(addon.id);
                     const item = document.createElement('article');

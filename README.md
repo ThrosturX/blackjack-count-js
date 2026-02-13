@@ -24,6 +24,34 @@ The project is designed to run from both static hosting and `file://`.
 - Table Top Sandbox (`src/tabletop.html`)
 - And potentially other card games.
 
+## Split App Profiles (Suite, Casino, Solitaire)
+
+The codebase now supports a lightweight launcher profile switch for separate app bundles while preserving shared systems:
+
+- `suite`: full launcher (casino + solitaire + sandbox)
+- `casino`: launcher focused on Blackjack and Texas Hold'em Poker
+- `solitaire`: launcher focused on Klondike, FreeCell, Spider, Pyramid, and Table Top Sandbox (experimental)
+
+Profile selection writes `src/app-profile.js`, which `src/index.html` reads at runtime.
+The same profile also filters Store listings so split apps avoid out-of-audience add-ons.
+Android flavors now map these profiles to distinct app IDs:
+
+- `suite`: `com.antisthenes.bundle`
+- `casino`: `com.antisthenes.casino`
+- `solitaire`: `com.antisthenes.solitaire`
+
+Current flavor launcher labels:
+
+- `suite`: `Card Bundle`
+- `casino`: `Antisthenes Casino`
+- `solitaire`: `Antisthenes Solitaire`
+
+Commands:
+
+- `npm run profile:suite`
+- `npm run profile:casino`
+- `npm run profile:solitaire`
+
 ## Variants and Game Options
 
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
@@ -41,6 +69,7 @@ The project is designed to run from both static hosting and `file://`.
 - `src/shared/entitlements.js`: canonical local entitlement store with claim metadata and authoritative-merge APIs.
 - `src/shared/entitlement-sync.js`: lifecycle-aware entitlement sync runner (native bridge first, debug mock fallback).
 - `src/addons.js` + `src/addons/manifest.js`: add-on loading and add-on catalog registration.
+- `src/app-profile.js`: build-selected app profile consumed by the launcher to expose audience-specific game groups.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base, layout, and mobile override style layers.
 
 ## Persistence
@@ -109,7 +138,7 @@ When behavior or architecture changes substantially, keep these files in sync:
 
 - Capacitor wrapper progress and resume instructions are documented in `mobile/android/README.md`.
 - Developer shortcut scripts live in `scripts/`.
-- Native entitlement bridge stub is currently provided by `android/app/src/main/java/com/throstur/bjtable/EntitlementBridgePlugin.java`.
+- Native entitlement bridge stub is currently provided by `android/app/src/main/java/com/antisthenes/bundle/EntitlementBridgePlugin.java`.
 
 ## Android Developer Shortcuts
 
@@ -118,7 +147,15 @@ From repo root:
 - `npm run android:doctor`: verify Java/SDK/ADB and installed Capacitor packages.
 - `npm run cap:sync`: sync `src/` web assets into the Android project.
 - `npm run android:build:debug`: build debug APK.
+- `npm run android:suite:build:debug`: apply `suite` profile, sync, then build debug APK.
+- `npm run android:casino:build:debug`: apply `casino` profile, sync, then build debug APK.
+- `npm run android:solitaire:build:debug`: apply `solitaire` profile, sync, then build debug APK.
+- `npm run android:suite:bundle:release`: build `suite` Play bundle (`.aab`).
+- `npm run android:casino:bundle:release`: build `casino` Play bundle (`.aab`).
+- `npm run android:solitaire:bundle:release`: build `solitaire` Play bundle (`.aab`).
 - `npm run android:install:connected`: install debug APK to an authorized connected device.
+- `npm run android:casino:install:connected`: install casino debug APK.
+- `npm run android:solitaire:install:connected`: install solitaire debug APK.
 - `npm run android:rebuild:deploy`: full loop (`npm install`, sync, clean build, deploy).
 
 ### Fast Iteration Guidance

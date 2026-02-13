@@ -10,11 +10,20 @@ This file is a resume guide for wrapping the web app in Android via Capacitor.
 - Capacitor packages are pinned to `7.x`.
 - Android debug build is working with JDK 21 and local Android SDK path.
 - Developer shortcuts are available under `scripts/`.
+- Launcher profile split support is available through `src/app-profile.js` and `scripts/set_app_profile.sh`.
+- Android flavors are wired for split package IDs:
+  - `suite` -> `com.antisthenes.bundle`
+  - `casino` -> `com.antisthenes.casino`
+  - `solitaire` -> `com.antisthenes.solitaire`
+- Flavor launcher labels:
+  - `suite` -> `Card Bundle`
+  - `casino` -> `Antisthenes Casino`
+  - `solitaire` -> `Antisthenes Solitaire`
 - Shared web entitlement boundary is implemented:
   - `src/shared/entitlements.js` is the canonical local store.
   - `src/shared/entitlement-sync.js` performs startup/resume authoritative sync.
 - Native bridge stub is implemented:
-  - `android/app/src/main/java/com/throstur/bjtable/EntitlementBridgePlugin.java`
+  - `android/app/src/main/java/com/antisthenes/bundle/EntitlementBridgePlugin.java`
   - Registered from `MainActivity` as `EntitlementBridge`.
 
 ## Environment
@@ -35,16 +44,37 @@ npm run cap:sync
 npm run android:build:debug
 ```
 
+Profile-targeted build shortcuts:
+
+```bash
+npm run android:suite:build:debug
+npm run android:casino:build:debug
+npm run android:solitaire:build:debug
+```
+
+These commands apply the profile first, then sync and build.
+
+Release bundle shortcuts (for Play Console upload artifacts):
+
+```bash
+npm run android:suite:bundle:release
+npm run android:casino:bundle:release
+npm run android:solitaire:bundle:release
+```
+
 ## Rapid Prototyping Workflow
 
 - For minor web-only changes in `src/` (CSS/layout/content/JS that does not require device validation), skip Android sync/build and validate in browser/`file://` first.
 - Use `npm run cap:sync` when you are ready to test updated web assets on Android.
+- Use `npm run profile:<suite|casino|solitaire>` to switch launcher audience before sync/build when validating split app behavior.
 - Use `npm run android:build:debug` and install only for Android/device checks, native changes, or when an APK artifact is needed.
 
 Install APK to connected authorized phone:
 
 ```bash
 npm run android:install:connected
+npm run android:casino:install:connected
+npm run android:solitaire:install:connected
 ```
 
 One command full loop (install deps, sync, clean rebuild, deploy):
@@ -53,10 +83,20 @@ One command full loop (install deps, sync, clean rebuild, deploy):
 npm run android:rebuild:deploy
 ```
 
-APK output:
+Debug APK outputs:
 
 ```text
-android/app/build/outputs/apk/debug/app-debug.apk
+android/app/build/outputs/apk/suite/debug/app-suite-debug.apk
+android/app/build/outputs/apk/casino/debug/app-casino-debug.apk
+android/app/build/outputs/apk/solitaire/debug/app-solitaire-debug.apk
+```
+
+Release AAB outputs:
+
+```text
+android/app/build/outputs/bundle/suiteRelease/app-suite-release.aab
+android/app/build/outputs/bundle/casinoRelease/app-casino-release.aab
+android/app/build/outputs/bundle/solitaireRelease/app-solitaire-release.aab
 ```
 
 ## First-Time Machine Requirements
