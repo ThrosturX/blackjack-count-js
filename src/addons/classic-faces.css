@@ -1,9 +1,10 @@
 /* Classic card faces add-on */
 
 .card.classic-faces-card {
-    --classic-pip-size: clamp(0.95rem, 2.05vw, 1.6rem);
-    --classic-ace-size: clamp(1.8rem, 3vw, 2.5rem);
-    --classic-rank-size: clamp(0.75rem, 1.5vw, 0.95rem);
+    --classic-pip-size: 24px;
+    --classic-ace-size: 40px;
+    --classic-rank-size: 15px;
+    --classic-center-size: 37px;
     --classic-corner-inset-y: 1px;
     --classic-rank-inset-x: 5px;
     --classic-suit-inset-x: 6px;
@@ -26,7 +27,7 @@
     height: auto;
     width: auto;
     transform: none;
-    font-size: clamp(1.95rem, 3vw, 3rem);
+    font-size: var(--classic-center-size);
     text-shadow: 0 0 1px rgba(251, 223, 188, 0.35);
 }
 

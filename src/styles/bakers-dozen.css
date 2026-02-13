@@ -81,12 +81,16 @@
 
 .tableau-grid {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: flex-start;
     gap: var(--bakers-tableau-gap);
     min-width: 100%;
     width: max-content;
     padding-bottom: calc(8px * var(--ui-scale));
+}
+
+.tableau-area.scroll-active .tableau-grid {
+    justify-content: flex-start;
 }
 
 .bakers-column {
@@ -117,7 +121,8 @@
 .bakers-column .stacked-card {
     position: absolute;
     left: 0;
-    width: var(--bakers-column-width);
+    width: var(--scaled-card-w);
+    height: var(--scaled-card-h);
     margin-left: 0;
     transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
@@ -132,6 +137,10 @@
 
 .card.selected-card {
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+.bakers-column .card.selected-card {
+    z-index: 150 !important;
 }
 
 .card.hint {

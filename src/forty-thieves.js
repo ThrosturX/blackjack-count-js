@@ -900,6 +900,7 @@
         tableEl.style.setProperty('--forty-tableau-gap', `${baseGap}px`);
         tableEl.style.setProperty('--forty-fan-x', `${fan}px`);
         tableEl.style.setProperty('--forty-foundation-cols', String(getRules().foundationSlots));
+        tableEl.style.setProperty('--forty-foundation-start-col', state.variantId === 'alibaba' ? '5' : '3');
 
         CommonUtils.ensureScrollableWidth({
             table: 'table',

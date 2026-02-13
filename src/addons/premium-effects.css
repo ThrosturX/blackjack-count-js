@@ -5,13 +5,13 @@
    ============================================ */
 
 /* GPU acceleration for animated elements */
-body.table-aurora #table,
-body.table-imperial #table,
-body.table-noir #table,
-body.table-neon #table,
-body.table-cyber #table,
-body.table-diner #table,
-body.table-ocean #table,
+body.table-aurora :is(#table, #klondike-table),
+body.table-imperial :is(#table, #klondike-table),
+body.table-noir :is(#table, #klondike-table),
+body.table-neon :is(#table, #klondike-table),
+body.table-cyber :is(#table, #klondike-table),
+body.table-diner :is(#table, #klondike-table),
+body.table-ocean :is(#table, #klondike-table),
 body.deck-solar .card,
 body.deck-cinderfall .card:not(.hidden),
 body.deck-cinderfall .card:not(.hidden) .suit-center,
@@ -20,24 +20,46 @@ body.deck-crimson-veil .card.hidden {
     will-change: box-shadow, filter;
 }
 
+/* Prevent animated table glows from causing viewport-height scrollbar flicker. */
+body.table-aurora .table-scroll,
+body.table-imperial .table-scroll,
+body.table-noir .table-scroll,
+body.table-neon .table-scroll,
+body.table-cyber .table-scroll,
+body.table-diner .table-scroll,
+body.table-ocean .table-scroll {
+    overflow-y: clip;
+}
+
+@supports not (overflow: clip) {
+    body.table-aurora .table-scroll,
+    body.table-imperial .table-scroll,
+    body.table-noir .table-scroll,
+    body.table-neon .table-scroll,
+    body.table-cyber .table-scroll,
+    body.table-diner .table-scroll,
+    body.table-ocean .table-scroll {
+        overflow-y: hidden;
+    }
+}
+
 /* Respect user motion preferences */
 @media (prefers-reduced-motion: reduce) {
-    body.table-aurora #table,
-    body.table-imperial #table,
-    body.table-noir #table,
-    body.table-neon #table,
-    body.table-cyber #table,
-    body.table-diner #table,
-    body.table-ocean #table,
-    body.table-ocean #klondike-table {
+    body.table-aurora :is(#table, #klondike-table),
+    body.table-imperial :is(#table, #klondike-table),
+    body.table-noir :is(#table, #klondike-table),
+    body.table-neon :is(#table, #klondike-table),
+    body.table-cyber :is(#table, #klondike-table),
+    body.table-diner :is(#table, #klondike-table),
+    body.table-ocean :is(#table, #klondike-table) {
         animation: none !important;
     }
 
-    body.table-aurora #table:hover,
-    body.table-imperial #table:hover,
-    body.table-noir #table:hover,
-    body.table-neon #table:hover,
-    body.table-cyber #table:hover {
+    body.table-aurora :is(#table, #klondike-table):hover,
+    body.table-imperial :is(#table, #klondike-table):hover,
+    body.table-noir :is(#table, #klondike-table):hover,
+    body.table-neon :is(#table, #klondike-table):hover,
+    body.table-cyber :is(#table, #klondike-table):hover {
         transform: none !important;
     }
 
@@ -56,7 +78,7 @@ body.deck-crimson-veil .card.hidden {
    ============================================ */
 
 /* --- Aurora Royale - Enhanced --- */
-body.table-aurora #table {
+body.table-aurora :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 100px rgba(80, 200, 240, 0.35),
         0 0 50px rgba(80, 200, 240, 0.45),
@@ -67,16 +89,15 @@ body.table-aurora #table {
     overflow: hidden;
 }
 
-body.table-aurora #table:hover {
+body.table-aurora :is(#table, #klondike-table):hover {
     box-shadow:
         inset 0 0 120px rgba(80, 200, 240, 0.55),
         0 0 70px rgba(80, 200, 240, 0.65),
         0 0 120px rgba(140, 90, 220, 0.45);
-    transform: scale(1.005);
 }
 
 /* --- Imperial Marble - Enhanced --- */
-body.table-imperial #table {
+body.table-imperial :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 110px rgba(0, 0, 0, 0.75),
         0 0 45px rgba(181, 154, 76, 0.55),
@@ -85,16 +106,15 @@ body.table-imperial #table {
     transition: all 0.4s ease;
 }
 
-body.table-imperial #table:hover {
+body.table-imperial :is(#table, #klondike-table):hover {
     box-shadow:
         inset 0 0 130px rgba(0, 0, 0, 0.85),
         0 0 65px rgba(181, 154, 76, 0.85),
         0 0 100px rgba(212, 175, 55, 0.5);
-    transform: scale(1.005);
 }
 
 /* --- Velour Noir - Enhanced --- */
-body.table-noir #table {
+body.table-noir :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 110px rgba(0, 0, 0, 0.85),
         0 0 35px rgba(255, 255, 255, 0.15),
@@ -103,16 +123,15 @@ body.table-noir #table {
     transition: all 0.4s ease;
 }
 
-body.table-noir #table:hover {
+body.table-noir :is(#table, #klondike-table):hover {
     box-shadow:
         inset 0 0 130px rgba(0, 0, 0, 0.95),
         0 0 55px rgba(255, 255, 255, 0.28),
         0 0 90px rgba(150, 150, 150, 0.35);
-    transform: scale(1.005);
 }
 
 /* --- Retro Diner - Enhanced --- */
-body.table-diner #table {
+body.table-diner :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 110px rgba(0, 0, 0, 0.8),
         0 0 40px rgba(120, 80, 40, 0.45),
@@ -124,7 +143,7 @@ body.table-diner #table {
     transition: all 0.4s ease;
 }
 
-body.table-diner #table:hover {
+body.table-diner :is(#table, #klondike-table):hover {
     box-shadow:
         inset 0 0 130px rgba(0, 0, 0, 0.9),
         0 0 60px rgba(120, 80, 40, 0.7),
@@ -133,8 +152,7 @@ body.table-diner #table:hover {
 }
 
 /* --- Open Ocean - Enhanced --- */
-body.table-ocean #table,
-body.table-ocean #klondike-table {
+body.table-ocean :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 120px rgba(0, 120, 160, 0.4),
         0 0 50px rgba(0, 160, 200, 0.3),
@@ -144,8 +162,7 @@ body.table-ocean #klondike-table {
     overflow: hidden;
 }
 
-body.table-ocean #table::before,
-body.table-ocean #klondike-table::before {
+body.table-ocean :is(#table, #klondike-table)::before {
     content: "";
     position: absolute;
     inset: -12%;
@@ -159,8 +176,7 @@ body.table-ocean #klondike-table::before {
     z-index: 0;
 }
 
-body.table-ocean #table::after,
-body.table-ocean #klondike-table::after {
+body.table-ocean :is(#table, #klondike-table)::after {
     content: "";
     position: absolute;
     inset: -12%;
@@ -173,8 +189,7 @@ body.table-ocean #klondike-table::after {
     z-index: 0;
 }
 
-body.table-ocean #table > :not(.ocean-creature):not(.ocean-orca),
-body.table-ocean #klondike-table > :not(.ocean-creature):not(.ocean-orca) {
+body.table-ocean :is(#table, #klondike-table) > :not(.ocean-creature):not(.ocean-orca) {
     z-index: 2;
 }
 
@@ -268,7 +283,7 @@ body.table-ocean .ocean-orca-swim {
    ============================================ */
 
 /* Neon table with dramatic flicker */
-body.table-neon #table {
+body.table-neon :is(#table, #klondike-table) {
     box-shadow:
         inset 0 0 80px rgba(255, 0, 255, 0.25),
         0 0 60px rgba(255, 0, 255, 0.5),
@@ -278,7 +293,7 @@ body.table-neon #table {
     transition: all 0.3s ease;
 }
 
-body.table-neon #table:hover {
+body.table-neon :is(#table, #klondike-table):hover {
     box-shadow:
         inset 0 0 100px rgba(255, 0, 255, 0.45),
         0 0 90px rgba(255, 0, 255, 0.75),
@@ -288,12 +303,12 @@ body.table-neon #table:hover {
 }
 
 /* Cyber table with grid flicker */
-body.table-cyber #table {
+body.table-cyber :is(#table, #klondike-table) {
     animation: cyberpunk-grid-flicker 5s infinite;
     transition: all 0.3s ease;
 }
 
-body.table-cyber #table:hover {
+body.table-cyber :is(#table, #klondike-table):hover {
     box-shadow:
         0 0 40px #ff00ff,
         inset 0 0 80px #00f2ff,
@@ -511,7 +526,7 @@ body.deck-cinderfall .card:not(.hidden) .val-bot::before {
    ============================================ */
 
 /* Storm effect for Aurora (water/icy theme) */
-body.table-aurora #table::before {
+body.table-aurora :is(#table, #klondike-table)::before {
     content: '';
     position: absolute;
     top: 0;
@@ -527,7 +542,7 @@ body.table-aurora #table::before {
 }
 
 /* Additional storm atmosphere overlay */
-body.table-aurora #table::after {
+body.table-aurora :is(#table, #klondike-table)::after {
     content: '';
     position: absolute;
     top: 0;

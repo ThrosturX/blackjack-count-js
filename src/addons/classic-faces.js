@@ -111,6 +111,31 @@
         return true;
     };
 
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+    const syncClassicSizing = (cardEl) => {
+        if (!cardEl) return;
+        const computed = window.getComputedStyle ? window.getComputedStyle(cardEl) : null;
+        let width = computed ? parseFloat(computed.width) : NaN;
+        let height = computed ? parseFloat(computed.height) : NaN;
+        if (!(width > 0) || !(height > 0)) {
+            const rect = cardEl.getBoundingClientRect ? cardEl.getBoundingClientRect() : null;
+            if (!(width > 0) && rect && rect.width > 0) width = rect.width;
+            if (!(height > 0) && rect && rect.height > 0) height = rect.height;
+        }
+        if (!(width > 0)) width = 70;
+        if (!(height > 0)) height = 100;
+
+        cardEl.style.setProperty('--classic-pip-size', `${clamp(width * 0.32, 10, 24).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-ace-size', `${clamp(width * 0.5, 16, 36).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-rank-size', `${clamp(width * 0.21, 8.5, 15.5).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-center-size', `${clamp(width * 0.48, 14, 38).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-corner-inset-y', `${clamp(height * 0.01, 0.5, 2).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-rank-inset-x', `${clamp(width * 0.07, 2.5, 7).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-suit-inset-x', `${clamp(width * 0.085, 3, 8).toFixed(2)}px`);
+        cardEl.style.setProperty('--classic-suit-inset-y', `${clamp(height * 0.16, 7, 16).toFixed(2)}px`);
+    };
+
     const resetClassicOnCardEl = (cardEl) => {
         if (!cardEl) return;
         const suitCenter = cardEl.querySelector('.suit-center');
@@ -123,8 +148,10 @@
     };
 
     const applyClassicToCardEl = (cardEl) => {
-        if (!cardEl || cardEl.dataset.classicFaces === '1') return;
+        if (!cardEl) return;
         if (!isClassicEnabled()) return;
+        syncClassicSizing(cardEl);
+        if (cardEl.dataset.classicFaces === '1') return;
         const val = cardEl.dataset.val;
         const suit = cardEl.dataset.suit;
         if (!val || !suit) return;
@@ -196,6 +223,11 @@
             document.querySelectorAll('.card').forEach(applyClassicToCardEl);
         };
 
+        const syncExistingClassicCards = () => {
+            if (!isClassicEnabled()) return;
+            document.querySelectorAll('.card.classic-faces-card').forEach(syncClassicSizing);
+        };
+
         const resetExistingCards = () => {
             document.querySelectorAll('.card').forEach(resetClassicOnCardEl);
         };
@@ -223,6 +255,8 @@
                 resetExistingCards();
             }
         });
+        window.addEventListener('resize', syncExistingClassicCards);
+        window.addEventListener('card-scale:changed', syncExistingClassicCards);
 
         window.__classicFacesInstalled = true;
         return true;

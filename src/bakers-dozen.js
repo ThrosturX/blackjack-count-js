@@ -7,6 +7,10 @@ const STACKED_OFFSET = 16;
 const HISTORY_LIMIT = 320;
 const FOUNDATION_SCORE = 10;
 const TABLEAU_MOVE_SCORE = 2;
+const BAKER_QUICK_CHECK_MAX_STATES = 22000;
+const BAKER_QUICK_CHECK_MAX_DURATION_MS = 800;
+const BAKER_DEEP_CHECK_MAX_STATES = 120000;
+const BAKER_DEEP_CHECK_MAX_DURATION_MS = 4500;
 
 const bakersSoundFiles = {
     card: ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav'],
@@ -29,6 +33,9 @@ let bakerStateManager = null;
 let selectedCard = null;
 let currentHint = null;
 let scheduleBakerSizing = null;
+let bakerSolvabilityChecker = null;
+let bakerCheckSolvedLocked = false;
+let bakerCheckUnsolvableLocked = false;
 
 function getBakerTotalCardCount() {
     const tableauCount = Array.isArray(bakerState.tableau)
@@ -242,6 +249,8 @@ function restoreBakersState(saved) {
         ))
         : [];
     bakerState.isGameWon = false;
+    resetBakerCheckAvailability();
+    closeBakerCheckOverlay();
     const elapsed = Number.isFinite(saved.elapsedSeconds) ? saved.elapsedSeconds : 0;
     bakerState.startTime = Date.now() - elapsed * 1000;
     clearSelection();
@@ -296,6 +305,270 @@ function canStackOnColumn(card, column) {
     return card.rank === top.rank - 1;
 }
 
+function cloneBakerCardForSolvability(card) {
+    if (!card) return card;
+    return {
+        suit: card.suit,
+        val: card.val,
+        rank: card.rank,
+        color: card.color
+    };
+}
+
+function createBakerSolvabilitySnapshot() {
+    return {
+        tableau: bakerState.tableau.map((column) => column.map(cloneBakerCardForSolvability)),
+        foundations: bakerState.foundations.map((pile) => pile.map(cloneBakerCardForSolvability))
+    };
+}
+
+function normalizeBakerSolvabilityState(state) {
+    if (!state || !Array.isArray(state.tableau) || !Array.isArray(state.foundations)) return '';
+    const tableauKey = state.tableau
+        .map((column) => column.map((card) => `${card.suit}${card.val}`).join(','))
+        .join('|');
+    const foundationKey = state.foundations
+        .map((pile) => pile.map((card) => `${card.suit}${card.val}`).join(','))
+        .join('|');
+    return `T:${tableauKey}#F:${foundationKey}`;
+}
+
+function listBakerSolvabilityMoves(state) {
+    if (!state || !Array.isArray(state.tableau) || !Array.isArray(state.foundations)) return [];
+    const moves = [];
+    for (let sourceCol = 0; sourceCol < state.tableau.length; sourceCol += 1) {
+        const column = state.tableau[sourceCol];
+        if (!Array.isArray(column) || !column.length) continue;
+        const top = column[column.length - 1];
+        for (let foundationIndex = 0; foundationIndex < state.foundations.length; foundationIndex += 1) {
+            if (canPlaceOnFoundation(top, state.foundations[foundationIndex])) {
+                moves.push({ type: 'tableau-to-foundation', sourceCol, foundationIndex, priority: 4 });
+            }
+        }
+        for (let targetCol = 0; targetCol < state.tableau.length; targetCol += 1) {
+            if (targetCol === sourceCol) continue;
+            if (canStackOnColumn(top, state.tableau[targetCol])) {
+                moves.push({ type: 'tableau-to-tableau', sourceCol, targetCol, priority: 2 });
+            }
+        }
+    }
+    moves.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    return moves;
+}
+
+function applyBakerSolvabilityMove(state, move) {
+    if (!state || !move || !move.type) return null;
+    const next = {
+        tableau: state.tableau.map((column) => column.slice()),
+        foundations: state.foundations.map((pile) => pile.slice())
+    };
+    if (move.type === 'tableau-to-foundation') {
+        const source = next.tableau[move.sourceCol];
+        const foundation = next.foundations[move.foundationIndex];
+        if (!source || !source.length || !foundation) return null;
+        const card = source[source.length - 1];
+        if (!canPlaceOnFoundation(card, foundation)) return null;
+        foundation.push(source.pop());
+        return next;
+    }
+    if (move.type === 'tableau-to-tableau') {
+        const source = next.tableau[move.sourceCol];
+        const target = next.tableau[move.targetCol];
+        if (!source || !source.length || !target || !target.length) return null;
+        const card = source[source.length - 1];
+        if (!canStackOnColumn(card, target)) return null;
+        target.push(source.pop());
+        return next;
+    }
+    return null;
+}
+
+function createBakerSolvabilityChecker() {
+    if (typeof SolitaireStateSolvabilityChecker === 'undefined') return null;
+    return new SolitaireStateSolvabilityChecker({
+        isSolved: (state) => Array.isArray(state.foundations) && state.foundations.length === FOUNDATION_SUITS.length
+            && state.foundations.every((pile) => Array.isArray(pile) && pile.length === 13),
+        normalizeState: normalizeBakerSolvabilityState,
+        listMoves: listBakerSolvabilityMoves,
+        applyMove: applyBakerSolvabilityMove,
+        shouldPrune: (state) => {
+            if (!state || !Array.isArray(state.foundations)) return true;
+            const solved = state.foundations.every((pile) => Array.isArray(pile) && pile.length === 13);
+            if (solved) return false;
+            return listBakerSolvabilityMoves(state).length === 0;
+        }
+    });
+}
+
+function getBakerCheckButton() {
+    return document.getElementById('bakers-check');
+}
+
+function getBakerCheckModalApi() {
+    if (typeof SolitaireCheckModal !== 'undefined') return SolitaireCheckModal;
+    return null;
+}
+
+function showBakerCheckOverlay(options = {}) {
+    const modal = getBakerCheckModalApi();
+    if (modal) {
+        modal.showInfo(options);
+        return;
+    }
+    if (options && options.message) {
+        CommonUtils.showTableToast(options.message, { variant: 'warn', duration: 2200, containerId: 'table' });
+    }
+}
+
+function closeBakerCheckOverlay() {
+    const modal = getBakerCheckModalApi();
+    if (!modal) return;
+    modal.close();
+}
+
+function lockBakerChecksAsUnsolvable() {
+    bakerCheckUnsolvableLocked = true;
+    bakerCheckSolvedLocked = false;
+    const button = getBakerCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Unsolvable';
+    button.classList.remove('check-solved');
+    button.classList.add('check-unsolvable');
+}
+
+function lockBakerChecksAsSolvable() {
+    bakerCheckSolvedLocked = true;
+    bakerCheckUnsolvableLocked = false;
+    const button = getBakerCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'SOLVABLE';
+    button.classList.add('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function releaseBakerCheckButtonsFromBusyState() {
+    if (bakerCheckSolvedLocked || bakerCheckUnsolvableLocked) return;
+    const button = getBakerCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function startBakerCheckButtonsBusyState() {
+    const button = getBakerCheckButton();
+    if (!button) return;
+    button.disabled = true;
+    if (!bakerCheckSolvedLocked && !bakerCheckUnsolvableLocked) {
+        button.classList.remove('check-solved');
+        button.classList.remove('check-unsolvable');
+    }
+}
+
+function resetBakerCheckAvailability() {
+    bakerCheckSolvedLocked = false;
+    bakerCheckUnsolvableLocked = false;
+    const button = getBakerCheckButton();
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = 'Check';
+    button.classList.remove('check-solved');
+    button.classList.remove('check-unsolvable');
+}
+
+function promptBakerDeepCheck() {
+    const modal = getBakerCheckModalApi();
+    if (!modal) {
+        showBakerCheckOverlay({
+            title: 'Quick Check Complete',
+            message: 'No immediate proof found. Run a deeper check.',
+            busy: false
+        });
+        return;
+    }
+    modal.showChoice({
+        title: 'Quick Check Complete',
+        message: 'No immediate proof found. Run a deeper check?',
+        secondaryLabel: 'Not Now',
+        confirmLabel: 'Prove Solve',
+        cancelLabel: 'Close'
+    }).then((choice) => {
+        if (choice === 'confirm') {
+            startBakerCheckButtonsBusyState();
+            runBakerCheck('attempt');
+        }
+    });
+}
+
+function handleBakerCheckResult(mode, result, limits) {
+    const isAttempt = mode === 'attempt';
+    if (result.solved && result.reason === 'solved') {
+        lockBakerChecksAsSolvable();
+        showBakerCheckOverlay({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `A solution path was found (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    if (result.reason === 'exhausted') {
+        lockBakerChecksAsUnsolvable();
+        showBakerCheckOverlay({
+            title: `${isAttempt ? 'Prove Solve' : 'Quick Check'} Result`,
+            message: `No solution exists from this position (${result.statesExplored} states explored).`,
+            busy: false
+        });
+        return;
+    }
+
+    releaseBakerCheckButtonsFromBusyState();
+    if (!isAttempt) {
+        promptBakerDeepCheck();
+        return;
+    }
+    showBakerCheckOverlay({
+        title: 'Prove Solve Result',
+        message: `No solution was found within current limits (${result.reason}, ${result.statesExplored} states).`,
+        busy: false
+    });
+    console.log(
+        `Baker's Dozen Check: solved=${result.solved}, reason=${result.reason}, statesExplored=${result.statesExplored}, durationMs=${result.durationMs}, maxStates=${limits.maxStates}, maxDurationMs=${limits.maxDurationMs}`
+    );
+}
+
+function runBakerCheck(mode) {
+    if (!bakerSolvabilityChecker) {
+        releaseBakerCheckButtonsFromBusyState();
+        CommonUtils.showTableToast('Solvability checker unavailable.', { variant: 'warn', duration: 2200, containerId: 'table' });
+        return;
+    }
+    const isAttempt = mode === 'attempt';
+    const limits = isAttempt
+        ? { maxStates: BAKER_DEEP_CHECK_MAX_STATES, maxDurationMs: BAKER_DEEP_CHECK_MAX_DURATION_MS }
+        : { maxStates: BAKER_QUICK_CHECK_MAX_STATES, maxDurationMs: BAKER_QUICK_CHECK_MAX_DURATION_MS };
+    const snapshot = createBakerSolvabilitySnapshot();
+    showBakerCheckOverlay({
+        title: isAttempt ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Checking current position...',
+        busy: true
+    });
+    window.setTimeout(() => {
+        const result = bakerSolvabilityChecker.check(snapshot, limits);
+        closeBakerCheckOverlay();
+        handleBakerCheckResult(mode, result, limits);
+    }, 0);
+}
+
+function checkCurrentBakerSolvability() {
+    if (bakerState.isGameWon || bakerCheckSolvedLocked || bakerCheckUnsolvableLocked) return;
+    startBakerCheckButtonsBusyState();
+    runBakerCheck('quick');
+}
+
 function recordMove(entry) {
     const nextHistory = bakerState.moveHistory || [];
     nextHistory.push(entry);
@@ -314,6 +587,7 @@ function moveCardToFoundation(fromColumn, suitIndex) {
     bakerState.foundations[suitIndex].push(card);
     bakerState.score += FOUNDATION_SCORE;
     bakerState.moves += 1;
+    resetBakerCheckAvailability();
     recordMove({
         type: 'tableau-to-foundation',
         column: fromColumn,
@@ -350,6 +624,7 @@ function moveCardBetweenTableau(fromColumn, toColumn) {
     bakerState.tableau[toColumn].push(card);
     bakerState.score += TABLEAU_MOVE_SCORE;
     bakerState.moves += 1;
+    resetBakerCheckAvailability();
     recordMove({
         type: 'tableau-to-tableau',
         fromColumn,
@@ -416,6 +691,7 @@ function updateTableau() {
             cardEl.style.zIndex = String(cardIndex + 1);
             if (selectedCard && selectedCard.column === columnIndex && selectedCard.index === cardIndex) {
                 cardEl.classList.add('selected-card');
+                cardEl.classList.add('picked-up');
             }
             if (cardIndex !== column.length - 1) {
                 cardEl.addEventListener('click', (evt) => evt.stopPropagation());
@@ -605,6 +881,7 @@ function undoLastMove() {
     }
     bakerState.score = move.prevScore;
     bakerState.moves = move.prevMoves;
+    resetBakerCheckAvailability();
     if (bakerState.isGameWon) {
         bakerState.isGameWon = false;
         hideWinOverlay();
@@ -620,6 +897,7 @@ function setupBakersEventListeners() {
     document.getElementById('bakers-undo')?.addEventListener('click', undoLastMove);
     document.getElementById('bakers-hint')?.addEventListener('click', showBakerHint);
     document.getElementById('bakers-autocomplete')?.addEventListener('click', autoCompleteBaker);
+    document.getElementById('bakers-check')?.addEventListener('click', checkCurrentBakerSolvability);
     document.getElementById('bakers-win-new-game')?.addEventListener('click', initBakerGame);
     document.querySelectorAll('.foundation-slot').forEach(slot => {
         slot.addEventListener('click', handleFoundationClick);
@@ -683,6 +961,8 @@ function initBakerGame() {
     bakerState.moves = 0;
     bakerState.isGameWon = false;
     bakerState.moveHistory = [];
+    resetBakerCheckAvailability();
+    closeBakerCheckOverlay();
     selectedCard = null;
     currentHint = null;
     if (bakerStateManager) bakerStateManager.clear();
@@ -697,6 +977,7 @@ function initBakerGame() {
 
 document.addEventListener('DOMContentLoaded', () => {
     CommonUtils.preloadAudio(bakersSoundFiles);
+    bakerSolvabilityChecker = createBakerSolvabilityChecker();
     setupBakersEventListeners();
     CommonUtils.initCardScaleControls('bakers-card-scale', 'bakers-card-scale-value', { min: 0.6, max: 1.6, step: 0.05 });
     scheduleBakerSizing = CommonUtils.createRafScheduler(ensureBakerSizing);

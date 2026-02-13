@@ -1,6 +1,7 @@
 #table.forty-layout {
     --forty-fan-x: calc(14px * var(--ui-scale));
     --forty-foundation-cols: 8;
+    --forty-foundation-start-col: 3;
     --table-shell-max-width: 1180px;
     position: relative;
     width: var(--table-shell-width);
@@ -48,7 +49,7 @@
 
 #forty-foundations {
     display: grid;
-    grid-column: 3 / span 8;
+    grid-column: var(--forty-foundation-start-col, 3) / span var(--forty-foundation-cols, 8);
     grid-template-columns: repeat(var(--forty-foundation-cols, 8), calc(var(--scaled-card-w) + var(--forty-fan-x, 14px)));
     gap: var(--forty-tableau-gap, calc(10px * var(--ui-scale)));
     flex: 0 0 auto;
