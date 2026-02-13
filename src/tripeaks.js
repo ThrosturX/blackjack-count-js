@@ -8,6 +8,8 @@ const tripeaksSoundFiles = {
 };
 
 const TRIPEAKS_MAX_HISTORY = 200;
+const TRIPEAKS_PEAK_CARDS = 28;
+const TRIPEAKS_FACEUP_START_INDEX = 18;
 
 const tripeaksState = {
     peaks: [], // 28 cards in a specific layout
@@ -18,16 +20,100 @@ const tripeaksState = {
     startTime: null,
     timerInterval: null,
     isGameWon: false,
-    moveHistory: []
+    moveHistory: [],
+    variantId: 'classic'
 };
+
+const TRIPEAKS_VARIANTS = Object.freeze({
+    classic: Object.freeze({
+        id: 'classic',
+        highScoreRuleSetKey: 'default',
+        allowWrapAround: true,
+        allowSameRank: false,
+        revealAllPeaks: false,
+        hideBlockedCards: false,
+        winMessage: 'You solved TriPeaks!'
+    }),
+    strict: Object.freeze({
+        id: 'strict',
+        highScoreRuleSetKey: 'strict-no-wrap',
+        allowWrapAround: false,
+        allowSameRank: false,
+        revealAllPeaks: false,
+        hideBlockedCards: false,
+        winMessage: 'You solved Strict TriPeaks!'
+    }),
+    relaxed: Object.freeze({
+        id: 'relaxed',
+        highScoreRuleSetKey: 'relaxed-wrap-and-pair',
+        allowWrapAround: true,
+        allowSameRank: true,
+        revealAllPeaks: false,
+        hideBlockedCards: false,
+        winMessage: 'You solved Relaxed TriPeaks!'
+    }),
+    open: Object.freeze({
+        id: 'open',
+        highScoreRuleSetKey: 'open-wrap',
+        allowWrapAround: true,
+        allowSameRank: false,
+        revealAllPeaks: true,
+        hideBlockedCards: false,
+        winMessage: 'You solved Open TriPeaks!'
+    })
+});
+
+function normalizeTriPeaksVariantId(value) {
+    const candidate = String(value || '').toLowerCase();
+    return Object.prototype.hasOwnProperty.call(TRIPEAKS_VARIANTS, candidate) ? candidate : 'classic';
+}
+
+function getTriPeaksVariantFromUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const fromUrl = params.get('variant');
+        if (!fromUrl) return null;
+        return normalizeTriPeaksVariantId(fromUrl);
+    } catch (err) {
+        return null;
+    }
+}
+
+const forcedTriPeaksVariantId = getTriPeaksVariantFromUrl();
+tripeaksState.variantId = forcedTriPeaksVariantId || 'classic';
 
 let tripeaksStateManager = null;
 let scheduleTriPeaksSizing = null;
 
+function getActiveTriPeaksVariant() {
+    return TRIPEAKS_VARIANTS[normalizeTriPeaksVariantId(tripeaksState.variantId)];
+}
+
+function syncTriPeaksVariantSelect() {
+    const select = document.getElementById('tripeaks-variant-select');
+    if (!select) return;
+    select.value = normalizeTriPeaksVariantId(tripeaksState.variantId);
+}
+
+function applyTriPeaksVariant(variantId, options = {}) {
+    const next = normalizeTriPeaksVariantId(variantId);
+    const previous = normalizeTriPeaksVariantId(tripeaksState.variantId);
+    tripeaksState.variantId = next;
+    syncTriPeaksVariantSelect();
+    if (options.startNewGame !== false && next !== previous) {
+        initTriPeaksGame();
+    }
+}
+
 function syncTriPeaksHighScore() {
     const highScoreEl = document.getElementById('tripeaks-high-score');
     if (!highScoreEl) return;
-    const highScore = CommonUtils.updateHighScore('tripeaks', 'default', tripeaksState.score);
+    const variant = getActiveTriPeaksVariant();
+    const highScore = CommonUtils.updateHighScore(
+        'tripeaks',
+        variant.highScoreRuleSetKey,
+        tripeaksState.score
+    );
     highScoreEl.textContent = highScore;
 }
 
@@ -102,6 +188,7 @@ function getTriPeaksSaveState() {
         waste: tripeaksState.waste,
         score: tripeaksState.score,
         moves: tripeaksState.moves,
+        variantId: normalizeTriPeaksVariantId(tripeaksState.variantId),
         moveHistory: tripeaksState.moveHistory,
         elapsedSeconds: Math.floor((Date.now() - tripeaksState.startTime) / 1000),
         isGameWon: tripeaksState.isGameWon
@@ -125,6 +212,18 @@ function reviveTriPeaksCard(card) {
 
 function restoreTriPeaksState(saved) {
     if (!saved || typeof saved !== 'object') return;
+    const savedVariantId = normalizeTriPeaksVariantId(saved.variantId);
+    if (forcedTriPeaksVariantId) {
+        if (savedVariantId !== forcedTriPeaksVariantId) {
+            if (tripeaksStateManager) tripeaksStateManager.clear();
+            initTriPeaksGame();
+            return;
+        }
+        tripeaksState.variantId = forcedTriPeaksVariantId;
+    } else {
+        tripeaksState.variantId = savedVariantId;
+    }
+    syncTriPeaksVariantSelect();
     tripeaksState.peaks = Array.isArray(saved.peaks)
         ? saved.peaks.map(card => reviveTriPeaksCard(card))
         : [];
@@ -158,6 +257,7 @@ function restoreTriPeaksState(saved) {
 
 function dealTriPeaks() {
     const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+    const variant = getActiveTriPeaksVariant();
 
     // TriPeaks layout: 28 cards
     // 3 peaks, each has 3 rows:
@@ -167,10 +267,9 @@ function dealTriPeaks() {
     // Row 3: 10 cards (connecting base)
 
     tripeaksState.peaks = [];
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < TRIPEAKS_PEAK_CARDS; i++) {
         const card = deck.pop();
-        // Standard TriPeaks: bottom row (indices 18-27) is face up, others face down
-        card.hidden = i < 18;
+        card.hidden = variant.revealAllPeaks ? false : i < TRIPEAKS_FACEUP_START_INDEX;
         tripeaksState.peaks.push(card);
     }
 
@@ -317,6 +416,9 @@ function updatePeaks() {
             newEl.addEventListener('click', () => handleCardClick(index));
         } else if (!exposed) {
             cardEl.classList.add('blocked');
+            if (getActiveTriPeaksVariant().hideBlockedCards) {
+                cardEl.classList.add('hidden');
+            }
         } else {
             cardEl.style.cursor = 'pointer';
             cardEl.addEventListener('click', () => handleCardClick(index));
@@ -335,7 +437,7 @@ function isCardExposed(index) {
     // Row 2: 9,10,11 (under 3,4), 12,13,14 (under 5,6), 15,16,17 (under 7,8)
     // Row 3: 18-27 (under 9-17, connected)
 
-    if (index >= 18) return true; // Bottom row is always exposed from below
+    if (index >= TRIPEAKS_FACEUP_START_INDEX) return true; // Bottom row is always exposed from below
 
     const overlaps = {
         0: [3, 4], 1: [5, 6], 2: [7, 8],
@@ -394,9 +496,11 @@ function handleCardClick(index) {
 
 function canMoveToWaste(card, wasteCard) {
     if (!wasteCard) return true;
+    const variant = getActiveTriPeaksVariant();
     const diff = Math.abs(card.rank - wasteCard.rank);
-    // Standard TriPeaks allows wrapping K and A
-    return diff === 1 || diff === 12;
+    if (variant.allowSameRank && diff === 0) return true;
+    if (diff === 1) return true;
+    return variant.allowWrapAround && diff === 12;
 }
 
 function moveToWaste(index) {
@@ -477,7 +581,7 @@ function checkWinCondition() {
         tripeaksState.isGameWon = true;
         clearInterval(tripeaksState.timerInterval);
         CommonUtils.playSound('win');
-        CommonUtils.showTableToast('You solved TriPeaks!', { variant: 'win', duration: 2500 });
+        CommonUtils.showTableToast(getActiveTriPeaksVariant().winMessage, { variant: 'win', duration: 2500 });
         if (tripeaksStateManager) {
             tripeaksStateManager.clear();
         }
@@ -506,6 +610,12 @@ function setupTriPeaksEventListeners() {
     document.getElementById('tripeaks-new-game').addEventListener('click', initTriPeaksGame);
     document.getElementById('tripeaks-undo').addEventListener('click', undoLastMove);
     document.getElementById('tripeaks-hint').addEventListener('click', showTriPeaksHint);
+    document.getElementById('tripeaks-variant-select')?.addEventListener('change', (event) => {
+        applyTriPeaksVariant(event.target.value, { startNewGame: true });
+        if (tripeaksStateManager) {
+            tripeaksStateManager.markDirty();
+        }
+    });
 
     const applyTableStyle = () => {
         const select = document.getElementById('table-style-select');
@@ -538,4 +648,6 @@ function setupTriPeaksEventListeners() {
         deckSelect.addEventListener('change', applyDeckStyle);
         applyDeckStyle();
     }
+
+    syncTriPeaksVariantSelect();
 }

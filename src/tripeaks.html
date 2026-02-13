@@ -34,6 +34,14 @@
                 <button id="tripeaks-hint" class="game-btn">Hint</button>
             </div>
             <div class="controls-section collapsed" id="settings-area">
+                <div class="stats">Rules:
+                    <select id="tripeaks-variant-select">
+                        <option value="classic" selected>Classic</option>
+                        <option value="strict">Strict (No Wrap)</option>
+                        <option value="relaxed">Relaxed (Wrap + Same Rank)</option>
+                        <option value="open">Open (All Face-Up)</option>
+                    </select>
+                </div>
                 <label class="stats">Table Scale:
                     <input id="tripeaks-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
                     <span id="tripeaks-card-scale-value">100%</span>

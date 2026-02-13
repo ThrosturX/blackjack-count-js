@@ -27,8 +27,56 @@ const SPIDER_SUIT_MODES = {
     1: { label: '1 Suit', suits: ['♠'], deckCount: 8 }
 };
 const SPIDER_FOUNDATION_PLACEHOLDER_SUITS = ['♥', '♠', '♦', '♣', '♥', '♠', '♦', '♣'];
+const spiderVariant = (() => {
+    const defaults = {
+        stateGameId: 'spider',
+        highScoreGameId: 'spider',
+        ruleSetKey: null,
+        forceSuitMode: null,
+        showSuitSelector: true,
+        allowDealFromStock: true,
+        foundationSlots: 8,
+        deckCount: null,
+        suits: null,
+        tableauDealCounts: null,
+        faceUpAllDealt: false,
+        enableCheck: true,
+        winMessage: 'You solved Spider Solitaire!',
+        stockPlaceholderLabel: 'Stock'
+    };
+    const incoming = (typeof window !== 'undefined' && window.SpiderVariant && typeof window.SpiderVariant === 'object')
+        ? window.SpiderVariant
+        : {};
+    const tableauDealCounts = Array.isArray(incoming.tableauDealCounts)
+        ? incoming.tableauDealCounts.map((count) => parseInt(count, 10)).filter((count) => Number.isFinite(count) && count >= 0)
+        : null;
+    const normalizedFoundationSlots = Math.max(1, parseInt(incoming.foundationSlots, 10) || defaults.foundationSlots);
+    return {
+        stateGameId: String(incoming.stateGameId || defaults.stateGameId),
+        highScoreGameId: String(incoming.highScoreGameId || defaults.highScoreGameId),
+        ruleSetKey: incoming.ruleSetKey ? String(incoming.ruleSetKey) : null,
+        forceSuitMode: Number.isFinite(parseInt(incoming.forceSuitMode, 10)) ? parseInt(incoming.forceSuitMode, 10) : defaults.forceSuitMode,
+        showSuitSelector: incoming.showSuitSelector !== false,
+        allowDealFromStock: incoming.allowDealFromStock !== false,
+        foundationSlots: normalizedFoundationSlots,
+        deckCount: Number.isFinite(parseInt(incoming.deckCount, 10)) ? parseInt(incoming.deckCount, 10) : defaults.deckCount,
+        suits: Array.isArray(incoming.suits) && incoming.suits.length ? incoming.suits.slice() : defaults.suits,
+        tableauDealCounts: (tableauDealCounts && tableauDealCounts.length === 10) ? tableauDealCounts : defaults.tableauDealCounts,
+        faceUpAllDealt: incoming.faceUpAllDealt === true,
+        enableCheck: incoming.enableCheck !== false,
+        winMessage: String(incoming.winMessage || defaults.winMessage),
+        stockPlaceholderLabel: String(incoming.stockPlaceholderLabel || defaults.stockPlaceholderLabel)
+    };
+})();
 
 function getSpiderSuitConfig() {
+    if (spiderVariant.deckCount && Array.isArray(spiderVariant.suits) && spiderVariant.suits.length) {
+        return {
+            label: 'Custom',
+            suits: spiderVariant.suits,
+            deckCount: spiderVariant.deckCount
+        };
+    }
     const key = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
     if (!SPIDER_SUIT_MODES[key]) {
         spiderState.suitMode = 4;
@@ -40,10 +88,16 @@ function getSpiderSuitConfig() {
 function syncSpiderSuitUI() {
     const select = document.getElementById('spider-suit-select');
     if (!select) return;
+    const container = select.closest('.stats');
+    if (container) {
+        container.style.display = spiderVariant.showSuitSelector ? '' : 'none';
+    }
+    if (!spiderVariant.showSuitSelector) return;
     select.value = String(spiderState.suitMode || 4);
 }
 
 function getSpiderRuleSetKey() {
+    if (spiderVariant.ruleSetKey) return spiderVariant.ruleSetKey;
     const suitMode = Number.isFinite(spiderState.suitMode) ? spiderState.suitMode : parseInt(spiderState.suitMode, 10);
     const normalized = SPIDER_SUIT_MODES[suitMode] ? suitMode : 4;
     return `suits-${normalized}`;
@@ -52,7 +106,7 @@ function getSpiderRuleSetKey() {
 function syncSpiderHighScore() {
     const highScoreEl = document.getElementById('spider-high-score');
     if (!highScoreEl) return;
-    const highScore = CommonUtils.updateHighScore('spider', getSpiderRuleSetKey(), spiderState.score);
+    const highScore = CommonUtils.updateHighScore(spiderVariant.highScoreGameId, getSpiderRuleSetKey(), spiderState.score);
     highScoreEl.textContent = highScore;
 }
 
@@ -106,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSpiderEventListeners();
     CommonUtils.initCardScaleControls('spider-card-scale', 'spider-card-scale-value');
     spiderStateManager = new CommonUtils.StateManager({
-        gameId: 'spider',
+        gameId: spiderVariant.stateGameId,
         getState: getSpiderSaveState,
         setState: restoreSpiderState,
         isWon: () => spiderState.isGameWon
@@ -232,6 +286,9 @@ function initSpiderGame() {
     spiderState.moves = 0;
     spiderState.isGameWon = false;
     spiderState.moveHistory = [];
+    if (Number.isFinite(spiderVariant.forceSuitMode) && SPIDER_SUIT_MODES[spiderVariant.forceSuitMode]) {
+        spiderState.suitMode = spiderVariant.forceSuitMode;
+    }
 
     if (spiderState.timerInterval) {
         clearInterval(spiderState.timerInterval);
@@ -275,6 +332,7 @@ function getSpiderSaveState() {
         moves: spiderState.moves,
         moveHistory: spiderState.moveHistory,
         suitMode: spiderState.suitMode,
+        variantId: spiderVariant.stateGameId,
         elapsedSeconds: getElapsedSeconds(spiderState.startTime),
         isGameWon: spiderState.isGameWon
     };
@@ -290,7 +348,11 @@ function restoreSpiderState(saved) {
     spiderState.score = Number.isFinite(saved.score) ? saved.score : 0;
     spiderState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     spiderState.moveHistory = Array.isArray(saved.moveHistory) ? saved.moveHistory : [];
-    spiderState.suitMode = SPIDER_SUIT_MODES[saved.suitMode] ? saved.suitMode : 4;
+    if (Number.isFinite(spiderVariant.forceSuitMode) && SPIDER_SUIT_MODES[spiderVariant.forceSuitMode]) {
+        spiderState.suitMode = spiderVariant.forceSuitMode;
+    } else {
+        spiderState.suitMode = SPIDER_SUIT_MODES[saved.suitMode] ? saved.suitMode : 4;
+    }
     spiderState.isGameWon = false;
     spiderState.isDealing = false;
 
@@ -313,10 +375,12 @@ function dealSpiderLayout() {
     spiderState.tableau = Array.from({ length: 10 }, () => []);
 
     for (let col = 0; col < 10; col++) {
-        const cardsInColumn = col < 4 ? 6 : 5;
+        const cardsInColumn = Array.isArray(spiderVariant.tableauDealCounts)
+            ? spiderVariant.tableauDealCounts[col]
+            : (col < 4 ? 6 : 5);
         for (let row = 0; row < cardsInColumn; row++) {
             const card = deck.pop();
-            card.hidden = row !== cardsInColumn - 1;
+            card.hidden = spiderVariant.faceUpAllDealt ? false : (row !== cardsInColumn - 1);
             spiderState.tableau[col].push(card);
         }
     }
@@ -461,7 +525,7 @@ function updateStock() {
     if (!stockEl) return;
     stockEl.innerHTML = '';
 
-    if (spiderState.stock.length > 0) {
+    if (spiderVariant.allowDealFromStock && spiderState.stock.length > 0) {
         const rowsLeft = Math.ceil(spiderState.stock.length / 10);
         const stack = document.createElement('div');
         stack.className = 'spider-stock-stack';
@@ -479,7 +543,7 @@ function updateStock() {
     } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'pile-placeholder';
-        placeholder.textContent = 'Stock';
+        placeholder.textContent = spiderVariant.stockPlaceholderLabel;
         stockEl.appendChild(placeholder);
     }
 }
@@ -489,7 +553,7 @@ function updateFoundations() {
     if (!foundationArea) return;
     foundationArea.innerHTML = '';
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < spiderVariant.foundationSlots; i++) {
         const pile = document.createElement('div');
         pile.className = 'spider-foundation pile';
         if (spiderState.foundations[i]) {
@@ -923,6 +987,7 @@ function checkForCompletedSequence(columnIndex) {
 }
 
 function dealFromStock() {
+    if (!spiderVariant.allowDealFromStock) return;
     if (spiderState.stock.length < 10) return;
     if (spiderState.isDealing) return;
     const hasEmptyColumn = spiderState.tableau.some(column => column.length === 0);
@@ -987,11 +1052,11 @@ function dealFromStock() {
 }
 
 function checkWinCondition() {
-    if (spiderState.foundations.length >= 8) {
+    if (spiderState.foundations.length >= spiderVariant.foundationSlots) {
         spiderState.isGameWon = true;
         clearInterval(spiderState.timerInterval);
         CommonUtils.playSound('win');
-        CommonUtils.showTableToast('You solved Spider Solitaire!', { variant: 'win', duration: 2500 });
+        CommonUtils.showTableToast(spiderVariant.winMessage, { variant: 'win', duration: 2500 });
         if (spiderStateManager) {
             spiderStateManager.clear();
         }
@@ -1067,17 +1132,22 @@ function setupSpiderEventListeners() {
     const suitSelect = document.getElementById('spider-suit-select');
     if (suitSelect) {
         syncSpiderSuitUI();
-        suitSelect.addEventListener('change', (event) => {
-            const nextMode = parseInt(event.target.value, 10);
-            spiderState.suitMode = SPIDER_SUIT_MODES[nextMode] ? nextMode : 4;
-            syncSpiderSuitUI();
-            initSpiderGame();
-        });
+        if (spiderVariant.showSuitSelector) {
+            suitSelect.addEventListener('change', (event) => {
+                const nextMode = parseInt(event.target.value, 10);
+                spiderState.suitMode = SPIDER_SUIT_MODES[nextMode] ? nextMode : 4;
+                syncSpiderSuitUI();
+                initSpiderGame();
+            });
+        }
     }
 
     const dealBtn = document.getElementById('spider-deal');
     if (dealBtn) {
-        dealBtn.addEventListener('click', dealFromStock);
+        dealBtn.style.display = spiderVariant.allowDealFromStock ? '' : 'none';
+        if (spiderVariant.allowDealFromStock) {
+            dealBtn.addEventListener('click', dealFromStock);
+        }
     }
     const undoBtn = document.getElementById('spider-undo');
     if (undoBtn) {
@@ -1089,7 +1159,10 @@ function setupSpiderEventListeners() {
     }
     const checkBtn = document.getElementById('spider-check');
     if (checkBtn) {
-        checkBtn.addEventListener('click', checkCurrentSpiderSolvability);
+        checkBtn.style.display = spiderVariant.enableCheck ? '' : 'none';
+        if (spiderVariant.enableCheck) {
+            checkBtn.addEventListener('click', checkCurrentSpiderSolvability);
+        }
     }
 
     const applyTableStyle = () => {
@@ -1148,6 +1221,7 @@ function setupSpiderEventListeners() {
 }
 
 function checkCurrentSpiderSolvability() {
+    if (!spiderVariant.enableCheck) return;
     if (spiderCheckSolvedLocked || spiderCheckUnsolvableLocked) return;
     startSpiderCheckBusyState();
     runSpiderCheck('quick');

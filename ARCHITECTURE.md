@@ -13,7 +13,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 
 ## Entry Points
 - `src/index.html`: launcher page.
-- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/strict-golf.html`, `src/mini-golf.html`, `src/long-golf.html`, `src/tabletop.html`.
+- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/simple-simon.html`, `src/forty-thieves.html`, `src/tripeaks.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/tabletop.html`.
 - Additional card game pages may be added over time.
 
 ## Shared Systems

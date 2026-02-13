@@ -20,13 +20,13 @@ The project is designed to run from both static hosting and `file://`.
 - Klondike Solitaire (`src/klondike.html`)
 - FreeCell (`src/freecell.html`)
 - Spider Solitaire (`src/spider.html`)
+- Simple Simon (`src/simple-simon.html`)
+- Forty Thieves / Napoleon at St. Helena (`src/forty-thieves.html`)
 - Pyramid Solitaire (`src/pyramid.html`)
 - Dark Pyramid (`src/dark-pyramid.html`)
 - Golf Solitaire (`src/golf.html`)
-- Strict Golf (`src/strict-golf.html`)
-- Mini Golf (`src/mini-golf.html`)
-- Long Golf (`src/long-golf.html`)
 - Baker's Dozen Solitaire (`src/bakers-dozen.html`)
+- TriPeaks Solitaire (`src/tripeaks.html`)
 - Table Top Sandbox (`src/tabletop.html`)
 - And potentially other card games.
 
@@ -61,10 +61,12 @@ Commands:
 ## Variants and Game Options
 
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).
-- Spider: 4-Suit, 2-Suit, and 1-Suit modes.
+- Spider: 4-Suit, 2-Suit, and 1-Suit modes, plus Simple Simon as a dedicated variant page.
+- Forty Thieves: Napoleon (Forty Thieves), Josephine, Alibaba, Thieves of Egypt, Rank and File selectable in game settings.
+- TriPeaks: Classic, Strict (no wrap), Relaxed (wrap + same-rank), Open (all peaks face-up) selectable in game settings.
 - Pyramid: Draw 1 / Draw 3.
 - Dark Pyramid: Pyramid rules with blocked cards hidden.
-- Golf: Golf Solitaire (wrap-around), Strict Golf (no wrap), Mini Golf (7x4, no wrap), Long Golf (7x6, wrap-around).
+- Golf: Classic (wrap-around), Strict (no wrap), Mini (7x4, no wrap), Long (7x6, wrap-around) selectable in game settings.
 - Blackjack: seats (1-9), decks (1-8), configurable table minimum bet, and per-seat persona save/load controls.
 - Table Top Sandbox: configurable deck count, deck groups, center piles, and foundation counts.
 
