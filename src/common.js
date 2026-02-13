@@ -19,6 +19,7 @@
             'tripeaks.html': 'tripeaks-card-scale',
             'pyramid.html': 'pyramid-card-scale',
             'dark-pyramid.html': 'pyramid-card-scale',
+            'cavaliers-castle.html': 'pyramid-card-scale',
             'golf.html': 'golf-card-scale',
             'forty-thieves.html': 'forty-card-scale',
             'tabletop.html': 'tabletop-card-scale'

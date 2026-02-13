@@ -1019,7 +1019,8 @@
         return !belowLeft && !belowRight;
     }
 
-    function applyPyramidGreedyRemoval(state) {
+    function applyPyramidGreedyRemoval(state, targetSum) {
+        var sumTarget = Number.isFinite(targetSum) ? targetSum : 13;
         var exposed = [];
         for (var row = 0; row < state.pyramid.length; row++) {
             for (var col = 0; col < state.pyramid[row].length; col++) {
@@ -1033,18 +1034,18 @@
 
         for (var i = 0; i < exposed.length; i++) {
             var a = exposed[i];
-            if (a.card.rank === 13) {
+            if (a.card.rank === sumTarget) {
                 state.pyramid[a.row][a.col] = null;
                 return true;
             }
-            if (wasteTop && (a.card.rank + wasteTop.rank === 13)) {
+            if (wasteTop && (a.card.rank + wasteTop.rank === sumTarget)) {
                 state.pyramid[a.row][a.col] = null;
                 state.waste.pop();
                 return true;
             }
             for (var j = i + 1; j < exposed.length; j++) {
                 var b = exposed[j];
-                if (a.card.rank + b.card.rank === 13) {
+                if (a.card.rank + b.card.rank === sumTarget) {
                     state.pyramid[a.row][a.col] = null;
                     state.pyramid[b.row][b.col] = null;
                     return true;
@@ -1052,7 +1053,7 @@
             }
         }
 
-        if (wasteTop && wasteTop.rank === 13) {
+        if (wasteTop && wasteTop.rank === sumTarget) {
             state.waste.pop();
             return true;
         }
@@ -1067,6 +1068,7 @@
         var maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : 50000;
         var maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : 5000;
         var drawCount = snapshot.drawCount === 3 ? 3 : 1;
+        var targetSum = Number.isFinite(snapshot.targetSum) ? Math.max(2, snapshot.targetSum) : 13;
         var state = {
             pyramid: snapshot.pyramid.map(function (row) { return row.map(function (card) { return card ? Object.assign({}, card) : null; }); }),
             stock: snapshot.stock.map(function (card) { return Object.assign({}, card); }),
@@ -1099,7 +1101,7 @@
             }
 
             iterations++;
-            if (applyPyramidGreedyRemoval(state)) {
+            if (applyPyramidGreedyRemoval(state, targetSum)) {
                 solutionMoves.push({ type: 'remove-exposed' });
                 var afterGreedy = normalizePyramidCheckState(state);
                 if (seenStates.has(afterGreedy)) {
@@ -1164,7 +1166,8 @@
         };
     }
 
-    function listPyramidCandidateMoves(state, drawCount) {
+    function listPyramidCandidateMoves(state, drawCount, targetSum) {
+        var sumTarget = Number.isFinite(targetSum) ? targetSum : 13;
         var exposed = [];
         for (var row = 0; row < state.pyramid.length; row++) {
             for (var col = 0; col < state.pyramid[row].length; col++) {
@@ -1178,20 +1181,20 @@
         var moves = [];
         for (var i = 0; i < exposed.length; i++) {
             var a = exposed[i];
-            if (a.card.rank === 13) {
+            if (a.card.rank === sumTarget) {
                 moves.push({ type: 'remove-king', row: a.row, col: a.col, priority: 6 });
             }
-            if (wasteTop && a.card.rank + wasteTop.rank === 13) {
+            if (wasteTop && a.card.rank + wasteTop.rank === sumTarget) {
                 moves.push({ type: 'remove-with-waste', row: a.row, col: a.col, priority: 5 });
             }
             for (var j = i + 1; j < exposed.length; j++) {
                 var b = exposed[j];
-                if (a.card.rank + b.card.rank === 13) {
+                if (a.card.rank + b.card.rank === sumTarget) {
                     moves.push({ type: 'remove-pair', rowA: a.row, colA: a.col, rowB: b.row, colB: b.col, priority: 7 });
                 }
             }
         }
-        if (wasteTop && wasteTop.rank === 13) {
+        if (wasteTop && wasteTop.rank === sumTarget) {
             moves.push({ type: 'remove-waste-king', priority: 4 });
         }
         if (state.stock.length > 0) {
@@ -1253,6 +1256,7 @@
         var maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : 50000;
         var maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : 60000;
         var drawCount = snapshot.drawCount === 3 ? 3 : 1;
+        var targetSum = Number.isFinite(snapshot.targetSum) ? Math.max(2, snapshot.targetSum) : 13;
         var startState = clonePyramidCheckState({
             pyramid: snapshot.pyramid,
             stock: snapshot.stock,
@@ -1304,7 +1308,7 @@
             var cleared = initialRemaining - remaining;
             if (cleared > bestCleared) bestCleared = cleared;
 
-            var candidates = listPyramidCandidateMoves(state, drawCount);
+            var candidates = listPyramidCandidateMoves(state, drawCount, targetSum);
             for (var i = candidates.length - 1; i >= 0; i--) {
                 var move = candidates[i];
                 var nextState = clonePyramidCheckState(state);
@@ -1344,16 +1348,40 @@
         }, 0);
     }
 
-    function completeSpiderSequences(state) {
+    function getSpiderCheckConfig(snapshot) {
+        var foundationSlots = Number.isFinite(snapshot && snapshot.foundationSlots)
+            ? Math.max(1, snapshot.foundationSlots)
+            : 8;
+        var completeRunLength = Number.isFinite(snapshot && snapshot.completeRunLength)
+            ? Math.max(1, snapshot.completeRunLength)
+            : 13;
+        var completeStartRank = Number.isFinite(snapshot && snapshot.completeStartRank)
+            ? snapshot.completeStartRank
+            : completeRunLength;
+        var dealRowSize = Number.isFinite(snapshot && snapshot.dealRowSize)
+            ? Math.max(1, snapshot.dealRowSize)
+            : ((snapshot && Array.isArray(snapshot.tableau)) ? snapshot.tableau.length : 10);
+        var allowDealFromStock = snapshot && snapshot.allowDealFromStock === false ? false : true;
+        return {
+            foundationSlots: foundationSlots,
+            completeRunLength: completeRunLength,
+            completeStartRank: completeStartRank,
+            dealRowSize: dealRowSize,
+            allowDealFromStock: allowDealFromStock
+        };
+    }
+
+    function completeSpiderSequences(state, config) {
+        var cfg = config || getSpiderCheckConfig(state);
         var completed = 0;
         for (var col = 0; col < state.tableau.length; col++) {
             while (true) {
                 var column = state.tableau[col];
-                if (!column || column.length < 13) break;
-                var start = column.length - 13;
+                if (!column || column.length < cfg.completeRunLength) break;
+                var start = column.length - cfg.completeRunLength;
                 var seq = column.slice(start);
                 var first = seq[0];
-                if (!first || first.hidden || first.rank !== 13) break;
+                if (!first || first.hidden || first.rank !== cfg.completeStartRank) break;
                 var valid = true;
                 for (var i = 0; i < seq.length - 1; i++) {
                     var current = seq[i];
@@ -1364,7 +1392,7 @@
                     }
                 }
                 if (!valid) break;
-                var removed = column.splice(start, 13);
+                var removed = column.splice(start, cfg.completeRunLength);
                 state.foundations.push(removed[0].suit);
                 var newTop = column[column.length - 1];
                 if (newTop && newTop.hidden) {
@@ -1499,7 +1527,8 @@
         return moves;
     }
 
-    function applySpiderSimulationMove(state, move) {
+    function applySpiderSimulationMove(state, move, config) {
+        var cfg = config || getSpiderCheckConfig(state);
         if (!move) return false;
         if (move.type === 'tableau-to-tableau') {
             var source = state.tableau[move.from];
@@ -1514,8 +1543,9 @@
             return true;
         }
         if (move.type === 'deal-row') {
-            if (state.stock.length < 10 || state.tableau.some(function (column) { return column.length === 0; })) return false;
-            for (var col = 0; col < 10; col++) {
+            if (!cfg.allowDealFromStock) return false;
+            if (state.stock.length < cfg.dealRowSize || state.tableau.some(function (column) { return column.length === 0; })) return false;
+            for (var col = 0; col < cfg.dealRowSize; col++) {
                 var dealt = state.stock.pop();
                 if (!dealt) return false;
                 dealt.hidden = false;
@@ -1530,6 +1560,7 @@
         var startedAt = Date.now();
         var maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : 50000;
         var maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : 60000;
+        var config = getSpiderCheckConfig(snapshot);
         var startState = cloneSpiderCheckState({
             tableau: snapshot.tableau,
             stock: snapshot.stock,
@@ -1568,7 +1599,7 @@
             var lastMove = current.lastMove;
             var depth = current.depth;
 
-            var completed = completeSpiderSequences(state);
+            var completed = completeSpiderSequences(state, config);
             if (completed > 0) {
                 var afterComplete = normalizeSpiderCheckState(state);
                 var completedDepth = depth + 1;
@@ -1583,7 +1614,7 @@
                 lastMove = { type: 'complete-sequence' };
             }
 
-            if (state.foundations.length >= 8) {
+            if (state.foundations.length >= config.foundationSlots) {
                 return {
                     solved: true,
                     reason: 'solved',
@@ -1606,14 +1637,14 @@
                 maxMoves: 22,
                 blockedReverse: lastMove
             });
-            if (state.stock.length >= 10 && !state.tableau.some(function (column) { return column.length === 0; })) {
+            if (config.allowDealFromStock && state.stock.length >= config.dealRowSize && !state.tableau.some(function (column) { return column.length === 0; })) {
                 candidateMoves.push({ type: 'deal-row' });
             }
 
             for (var i = 0; i < candidateMoves.length; i++) {
                 var move = candidateMoves[i];
                 var nextState = cloneSpiderCheckState(state);
-                if (!applySpiderSimulationMove(nextState, move)) continue;
+                if (!applySpiderSimulationMove(nextState, move, config)) continue;
                 var key = normalizeSpiderCheckState(nextState);
                 var nextDepth = depth + 1;
                 var knownDepth = seenStateDepth.get(key);
@@ -1652,6 +1683,7 @@
         var startedAt = Date.now();
         var maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : 50000;
         var maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : 5000;
+        var config = getSpiderCheckConfig(snapshot);
         var state = {
             tableau: snapshot.tableau.map(function (column) { return column.map(function (card) { return Object.assign({}, card); }); }),
             stock: snapshot.stock.map(function (card) { return Object.assign({}, card); }),
@@ -1671,8 +1703,8 @@
                 return { solved: false, reason: 'time-limit', statesExplored: iterations, prunedStates: 0, durationMs: Date.now() - startedAt, maxStates: maxStates, maxDurationMs: maxDurationMs };
             }
             iterations++;
-            var completed = completeSpiderSequences(state);
-            if (state.foundations.length >= 8) {
+            var completed = completeSpiderSequences(state, config);
+            if (state.foundations.length >= config.foundationSlots) {
                 return {
                     solved: true,
                     reason: 'solved',
@@ -1716,8 +1748,8 @@
                 continue;
             }
 
-            if (state.stock.length >= 10 && !state.tableau.some(function (column) { return column.length === 0; })) {
-                for (var col = 0; col < 10; col++) {
+            if (config.allowDealFromStock && state.stock.length >= config.dealRowSize && !state.tableau.some(function (column) { return column.length === 0; })) {
+                for (var col = 0; col < config.dealRowSize; col++) {
                     var dealt = state.stock.pop();
                     if (!dealt) break;
                     dealt.hidden = false;

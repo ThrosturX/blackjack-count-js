@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-    <title>Card Playing Suite - Royal Simon</title>
+    <title>Card Playing Suite - Cavalier's Castle</title>
     <link rel="stylesheet" href="styles/core.css">
     <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
-    <link rel="stylesheet" href="styles/spider.css">
+    <link rel="stylesheet" href="styles/pyramid.css">
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="styles/themes.css">
     <link rel="stylesheet" href="styles/mobile.css">
@@ -18,7 +18,7 @@
 <body>
     <header>
         <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
-        <h1>Royal Simon</h1>
+        <h1>Cavalier's Castle</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
             <button id="toggle-settings" class="btn-toggle">Settings</button>
@@ -29,20 +29,22 @@
 
         <div class="game-controls">
             <div class="controls-section" id="game-area">
-                <button id="spider-new-game" class="game-btn">New Game</button>
-                <button id="spider-deal" class="game-btn">Deal Row</button>
-                <button id="spider-undo" class="game-btn" disabled>Undo</button>
-                <button id="spider-hint" class="game-btn">Hint</button>
-                <button id="spider-check" class="game-btn">Check</button>
+                <button id="pyramid-new-game" class="game-btn">New Game</button>
+                <button id="pyramid-undo" class="game-btn" disabled>Undo</button>
+                <button id="pyramid-hint" class="game-btn">Hint</button>
+                <button id="pyramid-check" class="game-btn">Check</button>
             </div>
             <div class="controls-section collapsed" id="settings-area">
-                <div class="stats">Suits:
-                    <select id="spider-suit-select">
-                        <option value="4" selected>4 Suits</option>
-                        <option value="2">2 Suits</option>
-                        <option value="1">1 Suit</option>
+                <div class="stats">Draw:
+                    <select id="pyramid-draw-select">
+                        <option value="1" selected>Draw 1</option>
+                        <option value="3">Draw 3</option>
                     </select>
                 </div>
+                <label class="stats">Table Scale:
+                    <input id="pyramid-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
+                    <span id="pyramid-card-scale-value">100%</span>
+                </label>
             </div>
 
             <div class="controls-section collapsed" id="addons-area">
@@ -63,27 +65,21 @@
             </div>
 
             <div class="controls-section collapsed" id="stats-area">
-                <div class="stats">Moves: <span id="spider-moves">0</span></div>
-                <div class="stats">Time: <span id="spider-time">0:00</span></div>
-                <div class="stats">Score: <span id="spider-score">0</span></div>
-                <div class="stats">High Score: <span id="spider-high-score">0</span></div>
+                <div class="stats">Moves: <span id="pyramid-moves">0</span></div>
+                <div class="stats">Time: <span id="pyramid-time">0:00</span></div>
+                <div class="stats">Score: <span id="pyramid-score">0</span></div>
+                <div class="stats">High Score: <span id="pyramid-high-score">0</span></div>
             </div>
-        </div>
-        <div class="table-scale-strip">
-            <label class="stats table-scale-control">Table Scale:
-                <input id="spider-card-scale" type="range" min="0.5" max="2" step="0.05" value="1">
-                <span id="spider-card-scale-value">100%</span>
-            </label>
         </div>
     </header>
 
-    <div class="table-scroll" id="spider-scroll">
-        <main id="table" class="spider-layout">
-            <div id="spider-top-row">
-                <div id="spider-stock" class="pile"></div>
-                <div id="spider-foundations"></div>
+    <div class="table-scroll" id="pyramid-scroll">
+        <main id="table" class="pyramid-layout">
+            <div id="pyramid-top-row">
+                <div id="pyramid-stock" class="pyramid-pile"></div>
+                <div id="pyramid-waste" class="pyramid-pile"></div>
             </div>
-            <div id="spider-tableau"></div>
+            <div id="pyramid-area"></div>
         </main>
     </div>
 
@@ -97,30 +93,22 @@
     <script src="common.js"></script>
     <script src="header.js"></script>
     <script src="shared/ui-helpers.js"></script>
-    <script src="shared/mobile-controller.js"></script>
     <script src="shared/solitaire-check-modal.js"></script>
     <script>
-        window.SpiderVariant = {
-            stateGameId: 'royal-simon',
-            highScoreGameId: 'royal-simon',
-            ruleSetKey: 'royal-simon',
-            forceSuitMode: 4,
-            showSuitSelector: false,
-            allowDealFromStock: false,
-            foundationSlots: 4,
-            values: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'C', 'Q', 'K', 'A'],
-            completeRunLength: 14,
-            deckCount: 1,
-            suits: ['♠', '♥', '♦', '♣'],
-            tableauDealCounts: [8, 7, 7, 6, 6, 5, 5, 4, 4, 4],
-            faceUpAllDealt: true,
-            enableCheck: true,
-            winMessage: 'You solved Royal Simon!',
-            stockPlaceholderLabel: ''
+        window.PyramidVariant = {
+            stateGameId: 'cavaliers-castle',
+            highScoreGameId: 'cavaliers-castle',
+            ruleSetKey: 'cavaliers-castle',
+            layout: 'double-peak-v',
+            rows: 6,
+            peakGapColumns: 2,
+            targetSum: 14,
+            deckValues: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'C', 'Q', 'K', 'A'],
+            winMessage: "You solved Cavalier's Castle!"
         };
+        window.CardRankOverrides = { A: 1, J: 11, C: 12, Q: 13, K: 14 };
     </script>
-    <script>window.CardRankOverrides = { A: 1, J: 11, C: 12, Q: 13, K: 14 };</script>
-    <script src="spider.js"></script>
+    <script src="pyramid.js"></script>
 </body>
 
 </html>

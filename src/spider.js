@@ -995,8 +995,9 @@ function checkForCompletedSequence(columnIndex) {
 }
 
 function dealFromStock() {
+    const dealRowSize = spiderState.tableau.length || 10;
     if (!spiderVariant.allowDealFromStock) return;
-    if (spiderState.stock.length < 10) return;
+    if (spiderState.stock.length < dealRowSize) return;
     if (spiderState.isDealing) return;
     const hasEmptyColumn = spiderState.tableau.some(column => column.length === 0);
     if (hasEmptyColumn) {
@@ -1015,7 +1016,7 @@ function dealFromStock() {
     const completed = [];
 
     const performDeal = async () => {
-        for (let col = 0; col < 10; col++) {
+        for (let col = 0; col < dealRowSize; col++) {
             const card = spiderState.stock.pop();
             card.hidden = false;
             spiderState.tableau[col].push(card);
@@ -1333,11 +1334,17 @@ function handleSpiderCheckResult(mode, result, limits, snapshot, context = {}) {
 }
 
 function createSpiderCheckSnapshot() {
+    const dealRowSize = spiderState.tableau.length || 10;
     return {
         tableau: spiderState.tableau.map((column) => column.map(cloneSpiderCardForCheck)),
         stock: spiderState.stock.map(cloneSpiderCardForCheck),
         foundations: spiderState.foundations.slice(),
-        suitMode: spiderState.suitMode
+        suitMode: spiderState.suitMode,
+        foundationSlots: spiderVariant.foundationSlots,
+        completeRunLength: spiderVariant.completeRunLength,
+        completeStartRank: parseSpiderRankForCheck(spiderVariant.completeStartValue),
+        allowDealFromStock: spiderVariant.allowDealFromStock,
+        dealRowSize
     };
 }
 
@@ -1372,6 +1379,9 @@ function runSpiderCheckOnMainThread(snapshot, limits) {
     const fallbackLimits = getSpiderCheckLimits('quick', snapshot.suitMode);
     const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
     const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const foundationSlots = Number.isFinite(snapshot.foundationSlots) ? Math.max(1, snapshot.foundationSlots) : spiderVariant.foundationSlots;
+    const dealRowSize = Number.isFinite(snapshot.dealRowSize) ? Math.max(1, snapshot.dealRowSize) : (snapshot.tableau.length || 10);
+    const allowDealFromStock = snapshot.allowDealFromStock !== false;
     const state = {
         tableau: snapshot.tableau.map((column) => column.map((card) => Object.assign({}, card))),
         stock: snapshot.stock.map((card) => Object.assign({}, card)),
@@ -1393,7 +1403,7 @@ function runSpiderCheckOnMainThread(snapshot, limits) {
 
         iterations++;
         const completed = completeSpiderSequences(state);
-        if (state.foundations.length >= 8) {
+        if (state.foundations.length >= foundationSlots) {
             return {
                 solved: true,
                 reason: 'solved',
@@ -1437,8 +1447,8 @@ function runSpiderCheckOnMainThread(snapshot, limits) {
             continue;
         }
 
-        if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
-            for (let col = 0; col < 10; col++) {
+        if (allowDealFromStock && state.stock.length >= dealRowSize && !state.tableau.some((column) => column.length === 0)) {
+            for (let col = 0; col < dealRowSize; col++) {
                 const dealt = state.stock.pop();
                 if (!dealt) break;
                 dealt.hidden = false;
@@ -1476,6 +1486,9 @@ function runSpiderRelaxedCheckOnMainThread(snapshot, limits) {
     const fallbackLimits = getSpiderCheckLimits('attempt', snapshot.suitMode);
     const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
     const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
+    const foundationSlots = Number.isFinite(snapshot.foundationSlots) ? Math.max(1, snapshot.foundationSlots) : spiderVariant.foundationSlots;
+    const dealRowSize = Number.isFinite(snapshot.dealRowSize) ? Math.max(1, snapshot.dealRowSize) : (snapshot.tableau.length || 10);
+    const allowDealFromStock = snapshot.allowDealFromStock !== false;
     const startState = cloneSpiderCheckState({
         tableau: snapshot.tableau,
         stock: snapshot.stock,
@@ -1537,7 +1550,7 @@ function runSpiderRelaxedCheckOnMainThread(snapshot, limits) {
             lastMove = { type: 'complete-sequence' };
         }
 
-        if (state.foundations.length >= 8) {
+        if (state.foundations.length >= foundationSlots) {
             return {
                 solved: true,
                 reason: 'solved',
@@ -1560,7 +1573,7 @@ function runSpiderRelaxedCheckOnMainThread(snapshot, limits) {
             maxMoves: 22,
             blockedReverse: lastMove
         });
-        if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
+        if (allowDealFromStock && state.stock.length >= dealRowSize && !state.tableau.some((column) => column.length === 0)) {
             candidateMoves.push({ type: 'deal-row' });
         }
 
@@ -1794,6 +1807,7 @@ function listSpiderHeuristicMoves(state, options = {}) {
 }
 
 function applySpiderSimulationMove(state, move) {
+    const dealRowSize = state.tableau.length || 10;
     if (!move) return false;
     if (move.type === 'tableau-to-tableau') {
         const source = state.tableau[move.from];
@@ -1808,8 +1822,8 @@ function applySpiderSimulationMove(state, move) {
         return true;
     }
     if (move.type === 'deal-row') {
-        if (state.stock.length < 10 || state.tableau.some((column) => column.length === 0)) return false;
-        for (let col = 0; col < 10; col++) {
+        if (state.stock.length < dealRowSize || state.tableau.some((column) => column.length === 0)) return false;
+        for (let col = 0; col < dealRowSize; col++) {
             const dealt = state.stock.pop();
             if (!dealt) return false;
             dealt.hidden = false;
@@ -2057,7 +2071,7 @@ function showSpiderHint() {
         CommonUtils.showTableToast(`Hint: Move a run from column ${move.from + 1} to column ${move.to + 1}.`, { variant: 'warn', containerId: 'table', duration: 2400 });
         return;
     }
-    if (state.stock.length >= 10 && !state.tableau.some((column) => column.length === 0)) {
+    if (spiderVariant.allowDealFromStock && state.stock.length >= (state.tableau.length || 10) && !state.tableau.some((column) => column.length === 0)) {
         CommonUtils.showTableToast('Hint: Deal a new row from stock.', { variant: 'warn', containerId: 'table', duration: 2400 });
         return;
     }

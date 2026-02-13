@@ -7,7 +7,7 @@ const pyramidSoundFiles = {
     shuffle: ['shuffle.wav']
 };
 
-const PYRAMID_ROWS = 7;
+const PYRAMID_DEFAULT_ROWS = 7;
 const PYRAMID_PAIR_SCORE = 5;
 const PYRAMID_KING_SCORE = 10;
 const PYRAMID_MAX_HISTORY = 200;
@@ -39,6 +39,13 @@ const pyramidVariant = (() => {
     const defaults = {
         stateGameId: 'pyramid',
         highScoreGameId: 'pyramid',
+        ruleSetKey: null,
+        layout: 'classic',
+        rows: PYRAMID_DEFAULT_ROWS,
+        peakGapColumns: 2,
+        targetSum: 13,
+        deckSuits: SUITS,
+        deckValues: VALUES,
         hideBlockedCards: false,
         winMessage: 'You solved Pyramid!'
     };
@@ -48,10 +55,55 @@ const pyramidVariant = (() => {
     return {
         stateGameId: String(incoming.stateGameId || defaults.stateGameId),
         highScoreGameId: String(incoming.highScoreGameId || defaults.highScoreGameId),
+        ruleSetKey: incoming.ruleSetKey ? String(incoming.ruleSetKey) : defaults.ruleSetKey,
+        layout: (incoming.layout === 'double-peak' || incoming.layout === 'double-peak-v')
+            ? incoming.layout
+            : defaults.layout,
+        rows: Math.max(1, parseInt(incoming.rows, 10) || defaults.rows),
+        peakGapColumns: Math.max(0, parseInt(incoming.peakGapColumns, 10) || defaults.peakGapColumns),
+        targetSum: Math.max(2, parseInt(incoming.targetSum, 10) || defaults.targetSum),
+        deckSuits: Array.isArray(incoming.deckSuits) && incoming.deckSuits.length ? incoming.deckSuits.slice() : defaults.deckSuits.slice(),
+        deckValues: Array.isArray(incoming.deckValues) && incoming.deckValues.length ? incoming.deckValues.slice() : defaults.deckValues.slice(),
         hideBlockedCards: incoming.hideBlockedCards === true,
         winMessage: String(incoming.winMessage || defaults.winMessage)
     };
 })();
+
+function getPyramidTargetSum() {
+    return pyramidVariant.targetSum;
+}
+
+function getPyramidRowCount() {
+    return pyramidState.pyramid.length || pyramidVariant.rows;
+}
+
+function getPyramidMaxColumns() {
+    if (pyramidVariant.layout === 'double-peak' || pyramidVariant.layout === 'double-peak-v') {
+        return (pyramidVariant.rows + pyramidVariant.peakGapColumns) + pyramidVariant.rows;
+    }
+    return pyramidVariant.rows;
+}
+
+function getDoublePeakRightOffset() {
+    return pyramidVariant.rows + pyramidVariant.peakGapColumns;
+}
+
+function getPyramidCardXIndex(row, col) {
+    if (pyramidVariant.layout !== 'double-peak-v') {
+        return col;
+    }
+    const rightOffset = getDoublePeakRightOffset();
+    if (col < rightOffset) {
+        // Mirror the left peak so each lower row fans outward to the left.
+        return (pyramidVariant.rows - 1) - (row - col);
+    }
+    // Right peak keeps the standard orientation, fanning to the right.
+    return col;
+}
+
+function createPyramidDeck() {
+    return CommonUtils.createShoe(1, pyramidVariant.deckSuits, pyramidVariant.deckValues);
+}
 
 let pyramidStateManager = null;
 let pyramidCheckWorker = null;
@@ -62,6 +114,7 @@ let pyramidStoredSolution = null;
 
 function getPyramidRuleSetKey() {
     const drawCount = pyramidState.drawCount === 3 ? 3 : 1;
+    if (pyramidVariant.ruleSetKey) return `${pyramidVariant.ruleSetKey}-draw-${drawCount}`;
     return `draw-${drawCount}`;
 }
 
@@ -227,17 +280,37 @@ function restorePyramidState(saved) {
 }
 
 function dealPyramid() {
-    const deck = CommonUtils.createShoe(1, SUITS, VALUES);
+    const deck = createPyramidDeck();
     pyramidState.pyramid = [];
 
-    for (let row = 0; row < PYRAMID_ROWS; row++) {
-        const rowCards = [];
-        for (let col = 0; col <= row; col++) {
-            const card = deck.pop();
-            card.hidden = false;
-            rowCards.push(card);
+    if (pyramidVariant.layout === 'double-peak' || pyramidVariant.layout === 'double-peak-v') {
+        const rows = pyramidVariant.rows;
+        const rightOffset = getDoublePeakRightOffset();
+        const maxCols = getPyramidMaxColumns();
+        for (let row = 0; row < rows; row++) {
+            const rowCards = Array(maxCols).fill(null);
+            for (let col = 0; col <= row; col++) {
+                const leftCard = deck.pop();
+                if (!leftCard) continue;
+                leftCard.hidden = false;
+                rowCards[col] = leftCard;
+                const rightCard = deck.pop();
+                if (!rightCard) continue;
+                rightCard.hidden = false;
+                rowCards[rightOffset + col] = rightCard;
+            }
+            pyramidState.pyramid.push(rowCards);
         }
-        pyramidState.pyramid.push(rowCards);
+    } else {
+        for (let row = 0; row < pyramidVariant.rows; row++) {
+            const rowCards = [];
+            for (let col = 0; col <= row; col++) {
+                const card = deck.pop();
+                card.hidden = false;
+                rowCards.push(card);
+            }
+            pyramidState.pyramid.push(rowCards);
+        }
     }
 
     pyramidState.stock = deck;
@@ -325,18 +398,23 @@ function updatePyramid() {
     area.innerHTML = '';
 
     const metrics = getPyramidMetrics();
-    const maxRowWidth = metrics.cardWidth + (PYRAMID_ROWS - 1) * metrics.hStep;
-    const totalHeight = metrics.cardHeight + (PYRAMID_ROWS - 1) * metrics.vStep;
+    const rowCount = getPyramidRowCount();
+    const maxColumns = getPyramidMaxColumns();
+    const maxRowWidth = metrics.cardWidth + Math.max(0, maxColumns - 1) * metrics.hStep;
+    const totalHeight = metrics.cardHeight + Math.max(0, rowCount - 1) * metrics.vStep;
 
     area.style.width = `${maxRowWidth}px`;
     area.style.height = `${totalHeight}px`;
 
-    for (let row = 0; row < PYRAMID_ROWS; row++) {
+    for (let row = 0; row < rowCount; row++) {
         const rowCards = pyramidState.pyramid[row] || [];
-        const rowWidth = metrics.cardWidth + row * metrics.hStep;
-        const offsetX = (maxRowWidth - rowWidth) / 2;
+        const rowLength = rowCards.length;
+        const rowWidth = metrics.cardWidth + Math.max(0, rowLength - 1) * metrics.hStep;
+        const offsetX = (pyramidVariant.layout === 'double-peak' || pyramidVariant.layout === 'double-peak-v')
+            ? 0
+            : (maxRowWidth - rowWidth) / 2;
 
-        for (let col = 0; col <= row; col++) {
+        for (let col = 0; col < rowLength; col++) {
             const card = rowCards[col];
             if (!card) continue;
 
@@ -345,7 +423,8 @@ function updatePyramid() {
             cardEl.dataset.row = row;
             cardEl.dataset.col = col;
             cardEl.style.position = 'absolute';
-            cardEl.style.left = `${offsetX + col * metrics.hStep}px`;
+            const xIndex = getPyramidCardXIndex(row, col);
+            cardEl.style.left = `${offsetX + xIndex * metrics.hStep}px`;
             cardEl.style.top = `${row * metrics.vStep}px`;
 
             const exposed = isCardExposed(row, col);
@@ -453,7 +532,8 @@ function handleCardClick(e) {
 function handleSelection(selection) {
     if (!selection || !selection.card) return;
 
-    if (selection.card.rank === 13) {
+    const targetSum = getPyramidTargetSum();
+    if (selection.card.rank === targetSum) {
         clearSelection();
         removeSelectedCards([selection], PYRAMID_KING_SCORE);
         return;
@@ -471,7 +551,7 @@ function handleSelection(selection) {
     }
 
     const sum = existing.card.rank + selection.card.rank;
-    if (sum === 13) {
+    if (sum === targetSum) {
         removeSelectedCards([existing, selection], PYRAMID_PAIR_SCORE);
         clearSelection();
         return;
@@ -532,7 +612,7 @@ function removeSelectedCards(selections, scoreDelta) {
 }
 
 function isCardExposed(row, col) {
-    if (row >= PYRAMID_ROWS - 1) return true;
+    if (row >= getPyramidRowCount() - 1) return true;
     const belowLeft = pyramidState.pyramid[row + 1]?.[col];
     const belowRight = pyramidState.pyramid[row + 1]?.[col + 1];
     return !belowLeft && !belowRight;
@@ -827,7 +907,8 @@ function createPyramidCheckSnapshot() {
         pyramid: pyramidState.pyramid.map((row) => row.map((card) => (card ? cloneCardForCheck(card) : null))),
         stock: pyramidState.stock.map(cloneCardForCheck),
         waste: pyramidState.waste.map(cloneCardForCheck),
-        drawCount: pyramidState.drawCount
+        drawCount: pyramidState.drawCount,
+        targetSum: getPyramidTargetSum()
     };
 }
 
@@ -842,8 +923,12 @@ function cloneCardForCheck(card) {
 }
 
 function parseCardRankForCheck(value) {
+    if (typeof window !== 'undefined' && window.CardRankOverrides && Number.isFinite(window.CardRankOverrides[value])) {
+        return window.CardRankOverrides[value];
+    }
     if (value === 'A') return 1;
     if (value === 'J') return 11;
+    if (value === 'C') return 12;
     if (value === 'Q') return 12;
     if (value === 'K') return 13;
     const parsed = parseInt(value, 10);
@@ -859,6 +944,7 @@ function runPyramidCheckOnMainThread(snapshot, limits) {
     const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
     const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
     const drawCount = snapshot.drawCount === 3 ? 3 : 1;
+    const targetSum = Number.isFinite(snapshot.targetSum) ? Math.max(2, snapshot.targetSum) : 13;
     const state = {
         pyramid: snapshot.pyramid.map((row) => row.map((card) => (card ? Object.assign({}, card) : null))),
         stock: snapshot.stock.map((card) => Object.assign({}, card)),
@@ -890,7 +976,7 @@ function runPyramidCheckOnMainThread(snapshot, limits) {
             };
         }
         iterations++;
-        if (applyPyramidGreedyRemoval(state)) {
+        if (applyPyramidGreedyRemoval(state, targetSum)) {
             solutionMoves.push({ type: 'remove-exposed' });
             const key = normalizePyramidSimulationState(state);
             if (seenStates.has(key)) {
@@ -953,6 +1039,7 @@ function runPyramidRelaxedCheckOnMainThread(snapshot, limits) {
     const maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : fallbackLimits.maxStates;
     const maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : fallbackLimits.maxDurationMs;
     const drawCount = snapshot.drawCount === 3 ? 3 : 1;
+    const targetSum = Number.isFinite(snapshot.targetSum) ? Math.max(2, snapshot.targetSum) : 13;
     const startState = clonePyramidCheckState({
         pyramid: snapshot.pyramid,
         stock: snapshot.stock,
@@ -1012,7 +1099,7 @@ function runPyramidRelaxedCheckOnMainThread(snapshot, limits) {
         const cleared = initialRemaining - remaining;
         if (cleared > bestCleared) bestCleared = cleared;
 
-        const candidates = listPyramidCandidateMoves(state, drawCount);
+        const candidates = listPyramidCandidateMoves(state, drawCount, targetSum);
         for (let i = candidates.length - 1; i >= 0; i--) {
             const move = candidates[i];
             const nextState = clonePyramidCheckState(state);
@@ -1091,7 +1178,7 @@ function isPyramidCardExposedForCheck(pyramid, row, col) {
     return !belowLeft && !belowRight;
 }
 
-function applyPyramidGreedyRemoval(state) {
+function applyPyramidGreedyRemoval(state, targetSum = 13) {
     const exposed = [];
     for (let row = 0; row < state.pyramid.length; row++) {
         for (let col = 0; col < state.pyramid[row].length; col++) {
@@ -1105,18 +1192,18 @@ function applyPyramidGreedyRemoval(state) {
 
     for (let i = 0; i < exposed.length; i++) {
         const a = exposed[i];
-        if (a.card.rank === 13) {
+        if (a.card.rank === targetSum) {
             state.pyramid[a.row][a.col] = null;
             return true;
         }
-        if (wasteTop && (a.card.rank + wasteTop.rank === 13)) {
+        if (wasteTop && (a.card.rank + wasteTop.rank === targetSum)) {
             state.pyramid[a.row][a.col] = null;
             state.waste.pop();
             return true;
         }
         for (let j = i + 1; j < exposed.length; j++) {
             const b = exposed[j];
-            if (a.card.rank + b.card.rank === 13) {
+            if (a.card.rank + b.card.rank === targetSum) {
                 state.pyramid[a.row][a.col] = null;
                 state.pyramid[b.row][b.col] = null;
                 return true;
@@ -1124,14 +1211,14 @@ function applyPyramidGreedyRemoval(state) {
         }
     }
 
-    if (wasteTop && wasteTop.rank === 13) {
+    if (wasteTop && wasteTop.rank === targetSum) {
         state.waste.pop();
         return true;
     }
     return false;
 }
 
-function listPyramidCandidateMoves(state, drawCount) {
+function listPyramidCandidateMoves(state, drawCount, targetSum = 13) {
     const exposed = [];
     for (let row = 0; row < state.pyramid.length; row++) {
         for (let col = 0; col < state.pyramid[row].length; col++) {
@@ -1146,21 +1233,21 @@ function listPyramidCandidateMoves(state, drawCount) {
 
     for (let i = 0; i < exposed.length; i++) {
         const a = exposed[i];
-        if (a.card.rank === 13) {
+        if (a.card.rank === targetSum) {
             moves.push({ type: 'remove-king', row: a.row, col: a.col, priority: 6 });
         }
-        if (wasteTop && a.card.rank + wasteTop.rank === 13) {
+        if (wasteTop && a.card.rank + wasteTop.rank === targetSum) {
             moves.push({ type: 'remove-with-waste', row: a.row, col: a.col, priority: 5 });
         }
         for (let j = i + 1; j < exposed.length; j++) {
             const b = exposed[j];
-            if (a.card.rank + b.card.rank === 13) {
+            if (a.card.rank + b.card.rank === targetSum) {
                 moves.push({ type: 'remove-pair', rowA: a.row, colA: a.col, rowB: b.row, colB: b.col, priority: 7 });
             }
         }
     }
 
-    if (wasteTop && wasteTop.rank === 13) {
+    if (wasteTop && wasteTop.rank === targetSum) {
         moves.push({ type: 'remove-waste-king', priority: 4 });
     }
     if (state.stock.length > 0) {
@@ -1427,8 +1514,9 @@ function getStoredPyramidHint() {
 }
 
 function formatPyramidHintMove(move) {
-    if (!move || !move.type) return 'Remove an exposed pair that sums to 13.';
-    if (move.type === 'remove-exposed') return 'Remove an exposed king or exposed pair summing to 13.';
+    const targetSum = getPyramidTargetSum();
+    if (!move || !move.type) return `Remove an exposed pair that sums to ${targetSum}.`;
+    if (move.type === 'remove-exposed') return `Remove an exposed ${targetSum}-card or exposed pair summing to ${targetSum}.`;
     if (move.type === 'draw-stock') return 'Draw from stock.';
     if (move.type === 'recycle-waste') return 'Recycle waste into stock.';
     return 'Try the next legal forward move.';
@@ -1446,8 +1534,8 @@ function showPyramidHint() {
         stock: snapshot.stock.map((card) => Object.assign({}, card)),
         waste: snapshot.waste.map((card) => Object.assign({}, card))
     };
-    if (applyPyramidGreedyRemoval(state)) {
-        CommonUtils.showTableToast('Hint: Remove an exposed king or exposed pair summing to 13.', { variant: 'warn', containerId: 'table', duration: 2400 });
+    if (applyPyramidGreedyRemoval(state, getPyramidTargetSum())) {
+        CommonUtils.showTableToast(`Hint: Remove an exposed ${getPyramidTargetSum()}-card or exposed pair summing to ${getPyramidTargetSum()}.`, { variant: 'warn', containerId: 'table', duration: 2400 });
         return;
     }
     if (state.stock.length > 0) {
