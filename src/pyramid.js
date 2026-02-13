@@ -11,6 +11,8 @@ const PYRAMID_ROWS = 7;
 const PYRAMID_PAIR_SCORE = 5;
 const PYRAMID_KING_SCORE = 10;
 const PYRAMID_MAX_HISTORY = 200;
+const PYRAMID_WASTE_FAN_BASE = 20;
+const PYRAMID_WASTE_FAN_MIN = 8;
 const PYRAMID_QUICK_CHECK_LIMITS = {
     1: { maxStates: 10000, maxDurationMs: 1000 },
     3: { maxStates: 25000, maxDurationMs: 5000 }
@@ -57,6 +59,11 @@ const selectionState = {
 };
 
 function ensurePyramidSizing() {
+    const tableEl = document.getElementById('table');
+    if (tableEl) {
+        const fanOffset = pyramidState.drawCount === 3 ? getPyramidWasteFanOffset() : 0;
+        tableEl.style.setProperty('--pyramid-waste-fan-x', `${fanOffset}px`);
+    }
     applyPyramidLift();
     CommonUtils.ensureScrollableWidth({
         table: 'table',
@@ -263,18 +270,34 @@ function updateWaste() {
     wasteEl.innerHTML = '';
 
     if (pyramidState.waste.length > 0) {
-        const topCard = pyramidState.waste[pyramidState.waste.length - 1];
-        const cardEl = CommonUtils.createCardEl(topCard);
-        cardEl.dataset.waste = 'true';
-        cardEl.style.cursor = 'pointer';
-        cardEl.addEventListener('click', handleCardClick);
-        wasteEl.appendChild(cardEl);
+        const visibleCount = pyramidState.drawCount === 3 ? 3 : 1;
+        CommonUtils.renderWasteFanPile({
+            containerEl: wasteEl,
+            waste: pyramidState.waste,
+            visibleCount,
+            fanOffset: getPyramidWasteFanOffset(),
+            fanStyle: 'classic',
+            onCard: ({ cardEl, isTop }) => {
+                if (!isTop) return;
+                cardEl.dataset.waste = 'true';
+                cardEl.style.cursor = 'pointer';
+                cardEl.addEventListener('click', handleCardClick);
+                cardEl.style.zIndex = 10;
+            }
+        });
     } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'pile-placeholder';
         placeholder.textContent = 'Waste';
         wasteEl.appendChild(placeholder);
     }
+}
+
+function getPyramidWasteFanOffset() {
+    return CommonUtils.getSolitaireStackOffset(PYRAMID_WASTE_FAN_BASE, {
+        min: PYRAMID_WASTE_FAN_MIN,
+        max: PYRAMID_WASTE_FAN_BASE
+    });
 }
 
 function updatePyramid() {
@@ -601,6 +624,7 @@ function setupPyramidEventListeners() {
         drawSelect.addEventListener('change', (event) => {
             const next = parseInt(event.target.value, 10);
             pyramidState.drawCount = next === 3 ? 3 : 1;
+            updateUI();
             updateStats();
             if (pyramidStateManager) {
                 pyramidStateManager.markDirty();

@@ -43,6 +43,11 @@
     justify-content: center;
 }
 
+#pyramid-waste {
+    width: calc(var(--scaled-card-w) + (2 * var(--pyramid-waste-fan-x, 20px)));
+    justify-content: flex-start;
+}
+
 .pile-placeholder {
     font-size: 1rem;
     color: rgba(255, 255, 255, 0.4);

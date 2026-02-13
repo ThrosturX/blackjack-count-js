@@ -17,8 +17,8 @@ This file is a resume guide for wrapping the web app in Android via Capacitor.
   - `solitaire` -> `com.antisthenes.solitaire`
 - Flavor launcher labels:
   - `suite` -> `Card Bundle`
-  - `casino` -> `Antisthenes Casino`
-  - `solitaire` -> `Antisthenes Solitaire`
+  - `casino` -> `House of Fortune Collection`
+  - `solitaire` -> `Virtue Solitaire Collection`
 - Shared web entitlement boundary is implemented:
   - `src/shared/entitlements.js` is the canonical local store.
   - `src/shared/entitlement-sync.js` performs startup/resume authoritative sync.

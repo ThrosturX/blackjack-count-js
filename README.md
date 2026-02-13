@@ -43,8 +43,8 @@ Android flavors now map these profiles to distinct app IDs:
 Current flavor launcher labels:
 
 - `suite`: `Card Bundle`
-- `casino`: `Antisthenes Casino`
-- `solitaire`: `Antisthenes Solitaire`
+- `casino`: `House of Fortune Collection`
+- `solitaire`: `Virtue Solitaire Collection`
 
 Commands:
 

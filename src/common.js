@@ -758,6 +758,73 @@ const CommonUtils = {
     },
 
     /**
+     * Renders a waste pile fan from left to right, with the newest card on the right.
+     * @param {Object} options
+     * @param {HTMLElement} options.containerEl
+     * @param {Array} options.waste
+     * @param {number} [options.visibleCount=3]
+     * @param {number} [options.fanOffset=0]
+     * @param {string} [options.fanStyle='ltr'] - 'ltr' or 'classic'
+     * @param {Function} [options.createCardEl]
+     * @param {Function} [options.onCard]
+     */
+    renderWasteFanPile: function (options = {}) {
+        const containerEl = options.containerEl;
+        const waste = Array.isArray(options.waste) ? options.waste : [];
+        if (!containerEl || waste.length === 0) return;
+
+        const requestedVisible = Number.isFinite(options.visibleCount)
+            ? Math.max(1, Math.floor(options.visibleCount))
+            : 3;
+        const visibleCount = Math.min(requestedVisible, waste.length);
+        const startIndex = waste.length - visibleCount;
+        const fanOffset = Number.isFinite(options.fanOffset) ? options.fanOffset : 0;
+        const fanStyle = options.fanStyle === 'classic' ? 'classic' : 'ltr';
+        const createCardEl = typeof options.createCardEl === 'function'
+            ? options.createCardEl
+            : (card) => this.createCardEl(card);
+        const onCard = typeof options.onCard === 'function' ? options.onCard : null;
+
+        for (let i = startIndex; i < waste.length; i++) {
+            const card = waste[i];
+            const visibleIndex = i - startIndex;
+            const isTop = i === waste.length - 1;
+            const cardEl = createCardEl(card);
+            let xOffset = visibleIndex * fanOffset;
+            if (fanStyle === 'classic') {
+                if (visibleCount === 2) {
+                    xOffset = visibleIndex === 0 ? 0 : fanOffset;
+                } else if (visibleCount >= 3) {
+                    // Classic spread: newest card centered on top, older cards peek left/right.
+                    const center = Math.floor((visibleCount - 1) / 2);
+                    if (visibleIndex === visibleCount - 1) {
+                        xOffset = center * fanOffset;
+                    } else if (visibleIndex < center) {
+                        xOffset = visibleIndex * fanOffset;
+                    } else {
+                        xOffset = (visibleIndex + 1) * fanOffset;
+                    }
+                }
+            }
+            cardEl.style.position = 'absolute';
+            cardEl.style.marginLeft = '0';
+            cardEl.style.left = `${xOffset}px`;
+            cardEl.style.zIndex = String(visibleIndex + 1);
+            if (onCard) {
+                onCard({
+                    cardEl,
+                    card,
+                    index: i,
+                    visibleIndex,
+                    visibleCount,
+                    isTop
+                });
+            }
+            containerEl.appendChild(cardEl);
+        }
+    },
+
+    /**
      * Updates the visual representation of the shoe.
      * @param {HTMLElement} cardStack - Container for card stack.
      * @param {Array} shoe - The cards in the shoe.

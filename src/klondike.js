@@ -592,29 +592,24 @@ function updateWaste() {
     wasteEl.innerHTML = '';
 
     if (gameState.waste.length > 0) {
-        // Show top card (or top 3 cards if draw 3)
-        const displayCount = Math.min(3, gameState.waste.length);
-        const startIndex = gameState.waste.length - displayCount;
-
-        for (let i = startIndex; i < gameState.waste.length; i++) {
-            const card = gameState.waste[i];
-            const cardEl = CommonUtils.createCardEl(card);
-            cardEl.style.position = 'absolute';
-            cardEl.style.left = `${(i - startIndex) * getWasteFanOffset()}px`;
-
-            // Only top card responds to drag
-            if (i === gameState.waste.length - 1) {
+        const visibleCount = gameState.drawCount === 3 ? 3 : 1;
+        CommonUtils.renderWasteFanPile({
+            containerEl: wasteEl,
+            waste: gameState.waste,
+            visibleCount,
+            fanOffset: getWasteFanOffset(),
+            onCard: ({ cardEl, isTop }) => {
+                // Only top card responds to drag.
+                if (!isTop) return;
                 cardEl.dataset.waste = 'true';
                 if (!CommonUtils.isMobile() || !dragState.mobileController) {
                     cardEl.addEventListener('pointerdown', handlePointerDown);
-                } 
+                }
                 cardEl.addEventListener('click', handleCardClick);
                 cardEl.style.cursor = 'pointer';
                 cardEl.style.zIndex = 10;
             }
-
-            wasteEl.appendChild(cardEl);
-        }
+        });
     } else {
         const placeholder = document.createElement('div');
         placeholder.className = 'pile-placeholder';
