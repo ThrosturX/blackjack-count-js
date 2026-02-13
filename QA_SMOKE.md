@@ -13,6 +13,7 @@
 - Every page loads with no console errors.
 - Header menus collapse/expand correctly.
 - Back button, title, and menu toggles do not overlap.
+- Table/deck theme selectors apply immediately and remain applied after gameplay interactions.
 - No unnecessary horizontal scrolling when content fits.
 - Horizontal scrolling works when content does not fit.
 - Works from both static hosting and `file://`.

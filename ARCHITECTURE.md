@@ -34,6 +34,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 ## Layout and Responsiveness Contract
 - Tables are wrapped in `.table-scroll` containers.
 - Horizontal scrolling is enabled only when required by content width.
+- For new solitaire pages, prefer `CommonUtils.ensureScrollableWidth(...)` instead of ad-hoc width math so wrapper/table `scroll-active` and `min-width` stay consistent on desktop/mobile.
 - Tables should center when there is spare width.
 - Blackjack shoe visibility is fit-driven: hide the shoe when it cannot fit cleanly inside the table without overlapping dealer/seat content.
 - Blackjack dealer alignment is fit-aware: when the shoe remains visible but encroaches near center, dealer content may shift slightly off center to preserve usable space.
@@ -41,6 +42,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Headers should prevent overlap between back button, title, and toggle buttons.
 - Mobile overrides are loaded last (`src/styles/mobile.css`).
 - For games that rebuild DOM after moves, preserve horizontal scroll state with `CommonUtils.preserveHorizontalScroll(...)` around update passes to avoid snap-to-left regressions when `scroll-active` toggles during layout.
+- Solitaire pages with theme controls should explicitly sync body theme classes from `#table-style-select` / `#deck-style-select` (including add-on refresh events) to keep table/deck themes applied after dynamic re-renders.
 - Launcher card exposure is profile-driven by `window.AppProfile.launcherGroups` so split bundles can target different audiences without forking game pages.
 - Store add-on exposure is profile-driven by `window.AppProfile.storeGameFilter` so split bundles can hide out-of-audience content (for example, blackjack counting packs in solitaire-only builds).
 

@@ -119,7 +119,12 @@
     };
 
     let stateManager = null;
-    const scheduleSizing = CommonUtils.createRafScheduler(ensureFortySizing);
+    const scheduleSizing = CommonUtils.createRafScheduler(() => {
+        CommonUtils.preserveHorizontalScroll({
+            targets: ['forty-scroll'],
+            update: () => ensureFortySizing()
+        });
+    });
 
     function getRules() {
         return RULES[normalizeVariantId(state.variantId)];
@@ -886,31 +891,39 @@
 
     function ensureFortySizing() {
         const tableEl = document.getElementById('table');
-        const scrollEl = document.getElementById('forty-scroll');
-        if (!tableEl || !scrollEl) return;
+        if (!tableEl) return;
 
         const cardMetrics = CommonUtils.getCardMetrics();
-        const cardWidth = cardMetrics.cardWidth;
         const baseGap = Math.max(4, Math.round(10 * Math.min(cardMetrics.scale, 1)));
         const fan = Math.max(4, Math.round(14 * Math.min(cardMetrics.scale, 1)));
 
         tableEl.style.setProperty('--forty-tableau-gap', `${baseGap}px`);
         tableEl.style.setProperty('--forty-fan-x', `${fan}px`);
+        tableEl.style.setProperty('--forty-foundation-cols', String(getRules().foundationSlots));
 
-        const contentWidth = 10 * (cardWidth + fan) + 9 * baseGap;
-        const availableWidth = scrollEl.clientWidth - 24;
-        tableEl.classList.toggle('scroll-active', contentWidth > availableWidth);
+        CommonUtils.ensureScrollableWidth({
+            table: 'table',
+            wrapper: 'forty-scroll',
+            contentSelectors: ['#forty-top-row', '#forty-tableau'],
+            enterTolerance: 6,
+            exitTolerance: 3
+        });
     }
 
     function updateUI() {
-        renderStock();
-        renderWaste();
-        renderFoundations();
-        renderTableau();
-        updateStats();
-        updateUndoButton();
-        updateDrawButton();
-        ensureFortySizing();
+        CommonUtils.preserveHorizontalScroll({
+            targets: ['forty-scroll'],
+            update: () => {
+                renderStock();
+                renderWaste();
+                renderFoundations();
+                renderTableau();
+                updateStats();
+                updateUndoButton();
+                updateDrawButton();
+                ensureFortySizing();
+            }
+        });
     }
 
     function gatherHintMoves() {
@@ -1024,9 +1037,45 @@
         }
     }
 
+    function setupThemeSync() {
+        const syncThemeClasses = () => {
+            const tableSelect = document.getElementById('table-style-select');
+            if (tableSelect) {
+                Array.from(document.body.classList).forEach((cls) => {
+                    if (cls.startsWith('table-')) document.body.classList.remove(cls);
+                });
+                if (tableSelect.value) {
+                    document.body.classList.add(`table-${tableSelect.value}`);
+                }
+            }
+
+            const deckSelect = document.getElementById('deck-style-select');
+            if (deckSelect) {
+                Array.from(document.body.classList).forEach((cls) => {
+                    if (cls.startsWith('deck-')) document.body.classList.remove(cls);
+                });
+                if (deckSelect.value) {
+                    document.body.classList.add(`deck-${deckSelect.value}`);
+                }
+            }
+        };
+
+        const tableSelect = document.getElementById('table-style-select');
+        if (tableSelect) tableSelect.addEventListener('change', syncThemeClasses);
+        const deckSelect = document.getElementById('deck-style-select');
+        if (deckSelect) deckSelect.addEventListener('change', syncThemeClasses);
+
+        requestAnimationFrame(syncThemeClasses);
+        if (window.AddonLoader && window.AddonLoader.ready) {
+            window.AddonLoader.ready.then(() => requestAnimationFrame(syncThemeClasses));
+        }
+        window.addEventListener('addons:changed', syncThemeClasses);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         CommonUtils.preloadAudio(sounds);
         setupEventListeners();
+        setupThemeSync();
         CommonUtils.initCardScaleControls('forty-card-scale', 'forty-card-scale-value');
 
         stateManager = new CommonUtils.StateManager({
