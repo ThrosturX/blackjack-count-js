@@ -1995,6 +1995,10 @@ function showKlondikeHelp() {
         `Stock: Draw ${drawCount} card${drawCount === 1 ? '' : 's'} at a time.`,
         KLONDIKE_HELP_RULES[variantId] || ''
     ].filter(Boolean).join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title: `${variant.label} Rules`, message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title: `${variant.label} Rules`, message });
         return;

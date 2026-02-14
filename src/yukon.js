@@ -893,6 +893,10 @@ function showYukonHelp() {
         'Empty columns: Only Kings can fill an empty tableau column.',
         'Tip: Expose face-down cards quickly to open up new moves.'
     ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title: 'Yukon Rules', message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title: 'Yukon Rules', message });
         return;

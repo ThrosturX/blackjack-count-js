@@ -1155,6 +1155,10 @@ function showSpiderHelp() {
         'Empty columns can hold any card or valid run.'
     ].join('\n');
 
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title, message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title, message });
         return;

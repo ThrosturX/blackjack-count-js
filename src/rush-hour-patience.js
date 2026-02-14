@@ -14,12 +14,14 @@
     const LONG_FOUNDATION_SCORE = 30;
     const MOVE_PENALTY = 1;
 
-    const HELP_TEXT = `You are a taxi driver completing fares across four city districts represented by the four card suits. Your goal is to finish all eight fare contracts—two per district—by delivering passengers in street-number order from Ace upward. The game uses a standard deck, optionally expanded with four Knight cards (one per suit) that rank between Jack and Queen.
-Seven tableau columns represent city streets. Only the bottom face-up card in each column can be picked up. Build these columns downward in alternating colors to free up passengers beneath. When a street card moves to a fare contract, the card beneath flips face-up as a new passenger steps to the curb. The stock pile is your queue of waiting passengers. You may draw from it up to three times total. After the third draw, the top passenger must be placed immediately onto a street or into a completed fare—they will leave if ignored again.
-Fare contracts are the foundation piles. Start the first contract in each district with an Ace or Two for short local trips. Start the second contract with an Eight for long cross-town rides. Build each contract upward in the same suit until complete.
-When any contract reaches the Seven card, rush hour begins. Now each stock draw pulls three passengers at once. You must place the topmost immediately; the other two wait in your backseat and block further draws until you complete a contract, which clears the backseat.
-Optional taxi stands (one or two empty spots) let you temporarily park a single passenger to untangle difficult sequences. Too many stands remove tension—limit to two maximum.
-You get three full passes through the stock for free. If you run out of passes but have a Joker parked in a stand, that Joker is discarded and grants one extra pass. There is no forced loss condition; ending a run is always your choice.`;
+    const HELP_TEXT = [
+        'Goal: Deliver all eight fare contracts by building foundations up by suit.',
+        'Tableau: Seven street columns build down in alternating colors; only the bottom face-up card can be moved.',
+        'Stock: You get three stock passes; after the third draw you must immediately play the top card or place it on a contract.',
+        'Rush hour: When any contract hits Seven you draw three cards at once, the top plays right away and the other two block further draws until a contract finishes.',
+        'Stands: Use up to two taxi stands to park a single passenger.',
+        'Optional cards: Parking a Joker consumes it to allow for an extra pass; Knights (if enabled) add the four Knight cards between Jack and Queen.'
+    ].join('\n');
 
     const sounds = {
         card: ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav'],
@@ -71,6 +73,15 @@ You get three full passes through the stock for free. If you run out of passes b
     });
 
     function showInfoDialog(title, message) {
+        const isRulesDialog = /\brules\b/i.test(String(title || ''));
+        if (
+            isRulesDialog
+            && typeof SolitaireUiFeedback !== 'undefined'
+            && typeof SolitaireUiFeedback.showHelp === 'function'
+        ) {
+            SolitaireUiFeedback.showHelp({ title, message });
+            return;
+        }
         if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
             SolitaireUiFeedback.showInfo({ title, message });
             return;

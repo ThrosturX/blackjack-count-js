@@ -59,6 +59,8 @@ Commands:
 - `npm run profile:casino`
 - `npm run profile:solitaire`
 
+TODO: Add a profile for "Premium" (educational, child-safe, no ads, paid, no casino/simulated gambling or related themes, no store purchases -- only add-on management stylized as "Settings").
+
 ## Variants and Game Options
 
 - Klondike: Classic Klondike, Vegas Klondike, Open Towers, Draw 1 / Draw 3 (variant-dependent lock rules).

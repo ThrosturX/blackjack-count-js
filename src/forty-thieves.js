@@ -173,6 +173,15 @@
     }
 
     function showInfoDialog(title, message) {
+        const isRulesDialog = /\brules\b/i.test(String(title || ''));
+        if (
+            isRulesDialog
+            && typeof SolitaireUiFeedback !== 'undefined'
+            && typeof SolitaireUiFeedback.showHelp === 'function'
+        ) {
+            SolitaireUiFeedback.showHelp({ title, message });
+            return;
+        }
         if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
             SolitaireUiFeedback.showInfo({ title, message });
             return;

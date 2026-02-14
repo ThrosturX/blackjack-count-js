@@ -728,6 +728,10 @@ function showPyramidHelp() {
         `Stock mode: ${drawMode}.`,
         layoutText
     ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title: `${gameName} Rules`, message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title: `${gameName} Rules`, message });
         return;

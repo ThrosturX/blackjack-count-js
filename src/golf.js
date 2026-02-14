@@ -120,6 +120,10 @@
             'Stock: Draw from stock when no tableau move is available.',
             'Winning: You win when every tableau card has been removed.'
         ].filter(Boolean).join('\n');
+        if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+            SolitaireUiFeedback.showHelp({ title: `${variant.label} Golf Rules`, message });
+            return;
+        }
         if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
             SolitaireUiFeedback.showInfo({ title: `${variant.label} Golf Rules`, message });
             return;

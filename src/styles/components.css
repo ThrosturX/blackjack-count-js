@@ -359,12 +359,11 @@ input:checked+.slider:before {
     position: fixed;
     inset: 0;
     display: none;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     background: rgba(3, 8, 20, 0.64);
     z-index: 1600;
     padding: 16px;
-    overflow-y: auto;
 }
 
 .solitaire-check-overlay.show {
@@ -374,7 +373,6 @@ input:checked+.slider:before {
 .solitaire-check-modal {
     width: min(380px, 92vw);
     min-height: 220px;
-    max-height: calc(100vh - 32px);
     border-radius: 12px;
     border: 1px solid rgba(133, 186, 236, 0.65);
     background: linear-gradient(170deg, rgba(10, 20, 36, 0.96), rgba(8, 14, 29, 0.96));
@@ -392,14 +390,56 @@ input:checked+.slider:before {
     color: #e7f2ff;
 }
 
-.solitaire-check-modal p {
+.solitaire-check-modal .solitaire-check-modal-message {
     margin: 0;
     line-height: 1.45;
     font-size: 0.95rem;
     color: #d8e7f8;
-    min-height: 0;
+    min-height: 74px;
     white-space: pre-line;
+}
+
+.solitaire-check-overlay.solitaire-check-overlay--expanded {
+    align-items: center;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.solitaire-check-modal.solitaire-check-modal--expanded {
+    width: min(720px, 94vw);
+    min-height: min(300px, 62vh);
+    max-height: min(78vh, 720px);
+}
+
+.solitaire-check-modal.solitaire-check-modal--expanded .solitaire-check-modal-message {
+    min-height: 0;
     overflow-y: auto;
+    white-space: normal;
+    padding-right: 4px;
+}
+
+.solitaire-help-content {
+    line-height: 1.5;
+}
+
+.solitaire-help-content p {
+    margin: 0 0 10px;
+    color: #d8e7f8;
+}
+
+.solitaire-help-content ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 7px;
+}
+
+.solitaire-help-content li {
+    color: #d8e7f8;
+}
+
+.solitaire-help-content li strong {
+    color: #e7f2ff;
 }
 
 .solitaire-check-modal-actions {
@@ -433,17 +473,15 @@ input:checked+.slider:before {
 }
 
 @media (max-width: 640px), (max-height: 640px) {
-    .solitaire-check-overlay {
-        padding: 0;
+    .solitaire-check-overlay.solitaire-check-overlay--expanded {
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
     }
 
-    .solitaire-check-modal {
-        width: 100vw;
-        max-height: 100vh;
-        min-height: 100vh;
-        border-radius: 0;
-        border-left: 0;
-        border-right: 0;
+    .solitaire-check-modal.solitaire-check-modal--expanded {
+        width: min(720px, 96vw);
+        min-height: min(260px, 58vh);
+        max-height: 84vh;
     }
 }
 

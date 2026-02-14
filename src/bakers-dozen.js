@@ -937,6 +937,10 @@ function showBakersHelp() {
         'Empty columns: Not refillable in Baker\'s Dozen.',
         'Tip: Prioritize exposing Aces and low cards early.'
     ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title: "Baker's Dozen Rules", message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title: "Baker's Dozen Rules", message });
         return;

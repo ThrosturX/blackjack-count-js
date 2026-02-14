@@ -1941,6 +1941,10 @@ function showFreecellHelp() {
         'Any card may move to an empty tableau column.',
         'You can move ordered sequences when enough free cells/empty columns are available.'
     ].join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title, message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title, message });
         return;

@@ -621,6 +621,10 @@ function showTriPeaksHelp() {
         'Stock: Draw a new waste card from stock when needed.',
         'Winning: The game is won when every peak card is removed.'
     ].filter(Boolean).join('\n');
+    if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showHelp === 'function') {
+        SolitaireUiFeedback.showHelp({ title: 'TriPeaks Rules', message });
+        return;
+    }
     if (typeof SolitaireUiFeedback !== 'undefined' && typeof SolitaireUiFeedback.showInfo === 'function') {
         SolitaireUiFeedback.showInfo({ title: 'TriPeaks Rules', message });
         return;

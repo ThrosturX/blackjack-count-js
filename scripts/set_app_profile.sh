@@ -22,8 +22,8 @@ case "$PROFILE" in
     STORE_ENABLED="true"
     ;;
   solitaire)
-    DISPLAY_NAME="Solitaire Collection"
-    TAGLINE="Focused solitaire lineup with classic variants, plus an experimental sandbox."
+    DISPLAY_NAME="Virtue Solitaire Collection"
+    TAGLINE="Select your favourite Patience game, one of our originals or play in the experimental table top sandbox."
     LAUNCHER_GROUPS='"solitaire", "sandbox"'
     STORE_GAME_FILTER='"klondike", "freecell", "spider", "pyramid", "tabletop"'
     STORE_ENABLED="true"
