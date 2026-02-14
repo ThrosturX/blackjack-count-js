@@ -8,6 +8,11 @@
     const SUIT_ORDER = ['♥', '♠', '♦', '♣'];
     const BASE_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const KNIGHT_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'C', 'Q', 'K'];
+    const RUSH_SESSION_ADDONS = ['classic-faces', 'worn-cards'];
+    const RUSH_SESSION_DECK = 'bsr-taxi';
+    const SHORT_FOUNDATION_SCORE = 20;
+    const LONG_FOUNDATION_SCORE = 30;
+    const MOVE_PENALTY = 1;
 
     const HELP_TEXT = `You are a taxi driver completing fares across four city districts represented by the four card suits. Your goal is to finish all eight fare contracts—two per district—by delivering passengers in street-number order from Ace upward. The game uses a standard deck, optionally expanded with four Knight cards (one per suit) that rank between Jack and Queen.
 Seven tableau columns represent city streets. Only the bottom face-up card in each column can be picked up. Build these columns downward in alternating colors to free up passengers beneath. When a street card moves to a fare contract, the card beneath flips face-up as a new passenger steps to the curb. The stock pile is your queue of waiting passengers. You may draw from it up to three times total. After the third draw, the top passenger must be placed immediately onto a street or into a completed fare—they will leave if ignored again.
@@ -55,7 +60,8 @@ You get three full passes through the stock for free. If you run out of passes b
 
     let stateManager = null;
     const dragState = {
-        active: null
+        active: null,
+        preview: null
     };
     const scheduleSizing = CommonUtils.createRafScheduler(() => {
         CommonUtils.preserveHorizontalScroll({
@@ -211,7 +217,6 @@ You get three full passes through the stock for free. If you run out of passes b
 
     function getSaveState() {
         return {
-            settings: { ...state.settings },
             tableau: state.tableau,
             stock: state.stock,
             waste: state.waste,
@@ -260,15 +265,6 @@ You get three full passes through the stock for free. If you run out of passes b
                 ? CommonUtils.hydrateSavedValue(value)
                 : value
         );
-
-        const nextSettings = saved.settings && typeof saved.settings === 'object' ? saved.settings : {};
-        state.settings = {
-            knightsEnabled: nextSettings.knightsEnabled !== false,
-            standCount: nextSettings.standCount === 1 ? 1 : 2,
-            jokersEnabled: nextSettings.jokersEnabled === true,
-            jokerCount: Number.isFinite(nextSettings.jokerCount) ? Math.max(1, Math.min(8, nextSettings.jokerCount)) : 2,
-            jokerPassMode: nextSettings.jokerPassMode === 'parked-unlimited' ? 'parked-unlimited' : 'consume'
-        };
 
         state.tableau = Array.isArray(saved.tableau)
             ? saved.tableau.slice(0, TABLEAU_COLUMNS).map((col) => (Array.isArray(col) ? hydrate(col) : []))
@@ -484,8 +480,52 @@ You get three full passes through the stock for free. If you run out of passes b
         }
 
         if (card.suit !== contract.suit) return false;
+
+        if (contract.type === 'short') {
+            const endIndex = getOrderIndex(getContractEndValue('short'));
+            const cardIndex = getOrderIndex(card.val);
+            if (cardIndex > endIndex) return false;
+        }
+
         const needed = getUpwardNextValue(top.val);
         return needed === card.val;
+    }
+
+    function applyMoveScore(options = {}) {
+        const target = options.target || null;
+        const origin = options.moveOrigin || null;
+        const card = options.movedCard || null;
+        let delta = 0;
+
+        if (target === 'contract' && Number.isFinite(options.contractIndex)) {
+            const contract = state.contracts[options.contractIndex];
+            if (contract) {
+                delta += contract.type === 'long' ? LONG_FOUNDATION_SCORE : SHORT_FOUNDATION_SCORE;
+            }
+        } else {
+            const isTaxiStandMove = origin === 'stand' || target === 'stand';
+            const isJokerMove = card ? isJoker(card) : false;
+            if (!isTaxiStandMove && !isJokerMove) {
+                delta -= MOVE_PENALTY;
+            }
+        }
+
+        if (delta !== 0) {
+            const nextScore = Math.max(0, Math.round(state.score + delta));
+            state.score = nextScore;
+        }
+    }
+
+    function getContractPartner(contract) {
+        if (!contract) return null;
+        return state.contracts.find((candidate) => (
+            candidate.suit === contract.suit && candidate.type !== contract.type
+        )) || null;
+    }
+
+    function contractHasAce(contract) {
+        if (!contract || !Array.isArray(contract.cards)) return false;
+        return contract.cards.some((card) => card && !isJoker(card) && card.val === 'A');
     }
 
     function isContractComplete(contract) {
@@ -509,15 +549,25 @@ You get three full passes through the stock for free. If you run out of passes b
             if (expectedSequence.length > 30) return false;
         }
 
-        if (contract.cards.length < expectedSequence.length) return false;
-        for (let i = 0; i < expectedSequence.length; i += 1) {
+        const cardCount = contract.cards.length;
+        const expectedCount = expectedSequence.length;
+        if (cardCount > expectedCount) return false;
+
+        for (let i = 0; i < cardCount; i += 1) {
             const card = contract.cards[i];
             if (!card || isJoker(card)) return false;
             if (card.suit !== expectedSuit) return false;
             if (card.val !== expectedSequence[i]) return false;
         }
 
-        return true;
+        if (cardCount === expectedCount) return true;
+
+        if (contract.type === 'long' && cardCount === expectedCount - 1) {
+            const partner = getContractPartner(contract);
+            return !!(partner && contractHasAce(partner));
+        }
+
+        return false;
     }
 
     function updateRushHourActivation() {
@@ -619,13 +669,11 @@ You get three full passes through the stock for free. If you run out of passes b
     }
 
     function updateScore() {
-        let completedContracts = 0;
-        let contractCards = 0;
-        state.contracts.forEach((contract) => {
-            contractCards += contract.cards.length;
-            if (isContractComplete(contract)) completedContracts += 1;
-        });
-        state.score = (contractCards * 8) + (completedContracts * 50) + Math.max(0, 400 - state.moves * 2);
+        if (!Number.isFinite(state.score)) {
+            state.score = 0;
+            return;
+        }
+        state.score = Math.max(0, Math.round(state.score));
     }
 
     function clearSelection() {
@@ -673,14 +721,16 @@ You get three full passes through the stock for free. If you run out of passes b
     }
 
     function commitMove(options = {}) {
+        applyMoveScore(options);
         state.moves += 1;
 
         if (options.placedWasteCard === true) {
             state.mustPlaceWaste = false;
         }
 
-        if (options.contractIndex >= 0) {
-            const contract = state.contracts[options.contractIndex];
+        const contractIndex = Number.isFinite(options.contractIndex) ? options.contractIndex : -1;
+        if (contractIndex >= 0) {
+            const contract = state.contracts[contractIndex];
             if (contract) {
                 updateRushHourActivation();
                 if (isContractComplete(contract)) {
@@ -719,6 +769,7 @@ You get three full passes through the stock for free. If you run out of passes b
                     updateUI();
                     return;
                 }
+                state.score -= 100;
             }
             recycleWasteIntoStock();
             updateUI();
@@ -805,11 +856,18 @@ You get three full passes through the stock for free. If you run out of passes b
         if (!card) return false;
         for (let i = 0; i < state.contracts.length; i += 1) {
             if (!canMoveToContract(card, i)) continue;
+            const origin = state.selected ? state.selected.source : null;
             pushHistoryEntry();
             const moved = removeSelectedSourceCard();
             if (!moved) return false;
             state.contracts[i].cards.push(moved);
-            commitMove({ placedWasteCard: state.selected && state.selected.source === 'waste', contractIndex: i });
+            commitMove({
+                placedWasteCard: origin === 'waste',
+                movedCard: moved,
+                moveOrigin: origin,
+                target: 'contract',
+                contractIndex: i
+            });
             return true;
         }
         return false;
@@ -862,12 +920,17 @@ You get three full passes through the stock for free. If you run out of passes b
         if (!selectedCard) return;
         if (!canMoveToStand(selectedCard, index)) return;
 
+        const origin = state.selected ? state.selected.source : null;
         pushHistoryEntry();
-        const placedWasteCard = state.selected.source === 'waste';
         const moved = removeSelectedSourceCard();
         if (!moved) return;
         state.stands[index] = moved;
-        commitMove({ placedWasteCard });
+        commitMove({
+            placedWasteCard: origin === 'waste',
+            movedCard: moved,
+            moveOrigin: origin,
+            target: 'stand'
+        });
     }
 
     function handleTableauCardClick(columnIndex, cardIndex) {
@@ -902,12 +965,17 @@ You get three full passes through the stock for free. If you run out of passes b
             return;
         }
 
+        const origin = state.selected ? state.selected.source : null;
         pushHistoryEntry();
-        const placedWasteCard = state.selected.source === 'waste';
         const moved = removeSelectedSourceCard();
         if (!moved) return;
         state.tableau[columnIndex].push(moved);
-        commitMove({ placedWasteCard });
+        commitMove({
+            placedWasteCard: origin === 'waste',
+            movedCard: moved,
+            moveOrigin: origin,
+            target: 'tableau'
+        });
     }
 
     function handleTableauColumnClick(columnIndex) {
@@ -921,12 +989,17 @@ You get three full passes through the stock for free. If you run out of passes b
             return;
         }
 
+        const origin = state.selected ? state.selected.source : null;
         pushHistoryEntry();
-        const placedWasteCard = state.selected.source === 'waste';
         const moved = removeSelectedSourceCard();
         if (!moved) return;
         state.tableau[columnIndex].push(moved);
-        commitMove({ placedWasteCard });
+        commitMove({
+            placedWasteCard: origin === 'waste',
+            movedCard: moved,
+            moveOrigin: origin,
+            target: 'tableau'
+        });
     }
 
     function handleContractClick(contractIndex) {
@@ -935,12 +1008,18 @@ You get three full passes through the stock for free. If you run out of passes b
         if (!selectedCard) return;
         if (!canMoveToContract(selectedCard, contractIndex)) return;
 
+        const origin = state.selected ? state.selected.source : null;
         pushHistoryEntry();
-        const placedWasteCard = state.selected.source === 'waste';
         const moved = removeSelectedSourceCard();
         if (!moved) return;
         state.contracts[contractIndex].cards.push(moved);
-        commitMove({ placedWasteCard, contractIndex });
+        commitMove({
+            placedWasteCard: origin === 'waste',
+            movedCard: moved,
+            moveOrigin: origin,
+            target: 'contract',
+            contractIndex
+        });
     }
 
     function clearDropIndicators() {
@@ -950,6 +1029,9 @@ You get three full passes through the stock for free. If you run out of passes b
     }
 
     function clearDragState() {
+        if (dragState.preview) {
+            dragState.preview.stop();
+        }
         dragState.active = null;
         clearDropIndicators();
         if (!CommonUtils.isMobile()) {
@@ -969,6 +1051,12 @@ You get three full passes through the stock for free. If you run out of passes b
             return;
         }
         dragState.active = { source: 'waste' };
+        if (!dragState.preview && typeof CommonUtils.createDesktopDragPreview === 'function') {
+            dragState.preview = CommonUtils.createDesktopDragPreview({ className: 'rush-drag-preview' });
+        }
+        if (dragState.preview) {
+            dragState.preview.start(event, event.currentTarget);
+        }
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', 'rush-waste');
@@ -981,6 +1069,12 @@ You get three full passes through the stock for free. If you run out of passes b
             return;
         }
         dragState.active = { source: 'stand', index: standIndex };
+        if (!dragState.preview && typeof CommonUtils.createDesktopDragPreview === 'function') {
+            dragState.preview = CommonUtils.createDesktopDragPreview({ className: 'rush-drag-preview' });
+        }
+        if (dragState.preview) {
+            dragState.preview.start(event, event.currentTarget);
+        }
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', `rush-stand:${standIndex}`);
@@ -994,6 +1088,12 @@ You get three full passes through the stock for free. If you run out of passes b
             return;
         }
         dragState.active = { source: 'tableau', index: columnIndex };
+        if (!dragState.preview && typeof CommonUtils.createDesktopDragPreview === 'function') {
+            dragState.preview = CommonUtils.createDesktopDragPreview({ className: 'rush-drag-preview' });
+        }
+        if (dragState.preview) {
+            dragState.preview.start(event, event.currentTarget);
+        }
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', `rush-tableau:${columnIndex}`);
@@ -1688,6 +1788,9 @@ You get three full passes through the stock for free. If you run out of passes b
         document.addEventListener('dragover', (event) => {
             if (!dragState.active) return;
             event.preventDefault();
+            if (dragState.preview) {
+                dragState.preview.move(event.clientX, event.clientY);
+            }
         });
         document.addEventListener('drop', (event) => {
             if (!dragState.active) return;
@@ -1747,6 +1850,99 @@ You get three full passes through the stock for free. If you run out of passes b
         window.addEventListener('addons:changed', syncThemeClasses);
     }
 
+    function forceRushDeckSelection() {
+        const deckSelect = document.getElementById('deck-style-select');
+        if (!deckSelect) return;
+        if (deckSelect.value === RUSH_SESSION_DECK) return;
+        deckSelect.value = RUSH_SESSION_DECK;
+        deckSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function findRushAddonEntry(addonId) {
+        const manifest = window.AddonManifest && Array.isArray(window.AddonManifest.addons)
+            ? window.AddonManifest.addons
+            : [];
+        return manifest.find((entry) => entry && entry.id === addonId) || null;
+    }
+
+    function loadRushAddonStyle(href) {
+        if (!href) return Promise.resolve({ href, loaded: false, element: null });
+        const existing = document.querySelector(`link[rel="stylesheet"][href="${href}"]`);
+        if (existing) {
+            existing.disabled = false;
+            return Promise.resolve({ href, loaded: true, element: existing });
+        }
+        return new Promise((resolve) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            link.onload = () => resolve({ href, loaded: true, element: link });
+            link.onerror = () => resolve({ href, loaded: false, element: link });
+            document.head.appendChild(link);
+        });
+    }
+
+    function loadRushAddonScript(src) {
+        if (!src) return Promise.resolve({ src, loaded: false });
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) return Promise.resolve({ src, loaded: true });
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = false;
+            script.onload = () => resolve({ src, loaded: true });
+            script.onerror = () => resolve({ src, loaded: false });
+            document.head.appendChild(script);
+        });
+    }
+
+    async function enableRushSessionAddons() {
+        for (const addonId of RUSH_SESSION_ADDONS) {
+            const entry = findRushAddonEntry(addonId);
+            if (!entry) continue;
+
+            const styles = Array.isArray(entry.styles) ? entry.styles : [];
+            const scripts = Array.isArray(entry.scripts) ? entry.scripts : [];
+
+            const links = await Promise.all(styles.map((href) => loadRushAddonStyle(href)));
+            const loadedScripts = [];
+            for (const src of scripts) {
+                loadedScripts.push(await loadRushAddonScript(src));
+            }
+
+            const loader = window.AddonLoader;
+            if (!loader || !loader.addons || typeof loader.addons.set !== 'function') continue;
+
+            if (!loader.addons.has(addonId)) {
+                loader.addons.set(addonId, {
+                    id: addonId,
+                    label: entry.label || addonId,
+                    description: entry.description || '',
+                    games: Array.isArray(entry.games) ? entry.games.slice() : null,
+                    styles: styles.slice(),
+                    scripts: scripts.slice(),
+                    links,
+                    loadedScripts,
+                    enabled: false
+                });
+            }
+
+            if (typeof loader.setAddonEnabled === 'function') {
+                loader.setAddonEnabled(addonId, true);
+            }
+        }
+    }
+
+    function setupRushSessionPerks() {
+        forceRushDeckSelection();
+        const run = () => enableRushSessionAddons().then(() => forceRushDeckSelection());
+        if (window.AddonLoader && window.AddonLoader.ready) {
+            window.AddonLoader.ready.finally(run);
+            return;
+        }
+        run();
+    }
+
     // Register BSR Taxi deck style specifically for Rush Hour Patience
     (() => {
         if (window.AssetRegistry && typeof window.AssetRegistry.registerThemePack === 'function') {
@@ -1763,6 +1959,7 @@ You get three full passes through the stock for free. If you run out of passes b
     document.addEventListener('DOMContentLoaded', () => {
         CommonUtils.preloadAudio(sounds);
         setupEventListeners();
+        setupRushSessionPerks();
         setupThemeSync();
         CommonUtils.initCardScaleControls('rush-card-scale', 'rush-card-scale-value');
 

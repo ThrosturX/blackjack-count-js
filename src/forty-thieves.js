@@ -158,7 +158,8 @@
 
     let stateManager = null;
     const dragState = {
-        active: null
+        active: null,
+        preview: null
     };
     const scheduleSizing = CommonUtils.createRafScheduler(() => {
         CommonUtils.preserveHorizontalScroll({
@@ -764,6 +765,9 @@
     }
 
     function clearDragState() {
+        if (dragState.preview) {
+            dragState.preview.stop();
+        }
         dragState.active = null;
         clearDropIndicators();
     }
@@ -784,6 +788,12 @@
             source: 'waste',
             cards: [card]
         };
+        if (!dragState.preview && typeof CommonUtils.createDesktopDragPreview === 'function') {
+            dragState.preview = CommonUtils.createDesktopDragPreview({ className: 'forty-drag-preview' });
+        }
+        if (dragState.preview) {
+            dragState.preview.start(event, event.currentTarget);
+        }
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', 'forty-waste');
@@ -806,6 +816,12 @@
             cardIndex,
             cards
         };
+        if (!dragState.preview && typeof CommonUtils.createDesktopDragPreview === 'function') {
+            dragState.preview = CommonUtils.createDesktopDragPreview({ className: 'forty-drag-preview' });
+        }
+        if (dragState.preview) {
+            dragState.preview.start(event, event.currentTarget);
+        }
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', `forty-tableau:${columnIndex}:${cardIndex}`);
@@ -1242,6 +1258,9 @@
         document.addEventListener('dragover', (event) => {
             if (!dragState.active) return;
             event.preventDefault();
+            if (dragState.preview) {
+                dragState.preview.move(event.clientX, event.clientY);
+            }
         });
         document.addEventListener('drop', (event) => {
             if (!dragState.active) return;

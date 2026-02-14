@@ -1074,6 +1074,83 @@ const CommonUtils = {
         }, duration);
     },
 
+    createDesktopDragPreview: function (options = {}) {
+        const zIndex = Number.isFinite(options.zIndex) ? options.zIndex : 6000;
+        const className = typeof options.className === 'string' && options.className
+            ? options.className
+            : 'desktop-drag-preview';
+        let previewEl = null;
+        let sourceEl = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let transparentDragImage = null;
+
+        const ensureTransparentDragImage = () => {
+            if (transparentDragImage) return transparentDragImage;
+            transparentDragImage = document.createElement('canvas');
+            transparentDragImage.width = 1;
+            transparentDragImage.height = 1;
+            return transparentDragImage;
+        };
+
+        const setPreviewPosition = (x, y) => {
+            if (!previewEl) return;
+            previewEl.style.left = `${Math.round(x - offsetX)}px`;
+            previewEl.style.top = `${Math.round(y - offsetY)}px`;
+        };
+
+        return {
+            start(event, element) {
+                if (!event || !element || typeof document === 'undefined' || !document.body) return false;
+                this.stop();
+                sourceEl = element;
+
+                const rect = element.getBoundingClientRect();
+                const clientX = Number.isFinite(event.clientX) ? event.clientX : rect.left;
+                const clientY = Number.isFinite(event.clientY) ? event.clientY : rect.top;
+                offsetX = clientX - rect.left;
+                offsetY = clientY - rect.top;
+
+                previewEl = element.cloneNode(true);
+                previewEl.removeAttribute('id');
+                previewEl.classList.add(className);
+                previewEl.style.position = 'fixed';
+                previewEl.style.pointerEvents = 'none';
+                previewEl.style.margin = '0';
+                previewEl.style.zIndex = String(zIndex);
+                previewEl.style.width = `${Math.round(rect.width)}px`;
+                previewEl.style.height = `${Math.round(rect.height)}px`;
+                document.body.appendChild(previewEl);
+
+                sourceEl.classList.add('is-drag-source');
+                setPreviewPosition(clientX, clientY);
+
+                if (event.dataTransfer && typeof event.dataTransfer.setDragImage === 'function') {
+                    event.dataTransfer.setDragImage(ensureTransparentDragImage(), 0, 0);
+                }
+                return true;
+            },
+
+            move(clientX, clientY) {
+                if (!previewEl) return;
+                setPreviewPosition(clientX, clientY);
+            },
+
+            stop() {
+                if (previewEl && previewEl.parentNode) {
+                    previewEl.parentNode.removeChild(previewEl);
+                }
+                if (sourceEl) {
+                    sourceEl.classList.remove('is-drag-source');
+                }
+                previewEl = null;
+                sourceEl = null;
+                offsetX = 0;
+                offsetY = 0;
+            }
+        };
+    },
+
     /**
      * Returns a score display string or "BUST".
      * @param {number} score - The score.
