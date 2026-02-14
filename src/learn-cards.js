@@ -1,35 +1,51 @@
 (function() {
     "use strict";
 
-    const BREAK_CARDS_COMMON = [
+    const BREAK_FACTS_COMMON = [
         {
-            text: "Did you know? Jack is often called the Knave.",
-            cards: [new Card("♠", "J")]
+            text: "The Jack is also called the Knave.",
+            buildCards: buildKnaveFactCards
         },
         {
-            text: "Did you know? Traditional French suits are Hearts, Spades, Diamonds, and Clubs.",
-            cards: [new Card("♥", "A"), new Card("♠", "A"), new Card("♦", "A"), new Card("♣", "A")]
+            text: "Traditional French suits are Hearts, Spades, Diamonds, and Clubs.",
+            buildCards: buildTraditionalFrenchSuitCards
         },
         {
-            text: "Did you know? A standard deck has 52 cards: 13 per suit.",
-            cards: [new Card("♥", "K"), new Card("♣", "K"), new Card("♦", "K"), new Card("♠", "K")]
+            text: "A standard deck has 52 cards: 13 per suit.",
+            buildCards: buildStandardDeckFactCards
         },
         {
-            text: "Did you know? Face cards are Jack, Queen, and King.",
-            cards: [new Card("♠", "J"), new Card("♦", "Q"), new Card("♣", "K")]
+            text: "Face cards are Jack, Queen, and King.",
+            buildCards: buildFaceCardFactCards
+        },
+        {
+            text: "Aces can be low or high depending on the game.",
+            buildCards: buildAceFactCards
+        },
+        {
+            text: "Many solitaire games build by alternating red and black.",
+            buildCards: buildAlternatingColorFactCards
+        },
+        {
+            text: "Every suit has its own royal family cards.",
+            buildCards: buildRoyalFamilyFactCards
         }
     ];
 
     const BREAK_CARD_KNIGHT = {
-        text: "Did you know? The Knight appeared in 56-card decks between Knave and Queen.",
-        cards: [new Card("♣", "J"), new Card("♦", "C"), new Card("♥", "Q")]
+        text: "The Knight appeared in 56-card decks between Knave and Queen.",
+        buildCards: () => EducationalUtils.shuffle([
+            new Card("♣", "J"),
+            new Card("♦", "C"),
+            new Card("♥", "Q")
+        ])
     };
 
     const LEVEL_FACTS = {
         1: ["Hearts and Diamonds are red.", "Spades and Clubs are black.", "Each suit has 13 cards."],
         2: ["A then 2 to 10, then J-Q-K.", "Suits are shown by symbol.", "Cards can share rank across suits."],
-        3: ["Same rank can have many suits.", "Colors are red or black.", "Higher means bigger rank value."],
-        4: ["Tap higher or lower by rank.", "Ace is low in this mode.", "Practice makes rank comparison fast."],
+        3: ["Same rank can have many suits.", "Colors are red or black.", "Highest means the biggest rank value."],
+        4: ["Find the lowest or highest card by rank.", "Ace is low in this mode.", "Practice makes rank comparison fast."],
         5: ["History breaks appear between drills.", "Knight sits between Knave and Queen in 56-card decks.", "Card symbols evolved over centuries."]
     };
 
@@ -41,7 +57,10 @@
         autoLevel: true,
         recentAnswers: [],
         maxRecentAnswers: 12,
-        question: null
+        autoLevelBatch: [],
+        question: null,
+        lastStandardDeckFactRank: null,
+        expertUnlocked: false
     };
 
     const elements = {
@@ -93,7 +112,7 @@
 
     function bindEvents() {
         elements.nextButton.addEventListener("click", nextQuestion);
-        elements.breakNextButton?.addEventListener("click", nextQuestion);
+        elements.breakNextButton?.addEventListener("click", advanceBreakQuestion);
 
         elements.levelSelect.addEventListener("change", (event) => {
             state.level = clampLevel(parseInt(event.target.value, 10));
@@ -105,10 +124,6 @@
 
         elements.autoLevel.addEventListener("change", (event) => {
             state.autoLevel = event.target.checked;
-            if (state.autoLevel) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
-            }
             saveProgress();
             nextQuestion();
         });
@@ -135,10 +150,8 @@
         state.level = clampLevel(saved.level || 1);
         state.autoLevel = saved.autoLevel !== false;
         state.recentAnswers = Array.isArray(saved.recentAnswers) ? saved.recentAnswers : [];
-
-        if (state.autoLevel) {
-            state.level = 1;
-        }
+        state.autoLevelBatch = Array.isArray(saved.autoLevelBatch) ? saved.autoLevelBatch : [];
+        state.expertUnlocked = saved.expertUnlocked === true || state.level >= 5;
 
         elements.levelSelect.value = String(state.level);
         elements.autoLevel.checked = state.autoLevel;
@@ -152,11 +165,14 @@
             bestStreak: state.bestStreak,
             level: state.level,
             autoLevel: state.autoLevel,
-            recentAnswers: state.recentAnswers
+            recentAnswers: state.recentAnswers,
+            autoLevelBatch: state.autoLevelBatch,
+            expertUnlocked: state.expertUnlocked
         });
     }
 
     function nextQuestion() {
+        if (state.level >= 5) state.expertUnlocked = true;
         state.question = buildQuestion();
         renderQuestion();
         setFeedback("");
@@ -168,11 +184,11 @@
         const pickCard = () => deck[Math.floor(Math.random() * deck.length)];
 
         const builders = {
-            1: [questionSuitOnCard, questionColorOnCard],
-            2: [questionRankOnCard, questionFindCardByRank],
-            3: [questionFindSuitGroup, questionRankOnCard, questionFindCardByRank],
-            4: [questionHigherCard, questionLowerCard, questionFaceCardTap],
-            5: [questionHigherCard, questionLowerCard, questionFaceCardTap]
+            1: [questionSuitOnCard, questionColorOnCard, questionFindCardByRank, questionFindSuitGroup],
+            2: [questionRankOnCard, questionFindCardByRank, questionFindSuitGroup],
+            3: [questionFindSuitGroup, questionRankOnCard, questionFindCardByRank, questionHigherCard, questionLowerCard],
+            4: [questionHigherCard, questionLowerCard, questionFaceCardTap, questionMiddleRankTap],
+            5: [questionHigherCard, questionLowerCard, questionFaceCardTap, questionMiddleRankTap]
         };
 
         if (state.level === 5) {
@@ -186,28 +202,75 @@
 
     function buildExpertQuestion(pickCard, deck) {
         const roll = Math.random();
-        if (roll < 0.04) {
-            // Rare direct Knight drill.
-            return questionKnightMiddleTap();
+        if (roll < 0.07) {
+            return questionMiddleRankTap(pickCard, deck, true);
         }
-        if (roll < 0.10) {
-            // Rare Knight history break.
+        if (roll < 0.14) {
             return questionDidYouKnowBreak(true);
         }
-        if (roll < 0.32) {
-            // Common non-Knight educational break.
+        if (roll < 0.40) {
             return questionDidYouKnowBreak(false);
         }
-        const nonKnightBuilders = [
+        const nonBreakBuilders = [
             questionHigherCard,
             questionLowerCard,
             questionFaceCardTap,
+            questionMiddleRankTap,
             questionFindSuitGroup,
             questionFindCardByRank,
             questionRankOnCard
         ];
-        const pick = nonKnightBuilders[Math.floor(Math.random() * nonKnightBuilders.length)];
+        const pick = nonBreakBuilders[Math.floor(Math.random() * nonBreakBuilders.length)];
         return pick(pickCard, deck);
+    }
+
+    function getPracticeValues(includeKnight = false) {
+        const values = EducationalUtils.getValuesForLevel(Math.min(5, state.level + 1)).slice();
+        if (includeKnight && state.level >= 5 && !values.includes("C")) {
+            const queenIndex = values.indexOf("Q");
+            if (queenIndex >= 0) {
+                values.splice(queenIndex, 0, "C");
+            } else {
+                values.push("C");
+            }
+        }
+        return values;
+    }
+
+    function getExerciseChoiceCount() {
+        return Math.max(2, Math.min(6, state.level + 1));
+    }
+
+    function getHighestLowestCardCount() {
+        if (state.level >= 5) return 5;
+        if (state.level === 4) return 4;
+        if (state.level === 3) return 3;
+        return 2;
+    }
+
+    function getComparableRank(value) {
+        if (value === "C") return 12.5;
+        return EducationalUtils.getRank(value);
+    }
+
+    function pickDistinctValuesByRank(values, count) {
+        const result = [];
+        const seenRanks = new Set();
+        const shuffled = EducationalUtils.shuffle(values);
+
+        shuffled.forEach((value) => {
+            if (result.length >= count) return;
+            const rank = getComparableRank(value);
+            if (seenRanks.has(rank)) return;
+            seenRanks.add(rank);
+            result.push(value);
+        });
+
+        return result;
+    }
+
+    function randomSuit() {
+        return SUITS[Math.floor(Math.random() * SUITS.length)];
     }
 
     function questionSuitOnCard(pickCard) {
@@ -247,77 +310,111 @@
         return {
             kind: "choice",
             prompt: "Match rank",
-            cue: { text: `${card.val} = ?`, tone: "blue" },
+            cue: { text: `${EducationalUtils.getValueLabel(card.val)} = ?`, tone: "blue" },
             boardCards: [card],
-            choices: options.map((value) => ({ label: value, sublabel: `${EducationalUtils.getRank(value)}`, isCorrect: value === card.val }))
+            choices: options.map((value) => ({
+                label: EducationalUtils.getValueLabel(value),
+                sublabel: `${getComparableRank(value)}`,
+                isCorrect: value === card.val
+            }))
         };
     }
 
-    function questionFindCardByRank(_, deck) {
-        const values = EducationalUtils.shuffle(VALUES).slice(0, 4);
-        const cards = values.map((value, index) => new Card(SUITS[index % SUITS.length], value));
-        const target = cards[Math.floor(Math.random() * cards.length)];
+    function questionFindCardByRank() {
+        const choiceCount = getExerciseChoiceCount();
+        const valuePool = getPracticeValues(state.level >= 5);
+        const values = pickDistinctValuesByRank(valuePool, Math.min(choiceCount, valuePool.length));
+        const cards = values.map((value) => new Card(randomSuit(), value));
+        const targetIndex = Math.floor(Math.random() * cards.length);
+        const target = cards[targetIndex];
+
         return {
             kind: "board",
             prompt: "Find card",
-            cue: { text: `${target.val} 👆`, tone: "blue" },
+            cue: { text: `${EducationalUtils.getValueLabel(target.val)} 👆`, tone: "blue" },
             boardCards: cards,
-            boardCheck: (index) => cards[index].val === target.val
+            boardCheck: (index) => index === targetIndex
         };
     }
 
-    function questionFindSuitGroup(_, deck) {
-        const cards = EducationalUtils.pickRandom(deck, 4);
-        const targetCard = cards[Math.floor(Math.random() * cards.length)];
+    function questionFindSuitGroup() {
+        const choiceCount = getExerciseChoiceCount();
+        const targetSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
+        const cards = [new Card(targetSuit, pickRandom(getPracticeValues(false)))];
+
+        while (cards.length < choiceCount) {
+            const nonTargetSuits = SUITS.filter((suit) => suit !== targetSuit);
+            const suit = pickRandom(nonTargetSuits);
+            cards.push(new Card(suit, pickRandom(getPracticeValues(false))));
+        }
+
+        const shuffledCards = EducationalUtils.shuffle(cards);
+        const targetIndex = shuffledCards.findIndex((card) => card.suit === targetSuit);
+
         return {
             kind: "board",
             prompt: "Find suit",
-            cue: { text: `${targetCard.suit} 👆`, tone: "blue" },
-            boardCards: cards,
-            boardCheck: (index) => cards[index].suit === targetCard.suit
+            cue: { text: `${targetSuit} 👆`, tone: "blue" },
+            boardCards: shuffledCards,
+            boardCheck: (index) => index === targetIndex
         };
     }
 
-    function questionHigherCard(_, deck) {
-        const cards = EducationalUtils.pickRandom(deck, 2);
+    function questionHigherCard() {
+        const cardCount = getHighestLowestCardCount();
+        const valuePool = getPracticeValues(state.level >= 5);
+        const pickedValues = pickDistinctValuesByRank(valuePool, Math.min(cardCount, valuePool.length));
+        const cards = EducationalUtils.shuffle(pickedValues.map((value) => new Card(randomSuit(), value)));
+
+        let targetIndex = 0;
+        cards.forEach((card, index) => {
+            const rank = getComparableRank(card.val);
+            const targetRank = getComparableRank(cards[targetIndex].val);
+            if (rank > targetRank) targetIndex = index;
+        });
+
         return {
             kind: "board",
-            prompt: "Higher Card",
-            cue: { text: "➕ Higher", tone: "gold" },
+            prompt: "Highest Card",
+            cue: { text: "⬆ Highest", tone: "gold" },
             boardCards: cards,
-            boardCheck: (index) => {
-                const a = EducationalUtils.getRank(cards[0].val);
-                const b = EducationalUtils.getRank(cards[1].val);
-                const higher = a >= b ? 0 : 1;
-                return index === higher;
-            }
+            boardCheck: (index) => index === targetIndex
         };
     }
 
-    function questionLowerCard(_, deck) {
-        const cards = EducationalUtils.pickRandom(deck, 2);
+    function questionLowerCard() {
+        const cardCount = getHighestLowestCardCount();
+        const valuePool = getPracticeValues(state.level >= 5);
+        const pickedValues = pickDistinctValuesByRank(valuePool, Math.min(cardCount, valuePool.length));
+        const cards = EducationalUtils.shuffle(pickedValues.map((value) => new Card(randomSuit(), value)));
+
+        let targetIndex = 0;
+        cards.forEach((card, index) => {
+            const rank = getComparableRank(card.val);
+            const targetRank = getComparableRank(cards[targetIndex].val);
+            if (rank < targetRank) targetIndex = index;
+        });
+
         return {
             kind: "board",
-            prompt: "Lower Card",
-            cue: { text: "➖ Lower", tone: "orange" },
+            prompt: "Lowest Card",
+            cue: { text: "⬇ Lowest", tone: "orange" },
             boardCards: cards,
-            boardCheck: (index) => {
-                const a = EducationalUtils.getRank(cards[0].val);
-                const b = EducationalUtils.getRank(cards[1].val);
-                const lower = a <= b ? 0 : 1;
-                return index === lower;
-            }
+            boardCheck: (index) => index === targetIndex
         };
     }
 
     function questionFaceCardTap() {
-        const face = ["J", "Q", "K"][Math.floor(Math.random() * 3)];
-        const numbers = EducationalUtils.shuffle(["2", "4", "7", "9", "10"]).slice(0, 3);
+        const facePool = state.level >= 5
+            ? ["J", "Q", "K", "J", "Q", "K", "C"]
+            : ["J", "Q", "K"];
+        const face = pickRandom(facePool);
+        const numbers = EducationalUtils.shuffle(["2", "4", "6", "8", "9", "10"]).slice(0, 3);
         const cards = EducationalUtils.shuffle([
-            new Card("♠", face),
-            new Card("♥", numbers[0]),
-            new Card("♦", numbers[1]),
-            new Card("♣", numbers[2])
+            new Card(randomSuit(), face),
+            new Card(randomSuit(), numbers[0]),
+            new Card(randomSuit(), numbers[1]),
+            new Card(randomSuit(), numbers[2])
         ]);
 
         return {
@@ -325,36 +422,141 @@
             prompt: "Tap a face card",
             cue: { text: "🙂 Face Card", tone: "gold" },
             boardCards: cards,
-            boardCheck: (index) => ["J", "Q", "K"].includes(cards[index].val)
+            boardCheck: (index) => ["J", "Q", "K", "C"].includes(cards[index].val)
         };
     }
 
-    function questionKnightMiddleTap() {
-        const cards = EducationalUtils.shuffle([
-            new Card("♣", "J"),
-            new Card("♦", "C"),
-            new Card("♥", "Q")
-        ]);
+    function questionMiddleRankTap(_, __, forceKnight = false) {
+        let values;
+        if (forceKnight || (state.level >= 5 && Math.random() < 0.25)) {
+            values = ["J", "C", "Q"];
+        } else {
+            const pool = getPracticeValues(false);
+            values = pickDistinctValuesByRank(pool, 3);
+            if (values.length < 3) {
+                values = ["4", "7", "10"];
+            }
+        }
+
+        const sortedByRank = values.slice().sort((left, right) => getComparableRank(left) - getComparableRank(right));
+        const middleValue = sortedByRank[1];
+        const cards = EducationalUtils.shuffle(values.map((value) => new Card(randomSuit(), value)));
+
         return {
             kind: "board",
             prompt: "Tap middle rank",
-            cue: { text: "J < ? < Q", tone: "blue" },
+            cue: { text: `${sortedByRank[0]} < ? < ${sortedByRank[2]}`, tone: "blue" },
             boardCards: cards,
-            boardCheck: (index) => cards[index].val === "C"
+            boardCheck: (index) => cards[index].val === middleValue
         };
     }
 
     function questionDidYouKnowBreak(includeKnight = false) {
         const item = includeKnight
             ? BREAK_CARD_KNIGHT
-            : BREAK_CARDS_COMMON[Math.floor(Math.random() * BREAK_CARDS_COMMON.length)];
+            : BREAK_FACTS_COMMON[Math.floor(Math.random() * BREAK_FACTS_COMMON.length)];
         return {
             kind: "break",
             prompt: item.text,
-            cue: { text: "📘 Did you know?", tone: "blue" },
-            boardCards: item.cards,
+            cue: { text: "📘 Card Fact", tone: "blue" },
+            boardCards: item.buildCards(),
             choices: []
         };
+    }
+
+    function pickRandom(list) {
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function pickWeightedFactRank() {
+        const weightedPool = [
+            "2", "3", "4", "5", "6", "7", "8", "9", "10", "A",
+            "J", "Q", "K", "J", "Q", "K", "J", "Q", "K"
+        ];
+        if (state.expertUnlocked) {
+            weightedPool.push("C", "C");
+        }
+
+        let next = pickRandom(weightedPool);
+        if (state.lastStandardDeckFactRank && weightedPool.length > 1 && next === state.lastStandardDeckFactRank) {
+            const alternatives = weightedPool.filter((value) => value !== state.lastStandardDeckFactRank);
+            next = pickRandom(alternatives.length ? alternatives : weightedPool);
+        }
+        state.lastStandardDeckFactRank = next;
+        return next;
+    }
+
+    function buildAlternatingSuitCards(rank) {
+        const reds = EducationalUtils.shuffle(["♥", "♦"]);
+        const blacks = EducationalUtils.shuffle(["♠", "♣"]);
+        const suits = Math.random() < 0.5
+            ? [reds[0], blacks[0], reds[1], blacks[1]]
+            : [blacks[0], reds[0], blacks[1], reds[1]];
+        return suits.map((suit) => new Card(suit, rank));
+    }
+
+    function buildRandomFactCard() {
+        const valuePool = state.expertUnlocked ? EXTENDED_VALUES : VALUES;
+        return new Card(randomSuit(), pickRandom(valuePool));
+    }
+
+    function buildKnaveFactCards() {
+        const jackCount = 1 + Math.floor(Math.random() * 3);
+        const suits = EducationalUtils.shuffle(SUITS).slice(0, jackCount);
+        return suits.map((suit) => new Card(suit, "J"));
+    }
+
+    function buildTraditionalFrenchSuitCards() {
+        const swapSpadeAndClub = Math.random() < 0.5;
+        const secondSuit = swapSpadeAndClub ? "♣" : "♠";
+        const fourthSuit = swapSpadeAndClub ? "♠" : "♣";
+
+        const ah = new Card("♥", "A");
+        const asOrAc = new Card(secondSuit, "A");
+        const ad = new Card("♦", "A");
+        const acOrAs = new Card(fourthSuit, "A");
+        const randomOne = buildRandomFactCard();
+        const randomTwo = buildRandomFactCard();
+
+        if (Math.random() < 0.5) {
+            return [ah, asOrAc, ad, randomOne, acOrAs, randomTwo];
+        }
+        return [randomOne, ah, randomTwo, asOrAc, ad, acOrAs];
+    }
+
+    function buildStandardDeckFactCards() {
+        return buildAlternatingSuitCards(pickWeightedFactRank());
+    }
+
+    function buildFaceCardFactCards() {
+        const suits = EducationalUtils.shuffle(SUITS);
+        return [
+            new Card(suits[0], "J"),
+            new Card(suits[1], "Q"),
+            new Card(suits[2], "K")
+        ];
+    }
+
+    function buildAceFactCards() {
+        const cards = [
+            new Card("♥", "A"),
+            new Card("♣", "2"),
+            new Card("♦", "A"),
+            new Card("♠", "K")
+        ];
+        return EducationalUtils.shuffle(cards);
+    }
+
+    function buildAlternatingColorFactCards() {
+        const suits = buildAlternatingSuitCards("9").map((card) => card.suit);
+        const values = ["9", "8", "7", "6"];
+        return suits.map((suit, index) => new Card(suit, values[index]));
+    }
+
+    function buildRoyalFamilyFactCards() {
+        const suit = randomSuit();
+        const values = state.expertUnlocked && Math.random() < 0.25 ? ["J", "C", "Q", "K"] : ["J", "Q", "K"];
+        return values.map((value) => new Card(suit, value));
     }
 
     function renderQuestion() {
@@ -373,7 +575,7 @@
         elements.board.innerHTML = "";
 
         question.boardCards.forEach((card, index) => {
-            if (question.kind === "board") {
+            if (question.kind === "board" || question.kind === "break") {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.className = "edu-card-button";
@@ -381,7 +583,13 @@
                 shell.className = "edu-card-shell";
                 shell.appendChild(CommonUtils.createCardEl(new Card(card.suit, card.val)));
                 button.appendChild(shell);
-                button.addEventListener("click", () => handleBoardAnswer(index, shell));
+
+                if (question.kind === "board") {
+                    button.addEventListener("click", () => handleBoardAnswer(index, shell));
+                } else {
+                    button.addEventListener("click", advanceBreakQuestion);
+                }
+
                 elements.board.appendChild(button);
                 return;
             }
@@ -434,7 +642,8 @@
             elements.choices.appendChild(button);
         });
 
-        elements.choices.style.setProperty("--choice-columns", String(Math.max(2, question.choices.length)));
+        const columns = Math.min(6, Math.max(2, question.choices.length));
+        elements.choices.style.setProperty("--choice-columns", String(columns));
     }
 
     function handleChoiceAnswer(choice, button) {
@@ -451,6 +660,12 @@
         shell.classList.add(good ? "success" : "fail");
         disableInputs();
         resolveAnswer(good, good ? "Great!" : "Try next one.");
+    }
+
+    function advanceBreakQuestion() {
+        if (state.question?.kind !== "break") return;
+        disableInputs();
+        nextQuestion();
     }
 
     function disableInputs() {
@@ -479,12 +694,10 @@
         }
 
         if (state.autoLevel) {
-            const rate = EducationalUtils.calculateSuccessRate(state.recentAnswers);
-            state.level = EducationalUtils.adjustDifficulty(state.level, rate, 1, 5);
-            elements.levelSelect.value = String(state.level);
-            if (state.level === 5 && rate > 0.9) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
+            const batch = EducationalUtils.consumeAutoLevelBatch(state.autoLevelBatch, good, 7);
+            if (batch) {
+                state.level = EducationalUtils.adjustDifficultyFromBatch(state.level, batch, 1, 5, 6, 4);
+                elements.levelSelect.value = String(state.level);
             }
         }
 

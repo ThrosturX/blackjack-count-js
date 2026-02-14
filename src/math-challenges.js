@@ -4,34 +4,40 @@
     const CHALLENGE_TYPES = {
         MISSING_ADDEND: "missing-addend",
         SUBTRACT_TO_TARGET: "subtract-to-target",
-        FIND_SUM: "find-sum"
+        FIND_SUM: "find-sum",
+        BALANCE_TWO_CARD_SIDE: "balance-two-card-side"
     };
 
     const LEVELS = {
         1: {
             values: ["A", "2", "3", "4", "5"],
             challengeTypes: [CHALLENGE_TYPES.MISSING_ADDEND],
-            choiceCount: 3
+            choiceRange: [2, 2]
         },
         2: {
             values: ["A", "2", "3", "4", "5", "6", "7", "8"],
             challengeTypes: [CHALLENGE_TYPES.MISSING_ADDEND, CHALLENGE_TYPES.FIND_SUM],
-            choiceCount: 3
+            choiceRange: [3, 3]
         },
         3: {
             values: ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q"],
             challengeTypes: [CHALLENGE_TYPES.MISSING_ADDEND, CHALLENGE_TYPES.FIND_SUM, CHALLENGE_TYPES.SUBTRACT_TO_TARGET],
-            choiceCount: 4
+            choiceRange: [4, 4]
         },
         4: {
             values: ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"],
             challengeTypes: [CHALLENGE_TYPES.MISSING_ADDEND, CHALLENGE_TYPES.FIND_SUM, CHALLENGE_TYPES.SUBTRACT_TO_TARGET],
-            choiceCount: 4
+            choiceRange: [6, 8]
         },
         5: {
             values: VALUES.slice(),
-            challengeTypes: [CHALLENGE_TYPES.MISSING_ADDEND, CHALLENGE_TYPES.FIND_SUM, CHALLENGE_TYPES.SUBTRACT_TO_TARGET],
-            choiceCount: 5
+            challengeTypes: [
+                CHALLENGE_TYPES.MISSING_ADDEND,
+                CHALLENGE_TYPES.FIND_SUM,
+                CHALLENGE_TYPES.SUBTRACT_TO_TARGET,
+                CHALLENGE_TYPES.BALANCE_TWO_CARD_SIDE
+            ],
+            choiceRange: [8, 8]
         }
     };
 
@@ -47,7 +53,8 @@
         answerLocked: false,
         suppressClickChoiceId: null,
         recentAnswers: [],
-        maxRecentAnswers: 12
+        maxRecentAnswers: 12,
+        autoLevelBatch: []
     };
 
     const elements = {
@@ -107,10 +114,6 @@
 
         elements.autoLevel.addEventListener("change", (event) => {
             state.autoLevel = event.target.checked;
-            if (state.autoLevel) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
-            }
             saveProgress();
             nextChallenge();
         });
@@ -138,10 +141,7 @@
         state.level = clampLevel(saved.level || 1);
         state.autoLevel = saved.autoLevel !== false;
         state.recentAnswers = Array.isArray(saved.recentAnswers) ? saved.recentAnswers : [];
-
-        if (state.autoLevel) {
-            state.level = 1;
-        }
+        state.autoLevelBatch = Array.isArray(saved.autoLevelBatch) ? saved.autoLevelBatch : [];
 
         elements.levelSelect.value = String(state.level);
         elements.autoLevel.checked = state.autoLevel;
@@ -155,7 +155,8 @@
             bestStreak: state.bestStreak,
             level: state.level,
             autoLevel: state.autoLevel,
-            recentAnswers: state.recentAnswers
+            recentAnswers: state.recentAnswers,
+            autoLevelBatch: state.autoLevelBatch
         });
     }
 
@@ -173,15 +174,20 @@
         const config = LEVELS[state.level];
         const challengeType = config.challengeTypes[Math.floor(Math.random() * config.challengeTypes.length)];
         const values = config.values.slice();
+        const choiceCount = randomIntBetween(config.choiceRange[0], config.choiceRange[1]);
 
-        if (state.level === 5 && challengeType === CHALLENGE_TYPES.MISSING_ADDEND && Math.random() < 0.6) {
-            return buildExpertTwoCardMissing(values);
+        if (state.level === 5 && challengeType === CHALLENGE_TYPES.BALANCE_TWO_CARD_SIDE) {
+            return buildExpertBalanceChallenge(values, choiceCount);
         }
 
-        return buildSingleCardChallenge(challengeType, values, config.choiceCount);
+        if (state.level === 5 && challengeType === CHALLENGE_TYPES.MISSING_ADDEND && Math.random() < 0.45) {
+            return buildExpertTwoCardMissing(values, choiceCount);
+        }
+
+        return buildSingleCardChallenge(challengeType, values, choiceCount);
     }
 
-    function buildExpertTwoCardMissing(values) {
+    function buildExpertTwoCardMissing(values, choiceCount) {
         const lowValues = values.filter((value) => EducationalUtils.getRank(value) <= 10);
         const left = pickRandom(lowValues.length ? lowValues : values);
         const leftRank = EducationalUtils.getRank(left);
@@ -201,13 +207,48 @@
         const targetTotal = leftRank + neededTotal;
 
         const expectedValues = pair.slice().sort(sortByRankThenLabel);
-        const choices = buildChoiceObjects(expectedValues, values, 6);
+        const choices = buildChoiceObjects(expectedValues, values, choiceCount);
 
         return {
             prompt: "Place cards in ?",
             help: "Drag cards into ? (or tap card, then tap ?).",
             cue: { text: "🧩 Place 2 cards", tone: "blue" },
             expressionParts: [cardPart(left), symbolPart("+"), unknownPart(), symbolPart("="), numberPart(targetTotal)],
+            requiredCards: 2,
+            expectedValues,
+            choices
+        };
+    }
+
+    function buildExpertBalanceChallenge(values, choiceCount) {
+        const valuePool = values.filter((value) => EducationalUtils.getRank(value) <= 10);
+        const workingPool = valuePool.length >= 4 ? valuePool : values;
+        const leftPair = pickTwoDistinct(workingPool, 2);
+        const leftTotal = EducationalUtils.getRank(leftPair[0]) + EducationalUtils.getRank(leftPair[1]);
+
+        const pairCandidates = [];
+        for (let i = 0; i < workingPool.length; i += 1) {
+            for (let j = i; j < workingPool.length; j += 1) {
+                const left = workingPool[i];
+                const right = workingPool[j];
+                if (EducationalUtils.getRank(left) + EducationalUtils.getRank(right) === leftTotal) {
+                    pairCandidates.push([left, right]);
+                }
+            }
+        }
+
+        let expectedValues = leftPair.slice().sort(sortByRankThenLabel);
+        if (pairCandidates.length) {
+            expectedValues = pickRandom(pairCandidates).slice().sort(sortByRankThenLabel);
+        }
+
+        const choices = buildChoiceObjects(expectedValues, values, choiceCount);
+
+        return {
+            prompt: "Balance both sides",
+            help: "Place 2 cards in ? so both sides are equal.",
+            cue: { text: "⚖️ Balance equation", tone: "gold" },
+            expressionParts: [cardPart(leftPair[0]), symbolPart("+"), cardPart(leftPair[1]), symbolPart("="), unknownPart()],
             requiredCards: 2,
             expectedValues,
             choices
@@ -426,7 +467,7 @@
             elements.choices.appendChild(button);
         });
 
-        const columns = Math.max(3, Math.min(4, state.challenge.choices.length));
+        const columns = Math.max(2, Math.min(6, state.challenge.choices.length));
         elements.choices.style.setProperty("--choice-columns", String(columns));
     }
 
@@ -641,12 +682,10 @@
         }
 
         if (state.autoLevel) {
-            const rate = EducationalUtils.calculateSuccessRate(state.recentAnswers);
-            state.level = EducationalUtils.adjustDifficulty(state.level, rate, 1, 5);
-            elements.levelSelect.value = String(state.level);
-            if (state.level === 5 && rate > 0.85) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
+            const batch = EducationalUtils.consumeAutoLevelBatch(state.autoLevelBatch, isCorrect, 7);
+            if (batch) {
+                state.level = EducationalUtils.adjustDifficultyFromBatch(state.level, batch, 1, 5, 6, 4);
+                elements.levelSelect.value = String(state.level);
             }
         }
 
@@ -693,6 +732,11 @@
 
     function pickRandom(list) {
         return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function randomIntBetween(min, max) {
+        if (min >= max) return min;
+        return min + Math.floor(Math.random() * (max - min + 1));
     }
 
     function pickTwoDistinct(list, count) {

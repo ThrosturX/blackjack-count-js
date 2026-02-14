@@ -115,6 +115,19 @@ Solitaire games and Blackjack persist state with `localStorage` via `CommonUtils
 - Blackjack table height expands when scaled content would otherwise clip seat controls.
 - Solitaire drag/drop supports mobile panning while a card is selected.
 
+## Educational Lessons Learned
+
+- Keep prompts visual-first and short; avoid requiring reading proficiency for core actions.
+- Prefer card-tap exercises over text-choice quizzes when the concept is inherently card-based.
+- Avoid answer leakage: choices should not restate the answer in plain language when symbols/cards can communicate it.
+- Use stable, fixed-size answer tiles in learning games; do not allow content-length to collapse controls.
+- Hide unused UI sections (for example, empty answer panels) to avoid wasted screen space and confusion.
+- For drag tasks on mobile, card motion should feel like solitaire drag: start from original position and track naturally without cursor-jump behavior.
+- Preserve tap fallback for all drag interactions.
+- Keep standard 52-card assumptions in math drills; Knight is rare and primarily trivia/break content.
+- Insert occasional non-quiz “Did you know?” breaks in expert mode to reduce cognitive fatigue.
+- Ensure educational pages still render on a themed table surface so add-on table/deck themes remain meaningful.
+
 ## Add-ons and Themes
 
 - Add-on catalog is defined in `src/addons/manifest.js`.

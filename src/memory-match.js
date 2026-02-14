@@ -26,6 +26,13 @@
             isMatch: (a, b) => EducationalUtils.getRank(a.card.val) === EducationalUtils.getRank(b.card.val),
             buildPairs: buildSameRankPairs
         },
+        "same-rank-color": {
+            label: "Same rank + same color",
+            copy: "Match cards with the same rank and the same color.",
+            isMatch: (a, b) => EducationalUtils.getRank(a.card.val) === EducationalUtils.getRank(b.card.val)
+                && EducationalUtils.getCardColor(a.card) === EducationalUtils.getCardColor(b.card),
+            buildPairs: buildSameRankColorPairs
+        },
         "sequence": {
             label: "Sequence (+/-1)",
             copy: "Match cards one step apart (A can pair with K).",
@@ -51,11 +58,14 @@
     const LEVEL_CONFIG = {
         1: { pairs: 3, cols: 3, rule: "same-card" },
         2: { pairs: 4, cols: 4, rule: "same-card" },
-        3: { pairs: 6, cols: 4, rule: "same-color" },
-        4: { pairs: 8, cols: 4, rule: "complement-suit" },
-        5: { pairs: 10, cols: 5, rule: "same-rank" },
-        6: { pairs: 12, cols: 6, rule: "complement-suit" },
-        7: { pairs: 14, cols: 7, rule: "same-rank" }
+        3: { pairs: 6, cols: 4, rule: "same-rank" },
+        4: { pairs: 8, cols: 4, rule: "same-rank" },
+        5: { pairs: 10, cols: 5, rule: "same-rank-color" },
+        6: { pairs: 12, cols: 6, rule: "same-color" },
+        7: { pairs: 14, cols: 7, rule: "complement-suit" },
+        8: { pairs: 10, cols: 5, rule: "sequence" },
+        9: { pairs: 12, cols: 6, rule: "sequence-different-color" },
+        10: { pairs: 14, cols: 7, rule: "sequence-same-color" }
     };
 
     const state = {
@@ -70,7 +80,9 @@
         selectedRule: "auto",
         activeRule: "same-card",
         bestMoves: {},
-        winStreak: 0
+        winStreak: 0,
+        autoLevelBatch: [],
+        pendingAutoLevel: null
     };
 
     const elements = {
@@ -127,7 +139,8 @@
             state.currentLevel = clampLevel(parseInt(event.target.value, 10));
             state.autoLevel = false;
             elements.autoLevel.checked = false;
-            const levelConfig = LEVEL_CONFIG[state.currentLevel];
+            state.pendingAutoLevel = null;
+            const levelConfig = LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1];
             state.totalPairs = levelConfig.pairs;
             elements.pairsSelect.value = String(levelConfig.pairs);
             if (state.selectedRule === "auto") {
@@ -144,6 +157,7 @@
             state.currentLevel = findLevelForPairs(pairs);
             state.autoLevel = false;
             elements.autoLevel.checked = false;
+            state.pendingAutoLevel = null;
             elements.levelSelect.value = String(state.currentLevel);
             if (state.selectedRule === "auto") {
                 state.activeRule = LEVEL_CONFIG[state.currentLevel].rule;
@@ -158,6 +172,7 @@
             state.activeRule = resolveActiveRule();
             state.autoLevel = false;
             elements.autoLevel.checked = false;
+            state.pendingAutoLevel = null;
             updateRuleAndLevelUI();
             saveProgress();
             startNewGame();
@@ -165,11 +180,8 @@
 
         elements.autoLevel.addEventListener("change", (event) => {
             state.autoLevel = event.target.checked;
-            if (state.autoLevel) {
-                state.currentLevel = 1;
-                state.totalPairs = LEVEL_CONFIG[1].pairs;
-                elements.levelSelect.value = "1";
-                elements.pairsSelect.value = String(state.totalPairs);
+            if (!state.autoLevel) {
+                state.pendingAutoLevel = null;
             }
             state.activeRule = resolveActiveRule();
             updateRuleAndLevelUI();
@@ -183,7 +195,7 @@
     }
 
     function clampLevel(level) {
-        return Math.max(1, Math.min(7, Number.isFinite(level) ? level : 1));
+        return Math.max(1, Math.min(10, Number.isFinite(level) ? level : 1));
     }
 
     function findLevelForPairs(pairs) {
@@ -193,7 +205,7 @@
 
     function resolveActiveRule() {
         if (state.selectedRule && state.selectedRule !== "auto") return state.selectedRule;
-        return LEVEL_CONFIG[state.currentLevel].rule;
+        return (LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1]).rule;
     }
 
     function loadProgress() {
@@ -208,21 +220,19 @@
         state.totalPairs = saved.totalPairs || LEVEL_CONFIG[state.currentLevel].pairs;
         state.autoLevel = saved.autoLevel !== false;
         state.selectedRule = saved.selectedRule || "auto";
-        state.activeRule = saved.activeRule || resolveActiveRule();
+        if (state.selectedRule !== "auto" && !RULES[state.selectedRule]) {
+            state.selectedRule = "auto";
+        }
+        state.activeRule = RULES[saved.activeRule] ? saved.activeRule : resolveActiveRule();
         state.bestMoves = saved.bestMoves || {};
         state.winStreak = saved.winStreak || 0;
+        state.autoLevelBatch = Array.isArray(saved.autoLevelBatch) ? saved.autoLevelBatch : [];
+        state.pendingAutoLevel = Number.isFinite(saved.pendingAutoLevel) ? clampLevel(saved.pendingAutoLevel) : null;
 
         elements.levelSelect.value = String(state.currentLevel);
         elements.pairsSelect.value = String(state.totalPairs);
         elements.autoLevel.checked = state.autoLevel;
         elements.ruleSelect.value = state.selectedRule;
-
-        if (state.autoLevel) {
-            state.currentLevel = 1;
-            state.totalPairs = LEVEL_CONFIG[1].pairs;
-            elements.levelSelect.value = "1";
-            elements.pairsSelect.value = String(state.totalPairs);
-        }
 
         state.activeRule = resolveActiveRule();
         updateRuleAndLevelUI();
@@ -237,12 +247,15 @@
             selectedRule: state.selectedRule,
             activeRule: state.activeRule,
             bestMoves: state.bestMoves,
-            winStreak: state.winStreak
+            winStreak: state.winStreak,
+            autoLevelBatch: state.autoLevelBatch,
+            pendingAutoLevel: state.pendingAutoLevel
         });
     }
 
     function updateRuleAndLevelUI() {
-        const cols = LEVEL_CONFIG[state.currentLevel].cols;
+        const levelConfig = LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1];
+        const cols = levelConfig.cols;
         const rows = Math.ceil((state.totalPairs * 2) / cols);
         const rule = RULES[state.activeRule];
         elements.levelInfo.textContent = `Level ${state.currentLevel} · ${state.totalPairs} pairs · ${cols}x${rows} grid`;
@@ -269,6 +282,12 @@
         if (rule === "complement-suit") {
             appendExampleSet([new Card("♥", "9"), new Card("♠", "9")], "↔");
             appendExampleSet([new Card("♦", "5"), new Card("♣", "5")], "↔");
+            return;
+        }
+
+        if (rule === "same-rank-color") {
+            appendExampleSet([new Card("♥", "9"), new Card("♦", "9")], "↔");
+            appendExampleSet([new Card("♣", "J"), new Card("♠", "J")], "↔");
             return;
         }
 
@@ -317,6 +336,7 @@
     }
 
     function startNewGame() {
+        applyPendingAutoLevel();
         state.moves = 0;
         state.matchedPairs = 0;
         state.lockInput = false;
@@ -327,6 +347,16 @@
         renderGrid();
         setFeedback("");
         updateStats();
+        saveProgress();
+    }
+
+    function applyPendingAutoLevel() {
+        if (!state.autoLevel || !Number.isFinite(state.pendingAutoLevel)) return;
+        state.currentLevel = clampLevel(state.pendingAutoLevel);
+        state.totalPairs = (LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1]).pairs;
+        elements.levelSelect.value = String(state.currentLevel);
+        elements.pairsSelect.value = String(state.totalPairs);
+        state.pendingAutoLevel = null;
     }
 
     function generateDeck() {
@@ -400,6 +430,19 @@
         return cards;
     }
 
+    function buildSameRankColorPairs(pairCount) {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const cards = [];
+        for (let i = 0; i < pairCount; i += 1) {
+            const rank = values[Math.floor(Math.random() * values.length)];
+            const useRed = Math.random() < 0.5;
+            const suitPair = useRed ? ["♥", "♦"] : ["♠", "♣"];
+            cards.push({ card: new Card(suitPair[0], rank), matchKey: `rank-color-${i}` });
+            cards.push({ card: new Card(suitPair[1], rank), matchKey: `rank-color-${i}` });
+        }
+        return cards;
+    }
+
     function areAdjacentRanks(rankA, rankB) {
         const diff = Math.abs(rankA - rankB);
         if (diff === 1) return true;
@@ -452,7 +495,7 @@
 
     function renderGrid() {
         elements.grid.innerHTML = "";
-        const cols = LEVEL_CONFIG[state.currentLevel].cols;
+        const cols = (LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1]).cols;
         elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 92px))`;
 
         state.cards.forEach((entry, index) => {
@@ -496,6 +539,7 @@
         const left = state.cards[leftIndex];
         const right = state.cards[rightIndex];
         const isMatch = RULES[state.activeRule].isMatch(left, right);
+        recordAutoLevelAttempt(isMatch);
 
         if (isMatch) {
             setTimeout(() => {
@@ -507,6 +551,7 @@
                 setFeedback("Great match!", true);
                 CommonUtils.playSound("win");
                 updateStats();
+                saveProgress();
                 renderGrid();
                 if (state.matchedPairs >= state.totalPairs) {
                     onWin();
@@ -523,10 +568,12 @@
             setFeedback("No match yet. Try another pair.", false);
             CommonUtils.playSound("error");
             updateStats();
+            saveProgress();
             renderGrid();
         }, 760);
 
         updateStats();
+        saveProgress();
     }
 
     function onWin() {
@@ -539,16 +586,26 @@
         state.winStreak += 1;
         setFeedback(`You cleared the board in ${state.moves} moves!`, true);
         CommonUtils.playSound("youwin");
-
-        if (state.autoLevel) {
-            state.currentLevel = state.currentLevel >= 7 ? 1 : state.currentLevel + 1;
-            state.totalPairs = LEVEL_CONFIG[state.currentLevel].pairs;
-            elements.levelSelect.value = String(state.currentLevel);
-            elements.pairsSelect.value = String(state.totalPairs);
-        }
+        applyPendingAutoLevel();
+        state.activeRule = resolveActiveRule();
+        updateRuleAndLevelUI();
 
         updateStats();
         saveProgress();
+    }
+
+    function recordAutoLevelAttempt(isCorrect) {
+        if (!state.autoLevel) return;
+        const batch = EducationalUtils.consumeAutoLevelBatch(state.autoLevelBatch, isCorrect, 7);
+        if (!batch) return;
+        const nextLevel = EducationalUtils.adjustDifficultyFromBatch(state.currentLevel, batch, 1, 10, 6, 4);
+        if (nextLevel !== state.currentLevel) {
+            state.pendingAutoLevel = nextLevel;
+            setFeedback(
+                nextLevel > state.currentLevel ? "Level up next board!" : "Level down next board.",
+                nextLevel > state.currentLevel
+            );
+        }
     }
 
     function setFeedback(message, good) {

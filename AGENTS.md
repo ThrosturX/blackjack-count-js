@@ -63,6 +63,15 @@
 - Use subtle visual feedback; avoid immersion-breaking effects.
 - For substantial UI changes, state expected behavior on desktop and mobile in the turn summary.
 
+## Educational UX Guardrails
+- Target non-readers and low-literacy users first: visual cues, symbols, and direct card interactions should carry the task.
+- Keep “exercise” prompts concise and avoid redundant instruction blocks.
+- Prefer board/card selection tasks over text-heavy multiple-choice whenever possible.
+- Keep answer containers fixed-size and stable to avoid layout shifts and collapsed “line-like” buttons.
+- Hide inactive/empty panels to maximize usable play area.
+- Mobile drag interactions should mimic solitaire feel (anchored pickup, smooth movement) with tap fallback always available.
+- Knight content should be rare and primarily trivia/break flavor, not core repetition.
+
 ## QA Smoke Checklist
 - Open each game page and verify there are no console errors on load.
 - Verify starting a new deal/hand/game works.

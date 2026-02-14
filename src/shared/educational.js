@@ -148,6 +148,51 @@ const EducationalUtils = {
     },
 
     /**
+     * Records an answer in an auto-level window and returns a completed batch result.
+     * @param {Array<boolean>} windowAnswers - Mutable array used as a rolling batch buffer
+     * @param {boolean} isCorrect - Whether the latest answer was correct
+     * @param {number} batchSize - Answers required before a level check (default: 7)
+     * @returns {Object|null} Batch summary or null when batch isn't ready
+     */
+    consumeAutoLevelBatch: function(windowAnswers, isCorrect, batchSize = 7) {
+        if (!Array.isArray(windowAnswers)) return null;
+        windowAnswers.push(!!isCorrect);
+        if (windowAnswers.length < batchSize) return null;
+        const batch = windowAnswers.splice(0, batchSize);
+        const correct = batch.filter(Boolean).length;
+        return { total: batchSize, correct };
+    },
+
+    /**
+     * Applies batch-driven auto-level rules.
+     * Promote with >= 6/7 correct, demote with < 4/7 correct.
+     * @param {number} currentLevel - Current difficulty level
+     * @param {Object|null} batch - Output from consumeAutoLevelBatch
+     * @param {number} minLevel - Minimum difficulty
+     * @param {number} maxLevel - Maximum difficulty
+     * @param {number} promoteCorrect - Promote threshold (default: 6)
+     * @param {number} demoteBelow - Demote threshold, exclusive (default: 4)
+     * @returns {number} Adjusted level
+     */
+    adjustDifficultyFromBatch: function(
+        currentLevel,
+        batch,
+        minLevel = 1,
+        maxLevel = 5,
+        promoteCorrect = 6,
+        demoteBelow = 4
+    ) {
+        if (!batch || !Number.isFinite(batch.correct)) return currentLevel;
+        if (batch.correct >= promoteCorrect && currentLevel < maxLevel) {
+            return currentLevel + 1;
+        }
+        if (batch.correct < demoteBelow && currentLevel > minLevel) {
+            return currentLevel - 1;
+        }
+        return currentLevel;
+    },
+
+    /**
      * Adjusts difficulty based on success rate.
      * @param {number} currentLevel - Current difficulty level
      * @param {number} successRate - Recent success rate (0-1)
