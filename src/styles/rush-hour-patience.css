@@ -1,5 +1,7 @@
 #table.rush-layout {
     --rush-fan-x: calc(14px * var(--ui-scale));
+    --rush-track-width: calc(var(--scaled-card-w) + var(--rush-fan-x, 14px));
+    --rush-lane-spacer: var(--rush-track-width);
     --table-shell-max-width: 1240px;
     position: relative;
     width: var(--table-shell-width);
@@ -16,7 +18,7 @@
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    gap: calc(16px * var(--ui-scale));
+    gap: calc(14px * var(--ui-scale));
     overflow: visible;
     overflow-anchor: none;
     transition: background 0.5s, border-color 0.5s;
@@ -24,6 +26,14 @@
 
 #rush-scroll {
     overflow-anchor: none;
+}
+
+#rush-board-grid {
+    display: grid;
+    grid-template-columns: repeat(10, var(--rush-track-width));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    width: max-content;
+    margin: 0 auto;
 }
 
 #rush-stock,
@@ -41,11 +51,25 @@
 
 #rush-top-row {
     display: grid;
-    grid-template-columns: repeat(10, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    grid-template-columns: repeat(10, var(--rush-track-width));
     align-items: flex-start;
     gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    grid-column: 1 / -1;
     width: max-content;
-    margin: 0 auto;
+    margin: 0;
+}
+
+#rush-dispatch-panel {
+    grid-column: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: calc(6px * var(--ui-scale));
+}
+
+#rush-dispatch-row {
+    display: grid;
+    grid-template-columns: repeat(2, var(--rush-track-width));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
 }
 
 #rush-contracts-panel {
@@ -63,52 +87,73 @@
 
 .rush-contract-grid {
     display: grid;
-    grid-template-columns: repeat(8, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    grid-template-columns:
+        repeat(4, var(--rush-track-width))
+        calc(10px * var(--ui-scale))
+        repeat(4, var(--rush-track-width));
     gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+}
+
+.rush-contract-grid .rush-contract:nth-child(5) {
+    grid-column: 6;
 }
 
 #rush-lane-row {
     display: grid;
-    grid-template-columns: repeat(11, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    grid-template-columns:
+        repeat(2, var(--rush-track-width))
+        var(--rush-lane-spacer)
+        repeat(7, var(--rush-track-width));
     align-items: flex-start;
     gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+    grid-column: 1 / -1;
     width: max-content;
-    margin: 0 auto;
+    margin: 0;
 }
 
-#rush-backseat-panel {
+#rush-lane-left-column {
     grid-column: 1 / span 2;
     display: grid;
     grid-template-rows: auto auto;
-    gap: calc(6px * var(--ui-scale));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
 }
 
-#rush-stands-panel {
-    grid-column: 3 / span 2;
+#rush-backseat-panel {
     display: grid;
     grid-template-rows: auto auto;
     gap: calc(6px * var(--ui-scale));
 }
 
-#rush-backseat,
-#rush-stands {
+#rush-backseat {
     display: grid;
-    grid-template-columns: repeat(2, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    grid-template-columns: repeat(2, var(--rush-track-width));
     gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
 }
 
 #rush-tableau {
-    grid-column: 5 / span 7;
+    grid-column: 4 / span 7;
     display: grid;
-    grid-template-columns: repeat(7, calc(var(--scaled-card-w) + var(--rush-fan-x, 14px)));
+    grid-template-columns: repeat(7, var(--rush-track-width));
     gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
     width: max-content;
     min-width: fit-content;
 }
 
+#rush-stands-panel {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: calc(6px * var(--ui-scale));
+}
+
+#rush-stands {
+    display: grid;
+    grid-template-columns: repeat(2, var(--rush-track-width));
+    gap: var(--rush-tableau-gap, calc(10px * var(--ui-scale)));
+}
+
 .rush-subheader {
     margin: 0;
-    padding-left: calc(4px * var(--ui-scale));
+    text-align: center;
     font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -138,6 +183,37 @@
     text-align: center;
     line-height: 1.15;
     white-space: pre-line;
+}
+
+.rush-foundation-placeholder {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(10px * var(--ui-scale));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(10px * var(--ui-scale)) 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    color: rgba(255, 255, 255, 0.42);
+    pointer-events: none;
+}
+
+.rush-foundation-rank,
+.rush-foundation-rank-bottom {
+    font-size: clamp(0.7rem, calc(0.56rem + 0.35vw), 0.95rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.rush-foundation-suit {
+    font-size: clamp(1rem, calc(0.86rem + 0.45vw), 1.45rem);
+    color: rgba(255, 255, 255, 0.3);
+    transform: translateY(calc(-1px * var(--ui-scale)));
+}
+
+.rush-foundation-suit.is-red {
+    color: rgba(235, 87, 87, 0.42);
 }
 
 #rush-stock .card,
@@ -210,12 +286,14 @@
     border-color: rgba(255, 177, 74, 0.65);
 }
 
+#table.rush-layout.scroll-active #rush-board-grid,
 #table.rush-layout.scroll-active #rush-top-row,
 #table.rush-layout.scroll-active #rush-lane-row,
 #table.rush-layout.scroll-active #rush-tableau,
 #table.rush-layout.scroll-active #rush-contracts-panel,
 #table.rush-layout.scroll-active #rush-contracts,
 #table.rush-layout.scroll-active #rush-stands,
-#table.rush-layout.scroll-active #rush-backseat {
+#table.rush-layout.scroll-active #rush-backseat,
+#table.rush-layout.scroll-active #rush-dispatch-row {
     margin-inline: 0;
 }

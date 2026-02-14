@@ -69,11 +69,45 @@
     inset: 0;
     border-radius: calc(10px * var(--ui-scale));
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(10px * var(--ui-scale)) 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    color: rgba(255, 255, 255, 0.42);
+    pointer-events: none;
+}
+
+.forty-pile-placeholder {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(10px * var(--ui-scale));
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(1rem, calc(0.9rem + 0.25vw), 1.2rem);
+    font-size: clamp(0.95rem, calc(0.82rem + 0.22vw), 1.15rem);
     color: rgba(255, 255, 255, 0.35);
     pointer-events: none;
+}
+
+.forty-foundation-rank {
+    font-size: clamp(0.7rem, calc(0.56rem + 0.35vw), 0.95rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.forty-foundation-rank-bottom {
+    transform: rotate(180deg);
+}
+
+.forty-foundation-suit {
+    font-size: clamp(1rem, calc(0.86rem + 0.45vw), 1.45rem);
+    color: rgba(255, 255, 255, 0.3);
+    transform: translateY(calc(-1px * var(--ui-scale)));
+}
+
+.forty-foundation-suit.is-red {
+    color: rgba(235, 87, 87, 0.42);
 }
 
 #forty-stock .card,

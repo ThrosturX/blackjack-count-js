@@ -901,7 +901,7 @@
 
         if (!state.stock.length) {
             const placeholder = document.createElement('div');
-            placeholder.className = 'forty-foundation-placeholder';
+            placeholder.className = 'forty-pile-placeholder';
             placeholder.textContent = state.redealsRemaining > 0 ? 'Redeal' : 'Stock';
             stockEl.appendChild(placeholder);
         }
@@ -914,7 +914,7 @@
 
         if (!state.waste.length) {
             const placeholder = document.createElement('div');
-            placeholder.className = 'forty-foundation-placeholder';
+            placeholder.className = 'forty-pile-placeholder';
             placeholder.textContent = '';
             wasteEl.appendChild(placeholder);
             return;
@@ -942,6 +942,29 @@
         return fallback;
     }
 
+    function createFoundationPlaceholder(suit) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'forty-foundation-placeholder';
+
+        const topRank = document.createElement('span');
+        topRank.className = 'forty-foundation-rank forty-foundation-rank-top';
+        topRank.textContent = 'K';
+
+        const suitGlyph = document.createElement('span');
+        suitGlyph.className = 'forty-foundation-suit';
+        suitGlyph.textContent = suit;
+        if (suit === '♥' || suit === '♦') {
+            suitGlyph.classList.add('is-red');
+        }
+
+        const bottomRank = document.createElement('span');
+        bottomRank.className = 'forty-foundation-rank forty-foundation-rank-bottom';
+        bottomRank.textContent = 'A';
+
+        placeholder.append(topRank, suitGlyph, bottomRank);
+        return placeholder;
+    }
+
     function renderFoundations() {
         for (let i = 0; i < state.foundations.length; i += 1) {
             const pileEl = document.getElementById(`forty-foundation-${i}`);
@@ -965,10 +988,7 @@
                 clearDragState();
             });
             if (!pile.length) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'forty-foundation-placeholder';
-                placeholder.textContent = getFoundationPlaceholderSuit(i);
-                pileEl.appendChild(placeholder);
+                pileEl.appendChild(createFoundationPlaceholder(getFoundationPlaceholderSuit(i)));
                 continue;
             }
 

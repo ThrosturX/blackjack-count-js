@@ -140,8 +140,18 @@
         if (!cardEl) return;
         const suitCenter = cardEl.querySelector('.suit-center');
         if (!suitCenter) return;
-        suitCenter.textContent = cardEl.dataset.suit || '';
-        suitCenter.innerHTML = suitCenter.textContent;
+        const isJoker = cardEl.classList.contains('joker') || cardEl.dataset.val === 'JK';
+        if (isJoker) {
+            suitCenter.innerHTML = '';
+            if (!cardEl.classList.contains('hidden')) {
+                const icon = document.createElement('span');
+                icon.className = 'joker-face-art';
+                suitCenter.appendChild(icon);
+            }
+        } else {
+            suitCenter.textContent = cardEl.dataset.suit || '';
+            suitCenter.innerHTML = suitCenter.textContent;
+        }
         cardEl.classList.remove('classic-faces-card');
         cardEl.classList.remove('classic-faces-art-card');
         cardEl.dataset.classicFaces = '';
@@ -155,6 +165,11 @@
         const val = cardEl.dataset.val;
         const suit = cardEl.dataset.suit;
         if (!val || !suit) return;
+        const isJoker = cardEl.classList.contains('joker') || val === 'JK';
+        if (isJoker) {
+            resetClassicOnCardEl(cardEl);
+            return;
+        }
         const suitCenter = cardEl.querySelector('.suit-center');
         if (!suitCenter) return;
         cardEl.classList.add('classic-faces-card');

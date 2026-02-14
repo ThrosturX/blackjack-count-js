@@ -101,27 +101,36 @@
 
     <div class="table-scroll" id="rush-scroll">
         <main id="table" class="rush-layout">
-            <div id="rush-top-row">
-                <div id="rush-stock" class="rush-pile"></div>
-                <div id="rush-waste" class="rush-pile"></div>
-                <div id="rush-contracts-panel" class="rush-panel">
-                    <div class="rush-contract-subheaders">
-                        <h3 class="rush-subheader">Short Fares</h3>
-                        <h3 class="rush-subheader">Cross-town (8+)</h3>
+            <div id="rush-board-grid">
+                <div id="rush-top-row">
+                    <div id="rush-dispatch-panel" class="rush-panel">
+                        <h3 class="rush-subheader">Dispatch</h3>
+                        <div id="rush-dispatch-row">
+                            <div id="rush-stock" class="rush-pile"></div>
+                            <div id="rush-waste" class="rush-pile"></div>
+                        </div>
                     </div>
-                    <div id="rush-contracts" class="rush-contract-grid"></div>
+                    <div id="rush-contracts-panel" class="rush-panel">
+                        <div class="rush-contract-subheaders">
+                            <h3 class="rush-subheader">Short Fares</h3>
+                            <h3 class="rush-subheader">Cross Town (8+)</h3>
+                        </div>
+                        <div id="rush-contracts" class="rush-contract-grid"></div>
+                    </div>
                 </div>
-            </div>
-            <div id="rush-lane-row">
-                <div id="rush-backseat-panel" class="rush-panel">
-                    <h3 id="rush-hour-heading" class="rush-subheader rush-subtle">rush hour</h3>
-                    <div id="rush-backseat"></div>
+                <div id="rush-lane-row">
+                    <div id="rush-lane-left-column">
+                        <div id="rush-backseat-panel" class="rush-panel">
+                            <h3 id="rush-hour-heading" class="rush-subheader rush-subtle">rush hour</h3>
+                            <div id="rush-backseat"></div>
+                        </div>
+                        <div id="rush-stands-panel" class="rush-panel">
+                            <h3 class="rush-subheader">Taxi Stands</h3>
+                            <div id="rush-stands"></div>
+                        </div>
+                    </div>
+                    <div id="rush-tableau"></div>
                 </div>
-                <div id="rush-stands-panel" class="rush-panel">
-                    <h3 class="rush-subheader">Taxi Stands</h3>
-                    <div id="rush-stands"></div>
-                </div>
-                <div id="rush-tableau"></div>
             </div>
         </main>
     </div>

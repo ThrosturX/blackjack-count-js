@@ -74,6 +74,37 @@
     font-size: 2.5rem;
 }
 
+.card.joker:not(.hidden) .val-top .val-rank,
+.card.joker:not(.hidden) .val-bot .val-rank {
+    letter-spacing: 0.06em;
+}
+
+.card.joker:not(.hidden) .suit-center {
+    position: absolute;
+    inset: 4% 6%;
+    width: auto;
+    height: auto;
+    transform: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+}
+
+.card.joker:not(.hidden) .joker-face-art {
+    width: 96%;
+    height: 96%;
+    display: block;
+    background-image: url("../images/BSR-transparent.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.card.joker.hidden .joker-face-art {
+    display: none;
+}
+
 .val-bot {
     position: absolute;
     bottom: 4px;

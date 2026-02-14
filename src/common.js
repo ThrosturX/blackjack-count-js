@@ -770,12 +770,31 @@ const CommonUtils = {
      * @returns {HTMLElement}
      */
     createCardEl: function (card) {
+        const isJoker = card && (card.isJoker === true || card.val === 'JK');
+        const getJokerColor = () => {
+            if (!isJoker) return card.color;
+            const explicitColor = typeof card.jokerColor === 'string' ? card.jokerColor.toLowerCase() : '';
+            if (explicitColor === 'red' || explicitColor === 'black') return explicitColor;
+            if (card.isRedJoker === true) return 'red';
+            if (card.isBlackJoker === true) return 'black';
+            const suit = typeof card.suit === 'string' ? card.suit : '';
+            const suitLower = suit.toLowerCase();
+            if (suit === '♥' || suit === '♦' || suitLower.includes('red') || suitLower.includes('heart') || suitLower.includes('diamond')) {
+                return 'red';
+            }
+            if (suit === '♣' || suit === '♠' || suitLower.includes('black') || suitLower.includes('club') || suitLower.includes('spade')) {
+                return 'black';
+            }
+            return card.color === 'red' ? 'red' : 'black';
+        };
+        const displayColor = getJokerColor();
         const div = document.createElement('div');
-        div.className = `card ${card.color}${card.hidden ? ' hidden' : ''}${card.isSplitCard ? ' split-card' : ''}`;
+        div.className = `card ${displayColor}${card.hidden ? ' hidden' : ''}${card.isSplitCard ? ' split-card' : ''}${isJoker ? ' joker' : ''}`;
         div.dataset.suit = card.suit;
         div.dataset.val = card.val;
         div.dataset.rank = card.rank;
-        div.dataset.color = card.color;
+        div.dataset.color = displayColor;
+        if (isJoker) div.dataset.jokerColor = displayColor;
         if (!card.hidden && this.isCinderfallDeckActive()) {
             const burnProfile = this.getDeterministicBurnProfile(card);
             div.dataset.burnProfile = burnProfile.profile;
@@ -792,17 +811,31 @@ const CommonUtils = {
         }
         const valTop = document.createElement('div');
         valTop.className = 'val-top';
-        valTop.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
+        if (isJoker) {
+            valTop.innerHTML = `<span class="val-rank">JK</span>`;
+        } else {
+            valTop.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
+        }
         div.appendChild(valTop);
 
         const suitCenter = document.createElement('div');
         suitCenter.className = 'suit-center';
-        suitCenter.textContent = card.suit;
+        if (isJoker) {
+            const icon = document.createElement('span');
+            icon.className = 'joker-face-art';
+            suitCenter.appendChild(icon);
+        } else {
+            suitCenter.textContent = card.suit;
+        }
         div.appendChild(suitCenter);
 
         const valBot = document.createElement('div');
         valBot.className = 'val-bot';
-        valBot.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
+        if (isJoker) {
+            valBot.innerHTML = `<span class="val-rank">JK</span>`;
+        } else {
+            valBot.innerHTML = `<span class="val-rank">${card.val}</span><br><small>${card.suit}</small>`;
+        }
         div.appendChild(valBot);
 
         return div;

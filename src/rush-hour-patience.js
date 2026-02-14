@@ -14,7 +14,7 @@ Seven tableau columns represent city streets. Only the bottom face-up card in ea
 Fare contracts are the foundation piles. Start the first contract in each district with an Ace or Two for short local trips. Start the second contract with an Eight for long cross-town rides. Build each contract upward in the same suit until complete.
 When any contract reaches the Seven card, rush hour begins. Now each stock draw pulls three passengers at once. You must place the topmost immediately; the other two wait in your backseat and block further draws until you complete a contract, which clears the backseat.
 Optional taxi stands (one or two empty spots) let you temporarily park a single passenger to untangle difficult sequences. Too many stands remove tension—limit to two maximum.
-You win by completing all eight contracts. You lose if the stock empties twice (passengers gave up) or if no legal moves remain with passengers still waiting. Every draw risks passenger impatience; every completed fare earns breathing room. Plan routes carefully—especially during rush hour.`;
+You get three full passes through the stock for free. If you run out of passes but have a Joker parked in a stand, that Joker is discarded and grants one extra pass. There is no forced loss condition; ending a run is always your choice.`;
 
     const sounds = {
         card: ['card1.wav', 'card2.wav', 'card3.wav', 'card4.wav'],
@@ -38,6 +38,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         contracts: [],
         removedPassengers: 0,
         stockPass: 1,
+        jokerBonusPasses: 0,
         stockEmptyCount: 0,
         mustPlaceWaste: false,
         rushHourActive: false,
@@ -116,6 +117,9 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         cloned.hidden = !!card.hidden;
         if (Number.isFinite(card.rotation)) cloned.rotation = card.rotation;
         if (card.isJoker) cloned.isJoker = true;
+        if (typeof card.jokerColor === 'string') cloned.jokerColor = card.jokerColor;
+        if (card.isRedJoker === true) cloned.isRedJoker = true;
+        if (card.isBlackJoker === true) cloned.isBlackJoker = true;
         return cloned;
     }
 
@@ -146,6 +150,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
             contracts: cloneContracts(state.contracts),
             removedPassengers: state.removedPassengers,
             stockPass: state.stockPass,
+            jokerBonusPasses: state.jokerBonusPasses,
             stockEmptyCount: state.stockEmptyCount,
             mustPlaceWaste: state.mustPlaceWaste,
             rushHourActive: state.rushHourActive,
@@ -182,13 +187,14 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         state.contracts = cloneContracts(Array.isArray(entry.contracts) ? entry.contracts : createContractsMeta());
         state.removedPassengers = Number.isFinite(entry.removedPassengers) ? Math.max(0, entry.removedPassengers) : 0;
         state.stockPass = Number.isFinite(entry.stockPass) ? Math.max(1, entry.stockPass) : 1;
+        state.jokerBonusPasses = Number.isFinite(entry.jokerBonusPasses) ? Math.max(0, entry.jokerBonusPasses) : 0;
         state.stockEmptyCount = Number.isFinite(entry.stockEmptyCount) ? Math.max(0, entry.stockEmptyCount) : 0;
         state.mustPlaceWaste = entry.mustPlaceWaste === true;
         state.rushHourActive = entry.rushHourActive === true;
         state.moves = Number.isFinite(entry.moves) ? Math.max(0, entry.moves) : 0;
         state.score = Number.isFinite(entry.score) ? Math.max(0, entry.score) : 0;
         state.isGameWon = entry.isGameWon === true;
-        state.isGameLost = entry.isGameLost === true;
+        state.isGameLost = false;
         state.resultMessage = typeof entry.resultMessage === 'string' ? entry.resultMessage : '';
         state.selected = null;
     }
@@ -214,6 +220,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
             contracts: state.contracts,
             removedPassengers: state.removedPassengers,
             stockPass: state.stockPass,
+            jokerBonusPasses: state.jokerBonusPasses,
             stockEmptyCount: state.stockEmptyCount,
             mustPlaceWaste: state.mustPlaceWaste,
             rushHourActive: state.rushHourActive,
@@ -291,13 +298,14 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         state.backseatQueue = Array.isArray(saved.backseatQueue) ? hydrate(saved.backseatQueue) : [];
         state.removedPassengers = Number.isFinite(saved.removedPassengers) ? Math.max(0, saved.removedPassengers) : 0;
         state.stockPass = Number.isFinite(saved.stockPass) ? Math.max(1, saved.stockPass) : 1;
+        state.jokerBonusPasses = Number.isFinite(saved.jokerBonusPasses) ? Math.max(0, saved.jokerBonusPasses) : 0;
         state.stockEmptyCount = Number.isFinite(saved.stockEmptyCount) ? Math.max(0, saved.stockEmptyCount) : 0;
         state.mustPlaceWaste = saved.mustPlaceWaste === true;
         state.rushHourActive = saved.rushHourActive === true;
         state.moves = Number.isFinite(saved.moves) ? Math.max(0, saved.moves) : 0;
         state.score = Number.isFinite(saved.score) ? Math.max(0, saved.score) : 0;
         state.isGameWon = saved.isGameWon === true;
-        state.isGameLost = saved.isGameLost === true;
+        state.isGameLost = false;
         state.resultMessage = typeof saved.resultMessage === 'string' ? saved.resultMessage : '';
         state.moveHistory = [];
         state.selected = null;
@@ -329,6 +337,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         state.contracts = createContractsMeta();
         state.removedPassengers = 0;
         state.stockPass = 1;
+        state.jokerBonusPasses = 0;
         state.stockEmptyCount = 0;
         state.mustPlaceWaste = false;
         state.rushHourActive = false;
@@ -349,9 +358,13 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         }
     }
 
-    function createJoker() {
+    function createJoker(color = 'black') {
+        const normalizedColor = String(color || 'black').toLowerCase() === 'red' ? 'red' : 'black';
         const card = new Card('🃏', 'JK');
         card.isJoker = true;
+        card.jokerColor = normalizedColor;
+        card.isRedJoker = normalizedColor === 'red';
+        card.isBlackJoker = normalizedColor !== 'red';
         card.hidden = false;
         return card;
     }
@@ -365,7 +378,10 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         if (state.settings.jokersEnabled) {
             const count = Math.max(1, Math.min(8, state.settings.jokerCount));
             for (let i = 0; i < count; i += 1) {
-                deck.push(createJoker());
+                const jokerColor = count === 2
+                    ? (i === 0 ? 'red' : 'black')
+                    : (i % 2 === 0 ? 'black' : 'red');
+                deck.push(createJoker(jokerColor));
             }
             shuffleDeckInPlace(deck);
         }
@@ -522,7 +538,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         if (state.settings.jokerPassMode === 'parked-unlimited' && state.stands.some((card) => card && isJoker(card))) {
             return Number.POSITIVE_INFINITY;
         }
-        return baseline;
+        return baseline + state.jokerBonusPasses;
     }
 
     function consumeJokerPassBonusIfNeeded() {
@@ -533,6 +549,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
             if (card && isJoker(card)) {
                 state.stands[i] = null;
                 state.removedPassengers += 1;
+                state.jokerBonusPasses += 1;
                 CommonUtils.showTableToast('Parked Joker consumed for +1 pass.', { variant: 'warn', duration: 1800 });
                 return true;
             }
@@ -574,26 +591,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
     }
 
     function checkForLoss() {
-        if (state.isGameWon || state.isGameLost) return;
-        if (state.stockEmptyCount >= 2) {
-            state.isGameLost = true;
-            state.resultMessage = 'You lost: the stock emptied twice.';
-        }
-
-        if (!state.isGameLost && !hasAnyLegalMove() && getPassengersWaitingCount() > 0) {
-            state.isGameLost = true;
-            state.resultMessage = 'You lost: no legal moves remain with passengers waiting.';
-        }
-
-        if (!state.isGameLost) return;
-        if (state.timerInterval) {
-            clearInterval(state.timerInterval);
-            state.timerInterval = null;
-        }
-        if (stateManager) stateManager.markDirty();
-        window.setTimeout(() => {
-            showInfoDialog('Game Over', state.resultMessage);
-        }, 30);
+        // Rush Hour Patience has no forced loss condition.
     }
 
     function getPassengersWaitingCount() {
@@ -717,16 +715,10 @@ You win by completing all eight contracts. You lose if the stock empties twice (
             const passLimit = getDrawPassLimit();
             if (state.stockPass >= passLimit && passLimit !== Number.POSITIVE_INFINITY) {
                 if (!consumeJokerPassBonusIfNeeded()) {
+                    CommonUtils.showTableToast('No stock passes left. Park a Joker in a stand for +1 pass.', { variant: 'warn', duration: 2000 });
                     updateUI();
                     return;
                 }
-            }
-            state.stockEmptyCount += 1;
-            if (state.stockEmptyCount >= 2) {
-                checkForLoss();
-                updateUI();
-                if (stateManager) stateManager.markDirty();
-                return;
             }
             recycleWasteIntoStock();
             updateUI();
@@ -827,19 +819,6 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         event.preventDefault();
         if (state.isGameWon || state.isGameLost) return;
         if (!state.waste.length) {
-            if (state.selected && state.selected.source === 'tableau') {
-                if (state.mustPlaceWaste && state.waste.length > 0) {
-                    CommonUtils.showTableToast('Place the locked queue passenger first.', { variant: 'warn', duration: 1800 });
-                    return;
-                }
-                pushHistoryEntry();
-                const moved = removeSelectedSourceCard();
-                if (!moved) return;
-                moved.hidden = false;
-                state.waste.push(moved);
-                commitMove({ placedWasteCard: false });
-                return;
-            }
             clearSelection();
             updateUI();
             return;
@@ -854,16 +833,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
         }
 
         if (state.selected && state.selected.source === 'tableau') {
-            if (state.mustPlaceWaste && state.waste.length > 0) {
-                CommonUtils.showTableToast('Place the locked queue passenger first.', { variant: 'warn', duration: 1800 });
-                return;
-            }
-            pushHistoryEntry();
-            const moved = removeSelectedSourceCard();
-            if (!moved) return;
-            moved.hidden = false;
-            state.waste.push(moved);
-            commitMove({ placedWasteCard: false });
+            selectWasteTop();
             return;
         }
 
@@ -1062,10 +1032,7 @@ You win by completing all eight contracts. You lose if the stock empties twice (
     }
 
     function canDragDropToWaste() {
-        if (!selectFromDragSource()) return false;
-        if (!(state.selected && state.selected.source === 'tableau')) return false;
-        if (state.mustPlaceWaste && state.waste.length > 0) return false;
-        return true;
+        return false;
     }
 
     function undoMove() {
@@ -1081,6 +1048,13 @@ You win by completing all eight contracts. You lose if the stock empties twice (
 
     function getContractLabel(contract) {
         return `${contract.suit}`;
+    }
+
+    function getContractPlaceholderRanks(contract) {
+        if (!contract || contract.type === 'short') {
+            return { top: '7', bottom: 'A' };
+        }
+        return { top: 'A', bottom: '8' };
     }
 
     function renderStock() {
@@ -1267,8 +1241,25 @@ You win by completing all eight contracts. You lose if the stock empties twice (
 
             if (!contract.cards.length) {
                 const placeholder = document.createElement('div');
-                placeholder.className = 'rush-pile-placeholder';
-                placeholder.textContent = getContractLabel(contract);
+                placeholder.className = 'rush-foundation-placeholder';
+                const ranks = getContractPlaceholderRanks(contract);
+
+                const topRank = document.createElement('span');
+                topRank.className = 'rush-foundation-rank rush-foundation-rank-top';
+                topRank.textContent = ranks.top;
+
+                const suitGlyph = document.createElement('span');
+                suitGlyph.className = 'rush-foundation-suit';
+                suitGlyph.textContent = getContractLabel(contract);
+                if (contract.suit === '♥' || contract.suit === '♦') {
+                    suitGlyph.classList.add('is-red');
+                }
+
+                const bottomRank = document.createElement('span');
+                bottomRank.className = 'rush-foundation-rank rush-foundation-rank-bottom';
+                bottomRank.textContent = ranks.bottom;
+
+                placeholder.append(topRank, suitGlyph, bottomRank);
                 pileEl.appendChild(placeholder);
             } else {
                 const top = contract.cards[contract.cards.length - 1];
@@ -1411,18 +1402,37 @@ You win by completing all eight contracts. You lose if the stock empties twice (
     function ensureRushSizing() {
         const tableEl = document.getElementById('table');
         if (!tableEl) return;
+        const wrapperEl = document.getElementById('rush-scroll');
+        const laneRowEl = document.getElementById('rush-lane-row');
 
         const cardMetrics = CommonUtils.getCardMetrics();
         const baseGap = Math.max(4, Math.round(10 * Math.min(cardMetrics.scale, 1)));
         const fan = Math.max(4, Math.round(14 * Math.min(cardMetrics.scale, 1)));
+        const trackWidth = Math.max(0, Math.round(cardMetrics.cardWidth + fan));
 
         tableEl.style.setProperty('--rush-tableau-gap', `${baseGap}px`);
         tableEl.style.setProperty('--rush-fan-x', `${fan}px`);
+        tableEl.style.setProperty('--rush-track-width', `${trackWidth}px`);
+
+        // The dedicated empty lane between backseat and tableau is the only horizontal
+        // track we compress. This keeps the grid locked while preserving card sizing.
+        let laneSpacer = trackWidth;
+        tableEl.style.setProperty('--rush-lane-spacer', `${laneSpacer}px`);
+        if (wrapperEl && laneRowEl) {
+            const wrapperWidth = wrapperEl.getBoundingClientRect().width || 0;
+            if (wrapperWidth > 0) {
+                const laneOverflow = Math.max(0, laneRowEl.scrollWidth - wrapperWidth);
+                if (laneOverflow > 0) {
+                    laneSpacer = Math.max(0, Math.round(trackWidth - laneOverflow));
+                    tableEl.style.setProperty('--rush-lane-spacer', `${laneSpacer}px`);
+                }
+            }
+        }
 
         CommonUtils.ensureScrollableWidth({
             table: 'table',
             wrapper: 'rush-scroll',
-            contentSelectors: ['#rush-top-row', '#rush-lane-row', '#rush-tableau'],
+            contentSelectors: ['#rush-top-row', '#rush-lane-row'],
             enterTolerance: 6,
             exitTolerance: 3
         });
