@@ -101,18 +101,18 @@
     function bindEvents() {
         elements.levelSelect.addEventListener("change", (event) => {
             state.level = clampLevel(parseInt(event.target.value, 10));
-            state.autoLevel = false;
-            elements.autoLevel.checked = false;
+            // User manually selected a level - we allow this even if auto-level is on.
+            // If they want to "maintain" this level, they should uncheck auto-level manually.
+            // But typically, auto-level means "adjust from here", so we don't disable it.
+            // Regression fix: previously distinct control.
             saveProgress();
             nextChallenge();
         });
 
         elements.autoLevel.addEventListener("change", (event) => {
             state.autoLevel = event.target.checked;
-            if (state.autoLevel) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
-            }
+            // Regression fix: Toggling auto-level should not reset difficulty to 1.
+            // It just enables the logic for the *next* success/fail.
             saveProgress();
             nextChallenge();
         });
@@ -151,7 +151,9 @@
         state.autoLevel = saved.autoLevel !== false;
         state.recentAnswers = Array.isArray(saved.recentAnswers) ? saved.recentAnswers : [];
 
-        if (state.autoLevel) {
+        // Regression fix: Do not force level 1 on load if auto-level is on.
+        // We trust the saved level or default to 1 only if missing.
+        if (state.autoLevel && !saved) {
             state.level = 1;
         }
 
@@ -1002,6 +1004,46 @@
         };
 
         backdrop.addEventListener("click", dismiss);
+
+        // --- 3. Dynamic Layout Adjustment ---
+        // Final polish: calculate if cards protrude and adjust padding/gap to prevent overlap.
+        // We do this after adding to body so getBoundingClientRect() is valid.
+        adjustSolutionLayout(overlay);
+    }
+
+    function adjustSolutionLayout(overlay) {
+        const sides = overlay.querySelectorAll(".edu-solution-side");
+        let maxProtrusion = 0;
+
+        sides.forEach(side => {
+            const sideRect = side.getBoundingClientRect();
+            const cards = side.querySelectorAll(".card");
+
+            cards.forEach(card => {
+                const cardRect = card.getBoundingClientRect();
+                // Protrusion is how much the card sticks out ABOVE the side's top margin/boundary.
+                // We use sideRect.top to find the container's visual start.
+                const protrusion = sideRect.top - cardRect.top;
+                if (protrusion > maxProtrusion) {
+                    maxProtrusion = protrusion;
+                }
+            });
+        });
+
+        if (maxProtrusion > 0) {
+            // Apply padding to containers and increased row-gap to parents to push rows apart.
+            const fans = overlay.querySelector(".edu-solution-fans");
+            if (fans) {
+                // Buffer plus the protrusion
+                const buffer = 12;
+                fans.style.rowGap = `${24 + maxProtrusion}px`;
+                sides.forEach(side => {
+                    side.style.paddingTop = `${buffer + maxProtrusion}px`;
+                    // Ensure the side is tall enough to prevent RHS cards from hitting LHS bottom
+                    side.style.minHeight = "120px";
+                });
+            }
+        }
     }
 
     function recordAnswer(isCorrect) {
