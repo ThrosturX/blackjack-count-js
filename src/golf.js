@@ -5,7 +5,7 @@
     const TABLEAU_STACK_X = 2.5;
     const MAX_HISTORY = 240;
 
-    const GOLF_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♦', '♣', '♠'];
+    const GOLF_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♠', '♦', '♣'];
     const GOLF_VALUES = (typeof VALUES !== 'undefined') ? VALUES : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     const GolfRules = (window.GolfLogic || null);
 

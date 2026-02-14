@@ -154,14 +154,16 @@
         const allowExtras = themesCssLoaded() || addonsLoaded;
         const tableSelect = document.getElementById('table-style-select');
         const deckSelect = document.getElementById('deck-style-select');
+        const tablePreferred = tableSelect?.dataset.themeForce || storedSettings.table;
+        const deckPreferred = deckSelect?.dataset.themeForce || storedSettings.deck;
         populateSelect(tableSelect, {
             core: catalog.core.table,
             extras: catalog.extras.table
-        }, 'felt', allowExtras, storedSettings.table);
+        }, 'felt', allowExtras, tablePreferred);
         populateSelect(deckSelect, {
             core: catalog.core.deck,
             extras: catalog.extras.deck
-        }, 'red', allowExtras, storedSettings.deck);
+        }, 'red', allowExtras, deckPreferred);
 
     };
 
@@ -181,16 +183,18 @@
         });
     };
 
+    const shouldPersistThemeSelect = (select) => select && select.dataset.themePersist !== 'false';
+
     const bindSelectPersistence = () => {
         const tableSelect = document.getElementById('table-style-select');
         const deckSelect = document.getElementById('deck-style-select');
-        if (tableSelect && tableSelect.dataset.persistBound !== 'true') {
+        if (tableSelect && tableSelect.dataset.persistBound !== 'true' && shouldPersistThemeSelect(tableSelect)) {
             tableSelect.addEventListener('change', () => {
                 persistSettings({ table: tableSelect.value });
             });
             tableSelect.dataset.persistBound = 'true';
         }
-        if (deckSelect && deckSelect.dataset.persistBound !== 'true') {
+        if (deckSelect && deckSelect.dataset.persistBound !== 'true' && shouldPersistThemeSelect(deckSelect)) {
             deckSelect.addEventListener('change', () => {
                 persistSettings({ deck: deckSelect.value });
             });

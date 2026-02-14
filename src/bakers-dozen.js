@@ -1,8 +1,8 @@
-const BAKERS_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♦', '♣', '♠'];
+const BAKERS_SUITS = (typeof SUITS !== 'undefined') ? SUITS : ['♥', '♠', '♦', '♣'];
 const BAKERS_VALUES = (typeof VALUES !== 'undefined') ? VALUES : ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
 const BAKERS_COLUMNS = 13;
-const FOUNDATION_SUITS = ['♥', '♦', '♣', '♠'];
+const FOUNDATION_SUITS = ['♥', '♠', '♦', '♣'];
 const BAKERS_MIN_TABLEAU_CARDS = 4;
 const STACKED_OFFSET = 16;
 const HISTORY_LIMIT = 320;
@@ -240,6 +240,28 @@ function reviveBakerCard(card) {
     return card;
 }
 
+function normalizeSavedFoundations(savedFoundations) {
+    const normalized = FOUNDATION_SUITS.map(() => []);
+    if (!Array.isArray(savedFoundations)) return normalized;
+
+    savedFoundations.forEach((pile, pileIndex) => {
+        if (!Array.isArray(pile)) return;
+        pile.forEach((card) => {
+            const revived = reviveBakerCard(card);
+            if (!revived) return;
+            const suitIndex = FOUNDATION_SUITS.indexOf(revived.suit);
+            if (suitIndex >= 0) {
+                normalized[suitIndex].push(revived);
+                return;
+            }
+            const fallbackIndex = Math.max(0, Math.min(normalized.length - 1, pileIndex));
+            normalized[fallbackIndex].push(revived);
+        });
+    });
+
+    return normalized;
+}
+
 function restoreBakersState(saved) {
     if (!saved || typeof saved !== 'object') return;
     bakerState.tableau = Array.isArray(saved.tableau)
@@ -250,9 +272,7 @@ function restoreBakersState(saved) {
     while (bakerState.tableau.length < BAKERS_COLUMNS) {
         bakerState.tableau.push([]);
     }
-    bakerState.foundations = Array.isArray(saved.foundations) && saved.foundations.length === FOUNDATION_SUITS.length
-        ? saved.foundations.map(pile => (Array.isArray(pile) ? pile.map(card => reviveBakerCard(card)) : []))
-        : FOUNDATION_SUITS.map(() => []);
+    bakerState.foundations = normalizeSavedFoundations(saved.foundations);
     bakerState.score = Number.isFinite(saved.score) ? saved.score : 0;
     bakerState.moves = Number.isFinite(saved.moves) ? saved.moves : 0;
     bakerState.moveHistory = Array.isArray(saved.moveHistory)

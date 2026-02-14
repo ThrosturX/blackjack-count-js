@@ -48,7 +48,8 @@ body[class*="deck-"] .card.hidden::after {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
+    z-index: 1;
+     background:
         radial-gradient(circle at var(--wear-scuff-x, 28%) var(--wear-scuff-y, 30%), rgba(255, 255, 255, 0.08) 0%, transparent 48%),
         radial-gradient(circle at var(--wear-scuff2-x, 72%) var(--wear-scuff2-y, 68%), rgba(40, 30, 20, 0.22) 0%, transparent 55%),
         linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, transparent 42%),
@@ -57,7 +58,7 @@ body[class*="deck-"] .card.hidden::after {
     opacity: calc(var(--wear-layer-opacity, 1) * 0.65);
 }
 
-body[class*="deck-"]:not(.deck-red):not(.deck-blue):not(.deck-green):not(.deck-water):not(.deck-sun) .card:not(.hidden) {
+body[class*="deck-"]:not(.deck-red):not(.deck-blue):not(.deck-green):not(.deck-water):not(.deck-sun):not(.deck-bsr-taxi) .card:not(.hidden) {
     filter: sepia(0.35) saturate(0.8) brightness(0.92) contrast(0.9);
     box-shadow: inset 0 0 12px rgba(50, 35, 20, 0.5), 0 0 6px rgba(0, 0, 0, 0.25);
 }

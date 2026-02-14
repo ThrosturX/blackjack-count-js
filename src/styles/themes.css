@@ -125,8 +125,8 @@ body.deck-bsr-taxi .card-back {
     position: relative;
 }
 
-body.deck-bsr-taxi .card.hidden::after,
-body.deck-bsr-taxi .card-back::after {
+body.deck-bsr-taxi .card.hidden::before,
+body.deck-bsr-taxi .card-back::before {
     content: '';
     position: absolute;
     inset: 0%;
@@ -136,6 +136,7 @@ body.deck-bsr-taxi .card-back::after {
     background-size: 120%;
     opacity: 0.9;
     pointer-events: none;
+    z-index: 2;
 }
 
 body.deck-bsr-taxi .card:not(.hidden) {
@@ -172,6 +173,5 @@ body.deck-bsr-taxi .card.joker:not(.hidden) .joker-face-art {
 
 body.deck-bsr-taxi .card.joker:not(.hidden) .val-top .val-rank,
 body.deck-bsr-taxi .card.joker:not(.hidden) .val-bot .val-rank {
-    color: #c9a227;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }

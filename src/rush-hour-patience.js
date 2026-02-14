@@ -5,12 +5,12 @@
     const TABLEAU_STACK_Y = 26;
     const TABLEAU_STACK_Y_MIN_FACTOR = 0.35;
     const MAX_HISTORY = 220;
-    const SUIT_ORDER = ['♥', '♦', '♣', '♠'];
+    const SUIT_ORDER = ['♥', '♠', '♦', '♣'];
     const BASE_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const KNIGHT_VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'C', 'Q', 'K'];
 
     const HELP_TEXT = `You are a taxi driver completing fares across four city districts represented by the four card suits. Your goal is to finish all eight fare contracts—two per district—by delivering passengers in street-number order from Ace upward. The game uses a standard deck, optionally expanded with four Knight cards (one per suit) that rank between Jack and Queen.
-Seven tableau columns represent city streets. Only the bottom face-up card in each column can be picked up. Build these columns downward in alternating colors to free up passengers beneath. When a street card moves to the queue or to a fare contract, the card beneath flips face-up as a new passenger steps to the curb. The stock pile is your queue of waiting passengers. You may draw from it up to three times total. After the third draw, the top passenger must be placed immediately onto a street or into a completed fare—they will leave if ignored again.
+Seven tableau columns represent city streets. Only the bottom face-up card in each column can be picked up. Build these columns downward in alternating colors to free up passengers beneath. When a street card moves to a fare contract, the card beneath flips face-up as a new passenger steps to the curb. The stock pile is your queue of waiting passengers. You may draw from it up to three times total. After the third draw, the top passenger must be placed immediately onto a street or into a completed fare—they will leave if ignored again.
 Fare contracts are the foundation piles. Start the first contract in each district with an Ace or Two for short local trips. Start the second contract with an Eight for long cross-town rides. Build each contract upward in the same suit until complete.
 When any contract reaches the Seven card, rush hour begins. Now each stock draw pulls three passengers at once. You must place the topmost immediately; the other two wait in your backseat and block further draws until you complete a contract, which clears the backseat.
 Optional taxi stands (one or two empty spots) let you temporarily park a single passenger to untangle difficult sequences. Too many stands remove tension—limit to two maximum.
@@ -469,17 +469,17 @@ You get three full passes through the stock for free. If you run out of passes b
     function canMoveToContract(card, contractIndex) {
         const contract = state.contracts[contractIndex];
         if (!card || !contract) return false;
+        if (isJoker(card)) return false;
 
         const pile = contract.cards;
         const top = pile[pile.length - 1];
 
         if (!top) {
-            if (isJoker(card)) return true;
             if (card.suit !== contract.suit) return false;
             return getContractStartValues(contract.type).includes(card.val);
         }
 
-        if (isJoker(card) || isJoker(top)) {
+        if (isJoker(top)) {
             return true;
         }
 
@@ -894,6 +894,10 @@ You get three full passes through the stock for free. If you run out of passes b
         if (!selectedCard) return;
 
         if (!canMoveToTableau(selectedCard, columnIndex)) {
+            if (state.selected.source === 'waste') {
+                CommonUtils.showTableToast('Queue card cannot go there.', { variant: 'warn', duration: 1600 });
+                return;
+            }
             selectTableauTop(columnIndex);
             return;
         }
@@ -910,7 +914,12 @@ You get three full passes through the stock for free. If you run out of passes b
         if (!state.selected || state.isGameWon || state.isGameLost) return;
         const selectedCard = getSelectedCard();
         if (!selectedCard) return;
-        if (!canMoveToTableau(selectedCard, columnIndex)) return;
+        if (!canMoveToTableau(selectedCard, columnIndex)) {
+            if (state.selected.source === 'waste') {
+                CommonUtils.showTableToast('Queue card cannot go there.', { variant: 'warn', duration: 1600 });
+            }
+            return;
+        }
 
         pushHistoryEntry();
         const placedWasteCard = state.selected.source === 'waste';
@@ -1052,7 +1061,7 @@ You get three full passes through the stock for free. If you run out of passes b
 
     function getContractPlaceholderRanks(contract) {
         if (!contract || contract.type === 'short') {
-            return { top: '7', bottom: 'A' };
+            return { top: '7', bottom: 'A/2' };
         }
         return { top: 'A', bottom: '8' };
     }
