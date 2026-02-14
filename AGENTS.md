@@ -14,6 +14,9 @@
 - Golf Solitaire
 - Baker's Dozen Solitaire
 - Table Top Sandbox
+- Learn the Cards (educational)
+- Memory Match (educational)
+- Math Challenges (educational)
 - And potentially other card games.
 
 ## Product Direction
@@ -44,6 +47,7 @@
 - `src/shared/solitaire-check-worker.js`: worker-backed solitaire check runner used by both FreeCell and Klondike check flows.
 - `src/shared/entitlements.js`: shared local entitlement storage with claim ownership/source metadata and future authoritative sync hooks.
 - `src/shared/entitlement-sync.js`: lifecycle-aware authoritative entitlement sync bridge (native bridge first, debug mock fallback).
+- `src/shared/educational.js`: shared educational utilities for learning games - difficulty management, progress tracking, card utilities for educational games.
 - `src/addons/manifest.js` and `src/addons.js`: add-on catalog and registration.
 - `src/app-profile.js`: build-selected app profile (`suite`, `casino`, `solitaire`) used by launcher/store filtering and split packaging workflows.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared style layers (base, layout, mobile overrides loaded last).

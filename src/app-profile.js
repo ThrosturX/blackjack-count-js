@@ -3,7 +3,7 @@
     id: "solitaire",
     displayName: "Virtue Solitaire Collection",
     tagline: "Focused solitaire lineup with classic variants, plus an experimental sandbox.",
-    launcherGroups: ["solitaire", "sandbox"],
+    launcherGroups: ["solitaire", "sandbox", "educational"],
     storeGameFilter: ["klondike", "freecell", "spider", "pyramid", "tabletop"],
     storeEnabled: true
   });

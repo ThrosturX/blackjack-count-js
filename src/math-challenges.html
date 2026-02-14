@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+    <title>Math Challenges - Card Playing Suite</title>
+    <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/card.css">
+    <style>
+        :root {
+            --edu-card-width: 90px;
+            --edu-card-height: 126px;
+            --edu-gap: 12px;
+            --edu-success: #4caf50;
+            --edu-error: #f44336;
+            --edu-primary: #2196f3;
+            --edu-bg: #1a1a2e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--edu-bg);
+            color: white;
+            margin: 0;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .edu-header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .edu-title {
+            font-size: 1.1rem;
+            color: var(--gold);
+            margin: 0;
+        }
+
+        .edu-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.9rem;
+        }
+
+        .edu-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .edu-stat-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .edu-stat-value {
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        .edu-game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+            overflow: auto;
+        }
+
+        .edu-controls {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edu-control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .edu-control-group label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .edu-control-group select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .edu-question {
+            font-size: 1.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.95);
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            min-width: 280px;
+        }
+
+        .edu-cards-row {
+            display: flex;
+            gap: var(--edu-gap);
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edu-card-slot {
+            width: var(--edu-card-width);
+            height: var(--edu-card-height);
+            border: 3px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .edu-card-slot:active {
+            transform: scale(0.95);
+        }
+
+        .edu-card-slot.selected {
+            border-color: var(--edu-primary);
+            background: rgba(33, 150, 243, 0.2);
+        }
+
+        .edu-card-slot .card {
+            transform: scale(0.75);
+        }
+
+        .edu-operator {
+            font-size: 2rem;
+            color: var(--gold);
+            font-weight: bold;
+            padding: 0 8px;
+        }
+
+        .edu-equals {
+            font-size: 2rem;
+            color: var(--gold);
+            font-weight: bold;
+            padding: 0 16px;
+        }
+
+        .edu-answer-slot {
+            width: 80px;
+            height: 60px;
+            border: 3px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .edu-answer-slot.filled {
+            border-style: solid;
+            border-color: var(--edu-primary);
+            background: rgba(33, 150, 243, 0.1);
+        }
+
+        .edu-answer-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .edu-num-btn {
+            width: 56px;
+            height: 56px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: var(--edu-primary);
+            color: white;
+            font-size: 1.4rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .edu-num-btn:active {
+            transform: scale(0.95);
+        }
+
+        .edu-num-btn.correct {
+            background: var(--edu-success);
+            animation: pulse 0.4s ease;
+        }
+
+        .edu-num-btn.incorrect {
+            background: var(--edu-error);
+            animation: shake 0.4s ease;
+        }
+
+        .edu-action-btn {
+            padding: 12px 24px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .edu-action-btn.submit {
+            background: var(--edu-success);
+            color: white;
+        }
+
+        .edu-action-btn.clear {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .edu-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .edu-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 24px 48px;
+            border-radius: 16px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 1000;
+            animation: fadeInOut 1s ease forwards;
+        }
+
+        .edu-feedback.correct {
+            background: var(--edu-success);
+            color: white;
+        }
+
+        .edu-feedback.incorrect {
+            background: var(--edu-error);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        @media (max-width: 500px) {
+            :root {
+                --edu-card-width: 70px;
+                --edu-card-height: 98px;
+            }
+
+            .edu-question {
+                font-size: 1.2rem;
+                min-width: auto;
+                padding: 12px 16px;
+            }
+
+            .edu-num-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="edu-header">
+        <h1 class="edu-title">Math Challenges</h1>
+        <div class="edu-stats">
+            <div class="edu-stat">
+                <span class="edu-stat-label">Score:</span>
+                <span class="edu-stat-value" id="score">0</span>
+            </div>
+            <div class="edu-stat">
+                <span class="edu-stat-label">Streak:</span>
+                <span class="edu-stat-value" id="streak">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="edu-game-area">
+        <div class="edu-controls">
+            <div class="edu-control-group">
+                <label for="difficulty">Level:</label>
+                <select id="difficulty">
+                    <option value="1">Trivial</option>
+                    <option value="2">Easy</option>
+                    <option value="3" selected>Medium</option>
+                    <option value="4">Hard</option>
+                    <option value="5">Expert</option>
+                </select>
+            </div>
+            <div class="edu-control-group">
+                <label>
+                    <input type="checkbox" id="auto-difficulty" checked> Auto
+                </label>
+            </div>
+            <button class="edu-action-btn clear" id="new-game-btn">New Challenge</button>
+        </div>
+
+        <div class="edu-question" id="question">What is 5 + 3?</div>
+
+        <div class="edu-cards-row" id="cards-row">
+            <!-- Cards will be inserted here -->
+        </div>
+
+        <div class="edu-answer-row">
+            <button class="edu-num-btn" data-num="0">0</button>
+            <button class="edu-num-btn" data-num="1">1</button>
+            <button class="edu-num-btn" data-num="2">2</button>
+            <button class="edu-num-btn" data-num="3">3</button>
+            <button class="edu-num-btn" data-num="4">4</button>
+            <button class="edu-num-btn" data-num="5">5</button>
+            <button class="edu-num-btn" data-num="6">6</button>
+            <button class="edu-num-btn" data-num="7">7</button>
+            <button class="edu-num-btn" data-num="8">8</button>
+            <button class="edu-num-btn" data-num="9">9</button>
+            <button class="edu-num-btn" data-num="-">-</button>
+            <button class="edu-action-btn submit" id="submit-btn" disabled>Check</button>
+            <button class="edu-action-btn clear" id="clear-btn">Clear</button>
+        </div>
+    </main>
+
+    <script src="card.js"></script>
+    <script src="common.js"></script>
+    <script src="shared/educational.js"></script>
+    <script src="math-challenges.js"></script>
+</body>
+
+</html>
