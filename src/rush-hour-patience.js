@@ -1738,6 +1738,19 @@ You get three full passes through the stock for free. If you run out of passes b
         window.addEventListener('addons:changed', syncThemeClasses);
     }
 
+    // Register BSR Taxi deck style specifically for Rush Hour Patience
+    (() => {
+        if (window.AssetRegistry && typeof window.AssetRegistry.registerThemePack === 'function') {
+            window.AssetRegistry.registerThemePack({
+                id: 'bsr-taxi-rush-hour',
+                group: 'core',
+                deck: [
+                    ['BSR Taxi', 'bsr-taxi']
+                ]
+            });
+        }
+    })();
+
     document.addEventListener('DOMContentLoaded', () => {
         CommonUtils.preloadAudio(sounds);
         setupEventListeners();

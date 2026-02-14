@@ -101,3 +101,77 @@ body.deck-sun .card.red {
 body.deck-sun .card.black {
     color: rgba(65, 50, 40, 0.9);
 }
+
+/* BSR Taxi - Elegant luxury taxi company theme */
+body.deck-bsr-taxi {
+    --card-back-color: #f5f0e6;
+    --card-back-pattern-color: #ebe4d4;
+    --card-back-accent: #c9a227;
+    --card-edge-color: #d4c9b5;
+    --card-back-bg:
+        linear-gradient(135deg, #f5f0e6 0%, #ebe4d4 50%, #ddd4c0 100%);
+    --card-back-bg-size: 100% 100%;
+    --card-back-bg-position: 50% 50%;
+}
+
+body.deck-bsr-taxi .card.hidden,
+body.deck-bsr-taxi .card-back {
+    border: 2px solid var(--card-back-accent);
+    box-shadow:
+        inset 0 0 0 3px rgba(201, 162, 39, 0.3),
+        0 0 6px rgba(0, 0, 0, 0.3);
+    background-position: var(--card-back-bg-position, 50% 50%);
+    background-repeat: no-repeat;
+    position: relative;
+}
+
+body.deck-bsr-taxi .card.hidden::after,
+body.deck-bsr-taxi .card-back::after {
+    content: '';
+    position: absolute;
+    inset: 0%;
+    background-image: url("../images/BSR-transparent.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 120%;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+body.deck-bsr-taxi .card:not(.hidden) {
+    background:
+        linear-gradient(135deg, #f5f0e6 0%, #ebe4d4 30%, #ddd4c0 55%, #d4c9b5 100%);
+    border: 1px solid #b8a88a;
+    box-shadow:
+        inset 0 0 15px rgba(90, 70, 45, 0.15),
+        2px 2px 5px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+
+body.deck-bsr-taxi .card:not(.hidden)::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(201, 162, 39, 0.2);
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+body.deck-bsr-taxi .card.red {
+    color: #8b1a1a;
+}
+
+body.deck-bsr-taxi .card.black {
+    color: #1a1a1a;
+}
+
+/* Joker styling for BSR Taxi - uses the BSR logo */
+body.deck-bsr-taxi .card.joker:not(.hidden) .joker-face-art {
+    background-image: url("../images/BSR-transparent.svg");
+}
+
+body.deck-bsr-taxi .card.joker:not(.hidden) .val-top .val-rank,
+body.deck-bsr-taxi .card.joker:not(.hidden) .val-bot .val-rank {
+    color: #c9a227;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
