@@ -30,6 +30,38 @@
 
     let storedSettings = loadSettings();
     let isResetting = false;
+    const appProfile = (window.AppProfile && typeof window.AppProfile === 'object') ? window.AppProfile : {};
+
+    const parseCsvDataset = (value) => {
+        if (!value || typeof value !== 'string') return null;
+        const items = value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
+        return items.length ? new Set(items) : null;
+    };
+
+    const getAddonToggleAllowlist = () => {
+        const bodyAllow = parseCsvDataset(document.body?.dataset?.addonToggleAllowlist);
+        if (bodyAllow) return bodyAllow;
+        if (Array.isArray(appProfile.addonToggleAllowlist) && appProfile.addonToggleAllowlist.length) {
+            return new Set(appProfile.addonToggleAllowlist.map(String));
+        }
+        return null;
+    };
+
+    const shouldShowAddonToggle = (addon) => {
+        if (!addon || !addon.id) return false;
+        if (addon.id === 'default-themes') return false;
+        const allowlist = getAddonToggleAllowlist();
+        if (!allowlist) return true;
+        return allowlist.has(addon.id);
+    };
+
+    const shouldAutoEnableHiddenAddons = () => (
+        document.body?.dataset?.autoEnableHiddenAddons === 'true'
+        || appProfile.autoEnableHiddenAddons === true
+    );
 
     const persistSettings = (updates = {}) => {
         if (isResetting) return;
@@ -56,6 +88,42 @@
         } catch (err) {
             // Ignore storage failures.
         }
+    };
+
+    const getThemeDefaults = () => {
+        const profileDefaults = appProfile.themeDefaults && typeof appProfile.themeDefaults === 'object'
+            ? appProfile.themeDefaults
+            : {};
+        return {
+            table: document.body?.dataset?.themeDefaultTable || profileDefaults.table || null,
+            deck: document.body?.dataset?.themeDefaultDeck || profileDefaults.deck || null
+        };
+    };
+
+    const applyThemeDefaultsIfNeeded = () => {
+        const defaults = getThemeDefaults();
+        const updates = {};
+        if (!storedSettings.table && defaults.table) updates.table = defaults.table;
+        if (!storedSettings.deck && defaults.deck) updates.deck = defaults.deck;
+        if (!Object.keys(updates).length) return;
+        persistSettings(updates);
+    };
+
+    const applyAddonDefaultsIfNeeded = () => {
+        if (!window.AddonLoader || !window.AddonLoader.addons || !window.AddonLoader.addons.size) return;
+        const defaults = appProfile.addonDefaults && typeof appProfile.addonDefaults === 'object'
+            ? appProfile.addonDefaults
+            : {};
+        if (document.body?.dataset?.addonDefaultClassicFaces === 'true') {
+            defaults['classic-faces'] = true;
+        }
+        Object.entries(defaults).forEach(([id, enabled]) => {
+            if (!window.AddonLoader.addons.has(id)) return;
+            if (typeof storedSettings.addons?.[id] === 'boolean') return;
+            const shouldEnable = enabled !== false;
+            window.AddonLoader.setAddonEnabled(id, shouldEnable);
+            persistSettings({ addons: { [id]: shouldEnable } });
+        });
     };
 
     const createOption = (label, value, group) => {
@@ -177,6 +245,13 @@
     const applyStoredAddonStates = () => {
         if (!window.AddonLoader || !window.AddonLoader.addons) return;
         const addons = window.AddonLoader.addons;
+        addons.forEach((addon) => {
+            if (!addon || !addon.id) return;
+            if (!shouldAutoEnableHiddenAddons()) return;
+            if (shouldShowAddonToggle(addon)) return;
+            window.AddonLoader.setAddonEnabled(addon.id, true);
+            persistSettings({ addons: { [addon.id]: true } });
+        });
         Object.entries(storedSettings.addons || {}).forEach(([id, enabled]) => {
             if (!addons.has(id)) return;
             window.AddonLoader.setAddonEnabled(id, enabled !== false);
@@ -222,7 +297,14 @@
         if (!addonsArea) return;
         const stats = addonsArea.querySelector('.stats');
         if (!stats) return;
+        const shouldShowStore = appProfile.storeEnabled !== false
+            && addonsArea.dataset.noStoreLink !== 'true'
+            && document.body?.dataset?.noStoreLink !== 'true';
         let button = stats.querySelector('.addon-store-button');
+        if (!shouldShowStore) {
+            if (button && button.parentNode) button.parentNode.removeChild(button);
+            return;
+        }
         if (!button) {
             button = document.createElement('button');
             button.type = 'button';
@@ -326,6 +408,7 @@
                 let rendered = 0;
                 window.AddonLoader.addons.forEach(addon => {
                     if (!addonSupportsCurrentGame(addon)) return;
+                    if (!shouldShowAddonToggle(addon)) return;
                     container.appendChild(createAddonToggleLabel(addon));
                     rendered += 1;
                 });
@@ -386,7 +469,9 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             whenAddonsReady().then(() => {
+                applyThemeDefaultsIfNeeded();
                 applyStoredAddonStates();
+                applyAddonDefaultsIfNeeded();
                 initThemes();
                 bindSelectPersistence();
                 initAddonToggles();
@@ -394,7 +479,9 @@
         });
     } else {
         whenAddonsReady().then(() => {
+            applyThemeDefaultsIfNeeded();
             applyStoredAddonStates();
+            applyAddonDefaultsIfNeeded();
             initThemes();
             bindSelectPersistence();
             initAddonToggles();

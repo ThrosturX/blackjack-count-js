@@ -3,325 +3,103 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-    <title>Learn the Cards - Card Playing Suite</title>
+    <title>Card Playing Suite - Learn the Cards</title>
     <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
-    <style>
-        :root {
-            --edu-card-width: 100px;
-            --edu-card-height: 140px;
-            --edu-gap: 16px;
-            --edu-success: #4caf50;
-            --edu-error: #f44336;
-            --edu-primary: #2196f3;
-            --edu-bg: #1a1a2e;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--edu-bg);
-            color: white;
-            margin: 0;
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .edu-header {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .edu-title {
-            font-size: 1.1rem;
-            color: var(--gold);
-            margin: 0;
-        }
-
-        .edu-stats {
-            display: flex;
-            gap: 16px;
-            font-size: 0.9rem;
-        }
-
-        .edu-stat {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .edu-stat-label {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .edu-stat-value {
-            font-weight: bold;
-            color: var(--gold);
-        }
-
-        .edu-game-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            gap: 24px;
-        }
-
-        .edu-question {
-            font-size: 1.4rem;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.95);
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-        }
-
-        .edu-cards-container {
-            display: flex;
-            gap: var(--edu-gap);
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
-        }
-
-        .edu-card-slot {
-            width: var(--edu-card-width);
-            height: var(--edu-card-height);
-            border: 3px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .edu-card-slot:active {
-            transform: scale(0.95);
-        }
-
-        .edu-card-slot.selected {
-            border-color: var(--edu-primary);
-            background: rgba(33, 150, 243, 0.2);
-        }
-
-        .edu-card-slot .card {
-            position: relative;
-            transform: scale(0.85);
-        }
-
-        .edu-answer-row {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .edu-answer-btn {
-            padding: 14px 28px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            background: var(--edu-primary);
-            color: white;
-            font-weight: bold;
-            transition: all 0.2s ease;
-            min-width: 120px;
-        }
-
-        .edu-answer-btn:active {
-            transform: scale(0.95);
-        }
-
-        .edu-answer-btn.correct {
-            background: var(--edu-success);
-            animation: pulse 0.4s ease;
-        }
-
-        .edu-answer-btn.incorrect {
-            background: var(--edu-error);
-            animation: shake 0.4s ease;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-        }
-
-        .edu-difficulty-select {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .edu-difficulty-select label {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .edu-difficulty-select select {
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(0, 0, 0, 0.4);
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .edu-mode-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .edu-mode-toggle label {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .edu-mode-toggle input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-        }
-
-        .edu-feedback {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 24px 48px;
-            border-radius: 16px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            z-index: 1000;
-            animation: fadeInOut 1s ease forwards;
-        }
-
-        .edu-feedback.correct {
-            background: var(--edu-success);
-            color: white;
-        }
-
-        .edu-feedback.incorrect {
-            background: var(--edu-error);
-            color: white;
-        }
-
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-        }
-
-        .edu-progress-bar {
-            width: 100%;
-            max-width: 300px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .edu-progress-fill {
-            height: 100%;
-            background: var(--edu-success);
-            transition: width 0.3s ease;
-        }
-
-        @media (max-width: 500px) {
-            :root {
-                --edu-card-width: 80px;
-                --edu-card-height: 112px;
-            }
-
-            .edu-question {
-                font-size: 1.1rem;
-                padding: 10px 16px;
-            }
-
-            .edu-answer-btn {
-                padding: 12px 20px;
-                font-size: 1rem;
-                min-width: 100px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/mobile.css">
+    <link rel="stylesheet" href="styles/educational.css">
 </head>
 
-<body>
-    <header class="edu-header">
-        <h1 class="edu-title">Learn the Cards</h1>
-        <div class="edu-stats">
-            <div class="edu-stat">
-                <span class="edu-stat-label">Score:</span>
-                <span class="edu-stat-value" id="score">0</span>
+<body class="educational-page" data-addon-toggle-allowlist="classic-faces,worn-cards,premium-effects" data-theme-default-table="ocean" data-theme-default-deck="water" data-no-store-link="true" data-auto-enable-hidden-addons="true" data-addon-default-classic-faces="true">
+    <header>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <h1>Learn the Cards</h1>
+        <div class="header-toggles">
+            <button id="toggle-game" class="btn-toggle active">Game</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="game-area">
+                <button id="learn-next" class="game-btn">Next Question</button>
             </div>
-            <div class="edu-stat">
-                <span class="edu-stat-label">Streak:</span>
-                <span class="edu-stat-value" id="streak">0</span>
+
+            <div class="controls-section collapsed" id="settings-area">
+                <div class="stats">Level:
+                    <select id="learn-level-select">
+                        <option value="1">Trivial</option>
+                        <option value="2">Easy</option>
+                        <option value="3">Medium</option>
+                        <option value="4">Hard</option>
+                        <option value="5">Expert</option>
+                    </select>
+                </div>
+                <label class="stats"><input type="checkbox" id="learn-auto-level" checked> Auto-level</label>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area" data-no-store-link="true">
+                <div class="stats">Add-on settings:
+                    <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="stats-area">
+                <div class="stats">Score: <span id="learn-score">0</span></div>
+                <div class="stats">Streak: <span id="learn-streak">0</span></div>
+                <div class="stats">Best Streak: <span id="learn-best-streak">0</span></div>
+                <div class="stats">Correct: <span id="learn-correct-rate">0%</span></div>
             </div>
         </div>
     </header>
 
-    <main class="edu-game-area">
-        <div class="edu-difficulty-select">
-            <label for="difficulty">Level:</label>
-            <select id="difficulty">
-                <option value="1">Trivial</option>
-                <option value="2">Easy</option>
-                <option value="3" selected>Medium</option>
-                <option value="4">Hard</option>
-                <option value="5">Expert</option>
-            </select>
-        </div>
+    <div class="table-scroll">
+        <main id="table" class="edu-table">
+            <section class="edu-surface edu-surface--plain">
+                <div class="edu-task-panel">
+                    <span class="edu-task-label">Exercise</span>
+                    <p id="learn-prompt" class="edu-prompt">Tap the matching answer.</p>
+                </div>
+                <div id="learn-visual-cue" class="edu-visual-cue" data-tone="blue">🎯 Match</div>
+                <div id="learn-board" class="edu-row" style="justify-content: center; margin-top: 12px;"></div>
+                <button id="learn-break-next" class="game-btn" type="button" style="display:none; margin-top: 10px;">Next Card</button>
+                <div id="learn-feedback" class="edu-feedback" aria-live="polite"></div>
+            </section>
+            <section class="edu-surface" style="margin-top: 12px;">
+                <div id="learn-choices" class="edu-choice-grid edu-choice-grid--row"></div>
+            </section>
+            <section class="edu-surface" style="margin-top: 12px;">
+                <div class="edu-subtle" id="learn-fact" aria-live="polite">Card tip: Hearts and Diamonds are red.</div>
+            </section>
+        </main>
+    </div>
 
-        <div class="edu-mode-toggle">
-            <input type="checkbox" id="auto-difficulty" checked>
-            <label for="auto-difficulty">Auto-adjust difficulty</label>
-        </div>
-
-        <div class="edu-progress-bar">
-            <div class="edu-progress-fill" id="progress-fill" style="width: 0%"></div>
-        </div>
-
-        <div class="edu-question" id="question">Which card is higher?</div>
-
-        <div class="edu-cards-container" id="cards-container">
-            <div class="edu-card-slot" id="card-slot-1" data-index="0">
-                <!-- Card will be inserted here -->
-            </div>
-            <div class="edu-card-slot" id="card-slot-2" data-index="1">
-                <!-- Card will be inserted here -->
-            </div>
-        </div>
-
-        <div class="edu-answer-row" id="answer-buttons">
-            <!-- Answer buttons will be generated based on question type -->
-        </div>
-    </main>
-
+    <script src="app-profile.js"></script>
+    <script src="assets.js"></script>
+    <script src="addons/manifest.js"></script>
+    <script src="shared/entitlements.js"></script>
+    <script src="shared/entitlement-sync.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="shared/educational.js"></script>
     <script src="learn-cards.js"></script>
 </body>

@@ -9,11 +9,11 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - Must work from `file://` and static hosting.
 - No server/runtime dependency required for core gameplay.
 - Android native wrapper support is provided via Capacitor with `src/` as `webDir`.
-- Android audience split is implemented through flavors with distinct app IDs (`suite`, `casino`, `solitaire`) while sharing one web codebase.
+- Android audience split is implemented through flavors with distinct app IDs (`suite`, `casino`, `solitaire`) while sharing one web codebase; web profile tooling also includes `premium`.
 
 ## Entry Points
 - `src/index.html`: launcher page.
-- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/simple-simon.html`, `src/forty-thieves.html`, `src/rush-hour-patience.html`, `src/tripeaks.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/tabletop.html`.
+- Game pages: `src/blackjack.html`, `src/poker.html`, `src/klondike.html`, `src/freecell.html`, `src/spider.html`, `src/simple-simon.html`, `src/forty-thieves.html`, `src/rush-hour-patience.html`, `src/tripeaks.html`, `src/pyramid.html`, `src/dark-pyramid.html`, `src/golf.html`, `src/tabletop.html`, `src/learn-cards.html`, `src/memory-match.html`, `src/math-challenges.html`.
 - Additional card game pages may be added over time.
 
 ## Shared Systems
@@ -31,6 +31,7 @@ The repository is currently named `bj_table` (subject to be renamed appropriatel
 - `src/addons.js` + `src/addons/manifest.js`: addon manifest ingestion and addon loading/toggling.
 - `src/app-profile.js`: build-selected app profile consumed by launcher/store flows to expose audience-specific game groups for split app packaging.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base/layout/mobile styles.
+- `src/styles/educational.css`: shared educational page shell styles.
 
 ## Layout and Responsiveness Contract
 - Tables are wrapped in `.table-scroll` containers.

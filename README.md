@@ -29,15 +29,19 @@ The project is designed to run from both static hosting and `file://`.
 - Baker's Dozen Solitaire (`src/bakers-dozen.html`)
 - TriPeaks Solitaire (`src/tripeaks.html`)
 - Table Top Sandbox (`src/tabletop.html`)
+- Learn the Cards (`src/learn-cards.html`)
+- Memory Match (`src/memory-match.html`)
+- Math Challenges (`src/math-challenges.html`)
 - And potentially other card games.
 
-## Split App Profiles (Suite, Casino, Solitaire)
+## Split App Profiles (Suite, Casino, Solitaire, Premium)
 
 The codebase now supports a lightweight launcher profile switch for separate app bundles while preserving shared systems:
 
 - `suite`: full launcher (casino + solitaire + sandbox)
 - `casino`: launcher focused on Blackjack and Texas Hold'em Poker
 - `solitaire`: launcher focused on solitaire variants (including Klondike, FreeCell, Spider, Pyramid/Dark Pyramid, Golf variants) plus Table Top Sandbox (experimental)
+- `premium`: paid-oriented profile (solitaire + educational lineup, no store entrypoint, all add-ons claimed/unlocked by default)
 
 Profile selection writes `src/app-profile.js`, which `src/index.html` reads at runtime.
 The same profile also filters Store listings so split apps avoid out-of-audience add-ons.
@@ -46,20 +50,21 @@ Android flavors now map these profiles to distinct app IDs:
 - `suite`: `com.antisthenes.bundle`
 - `casino`: `com.antisthenes.casino`
 - `solitaire`: `com.antisthenes.solitaire`
+- `premium`: profile wiring exists in web launcher/tooling (native app-id/flavor wiring can be added when packaging starts)
 
 Current flavor launcher labels:
 
 - `suite`: `Card Bundle`
 - `casino`: `House of Fortune Collection`
 - `solitaire`: `Virtue Solitaire Collection`
+- `premium`: `Card Learning & Solitaire Premium`
 
 Commands:
 
 - `npm run profile:suite`
 - `npm run profile:casino`
 - `npm run profile:solitaire`
-
-TODO: Add a profile for "Premium" (educational, child-safe, no ads, paid, no casino/simulated gambling or related themes, no store purchases -- only add-on management stylized as "Settings").
+- `npm run profile:premium`
 
 ## Variants and Game Options
 
@@ -86,6 +91,7 @@ TODO: Add a profile for "Premium" (educational, child-safe, no ads, paid, no cas
 - `src/addons.js` + `src/addons/manifest.js`: add-on loading and add-on catalog registration.
 - `src/app-profile.js`: build-selected app profile consumed by the launcher to expose audience-specific game groups.
 - `src/styles/core.css`, `src/styles/layout.css`, `src/styles/mobile.css`: shared base, layout, and mobile override style layers.
+- `src/styles/educational.css`: shared educational shell styles for the learning games.
 
 ## Persistence
 

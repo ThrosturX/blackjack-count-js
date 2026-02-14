@@ -467,6 +467,9 @@
 
             <section class="launcher-section" data-section="educational">
                 <h2>Learning Games</h2>
+                <p id="educational-temp-note" style="display:none; margin: 0 0 10px; color: rgba(255,255,255,0.75); font-size: 0.88rem;">
+                    Temporary note: educational games are included here for now and will move to the premium profile flow later.
+                </p>
                 <div class="game-selection">
                     <a href="learn-cards.html" class="game-card" data-group="educational">
                         <div class="card-top">
@@ -499,7 +502,7 @@
                 id: 'suite',
                 displayName: 'Card Playing Suite',
                 tagline: 'Choose a game to start playing.',
-                launcherGroups: ['casino', 'solitaire', 'sandbox'],
+                launcherGroups: ['casino', 'solitaire', 'sandbox', 'educational'],
             };
             const profile = window.AppProfile || fallback;
             const allowedGroups = new Set(profile.launcherGroups || fallback.launcherGroups);
@@ -533,6 +536,11 @@
                     if (title && label) title.textContent = label;
                     if (copy && note) copy.textContent = note;
                 }
+            }
+
+            if (profile.temporaryEducationalInSolitaire === true || (profile.id || '').toLowerCase() === 'solitaire') {
+                const note = document.getElementById('educational-temp-note');
+                if (note) note.style.display = 'block';
             }
         })();
     </script>

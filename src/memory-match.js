@@ -1,368 +1,583 @@
-/**
- * Memory Match - Educational card matching game
- * Teaches memory and pattern recognition through card matching
- */
-
 (function() {
     "use strict";
 
-    // Game state
+    const RULES = {
+        "same-card": {
+            label: "Same card pair",
+            copy: "Tap two identical cards.",
+            isMatch: (a, b) => a.matchKey === b.matchKey,
+            buildPairs: buildSameCardPairs
+        },
+        "same-color": {
+            label: "Same color",
+            copy: "Match any two cards that are both red or both black.",
+            isMatch: (a, b) => EducationalUtils.getCardColor(a.card) === EducationalUtils.getCardColor(b.card),
+            buildPairs: buildColorPairs
+        },
+        "complement-suit": {
+            label: "Complement suits",
+            copy: "Match Hearts with Spades, and Diamonds with Clubs.",
+            isMatch: (a, b) => a.matchKey === b.matchKey,
+            buildPairs: buildComplementSuitPairs
+        },
+        "same-rank": {
+            label: "Same rank",
+            copy: "Match cards with the same rank (same number/face value).",
+            isMatch: (a, b) => EducationalUtils.getRank(a.card.val) === EducationalUtils.getRank(b.card.val),
+            buildPairs: buildSameRankPairs
+        },
+        "sequence": {
+            label: "Sequence (+/-1)",
+            copy: "Match cards one step apart (A can pair with K).",
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val)),
+            buildPairs: buildSequencePairs
+        },
+        "sequence-same-color": {
+            label: "Sequence same color",
+            copy: "Match one-step sequences with the same color only (A can pair with K).",
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val))
+                && EducationalUtils.getCardColor(a.card) === EducationalUtils.getCardColor(b.card),
+            buildPairs: (count) => buildSequencePairs(count, "same-color")
+        },
+        "sequence-different-color": {
+            label: "Sequence different color",
+            copy: "Match one-step sequences with different colors only (A can pair with K).",
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val))
+                && EducationalUtils.getCardColor(a.card) !== EducationalUtils.getCardColor(b.card),
+            buildPairs: (count) => buildSequencePairs(count, "different-color")
+        }
+    };
+
+    const LEVEL_CONFIG = {
+        1: { pairs: 3, cols: 3, rule: "same-card" },
+        2: { pairs: 4, cols: 4, rule: "same-card" },
+        3: { pairs: 6, cols: 4, rule: "same-color" },
+        4: { pairs: 8, cols: 4, rule: "complement-suit" },
+        5: { pairs: 10, cols: 5, rule: "same-rank" },
+        6: { pairs: 12, cols: 6, rule: "complement-suit" },
+        7: { pairs: 14, cols: 7, rule: "same-rank" }
+    };
+
     const state = {
         cards: [],
-        flippedCards: [],
+        flippedIndexes: [],
         matchedPairs: 0,
-        totalPairs: 6,
         moves: 0,
-        isProcessing: false,
-        currentLevel: 3,
-        consecutiveWins: 0,
+        lockInput: false,
+        currentLevel: 1,
+        totalPairs: 3,
         autoLevel: true,
-        levelProgress: {}
+        selectedRule: "auto",
+        activeRule: "same-card",
+        bestMoves: {},
+        winStreak: 0
     };
 
-    // Level configurations - optimized for portrait mode
-    const LEVEL_CONFIG = {
-        1: { pairs: 3, cols: 3 },    // 3x2 = 6 cards
-        2: { pairs: 4, cols: 4 },    // 2x4 = 8 cards
-        3: { pairs: 6, cols: 3 },    // 3x4 = 12 cards
-        4: { pairs: 8, cols: 4 },    // 4x4 = 16 cards
-        5: { pairs: 10, cols: 5 },   // 4x5 = 20 cards
-        6: { pairs: 12, cols: 4 },   // 4x6 = 24 cards
-        7: { pairs: 14, cols: 3, note: "Extended deck" }  // 3x10 = 30 cells, 28 cards
-    };
-
-    // DOM elements
     const elements = {
-        moves: null,
-        pairs: null,
+        newGameButton: null,
+        levelSelect: null,
         pairsSelect: null,
+        ruleSelect: null,
         autoLevel: null,
+        moves: null,
+        pairsProgress: null,
+        bestMoves: null,
+        winStreak: null,
         levelInfo: null,
-        gameGrid: null,
-        winOverlay: null,
-        finalMoves: null,
-        finalPairs: null,
-        newGameBtn: null,
-        playAgainBtn: null
+        ruleCopy: null,
+        ruleExamples: null,
+        feedback: null,
+        grid: null,
+        tableSelect: null,
+        deckSelect: null
     };
 
-    // Initialize the game
     function init() {
         cacheElements();
+        HeaderControls?.init({ openKeys: ["game", "stats"] });
         loadProgress();
         bindEvents();
+        syncThemeClasses();
         startNewGame();
     }
 
-    // Cache DOM elements
     function cacheElements() {
-        elements.moves = document.getElementById("moves");
-        elements.pairs = document.getElementById("pairs");
-        elements.pairsSelect = document.getElementById("pairs-select");
-        elements.autoLevel = document.getElementById("auto-level");
-        elements.levelInfo = document.getElementById("level-info");
-        elements.gameGrid = document.getElementById("game-grid");
-        elements.winOverlay = document.getElementById("win-overlay");
-        elements.finalMoves = document.getElementById("final-moves");
-        elements.finalPairs = document.getElementById("final-pairs");
-        elements.newGameBtn = document.getElementById("new-game-btn");
-        elements.playAgainBtn = document.getElementById("play-again-btn");
+        elements.newGameButton = document.getElementById("memory-new-game");
+        elements.levelSelect = document.getElementById("memory-level-select");
+        elements.pairsSelect = document.getElementById("memory-pairs-select");
+        elements.ruleSelect = document.getElementById("memory-rule-select");
+        elements.autoLevel = document.getElementById("memory-auto-level");
+        elements.moves = document.getElementById("memory-moves");
+        elements.pairsProgress = document.getElementById("memory-pairs-progress");
+        elements.bestMoves = document.getElementById("memory-best-moves");
+        elements.winStreak = document.getElementById("memory-win-streak");
+        elements.levelInfo = document.getElementById("memory-level-info");
+        elements.ruleCopy = document.getElementById("memory-rule-copy");
+        elements.ruleExamples = document.getElementById("memory-rule-examples");
+        elements.feedback = document.getElementById("memory-feedback");
+        elements.grid = document.getElementById("memory-grid");
+        elements.tableSelect = document.getElementById("table-style-select");
+        elements.deckSelect = document.getElementById("deck-style-select");
     }
 
-    // Bind event listeners
     function bindEvents() {
-        elements.pairsSelect.addEventListener("change", (e) => {
-            state.totalPairs = parseInt(e.target.value, 10);
+        elements.newGameButton.addEventListener("click", startNewGame);
+
+        elements.levelSelect.addEventListener("change", (event) => {
+            state.currentLevel = clampLevel(parseInt(event.target.value, 10));
             state.autoLevel = false;
             elements.autoLevel.checked = false;
-            startNewGame();
+            const levelConfig = LEVEL_CONFIG[state.currentLevel];
+            state.totalPairs = levelConfig.pairs;
+            elements.pairsSelect.value = String(levelConfig.pairs);
+            if (state.selectedRule === "auto") {
+                state.activeRule = levelConfig.rule;
+            }
+            updateRuleAndLevelUI();
             saveProgress();
+            startNewGame();
         });
 
-        elements.autoLevel.addEventListener("change", (e) => {
-            state.autoLevel = e.target.checked;
+        elements.pairsSelect.addEventListener("change", (event) => {
+            const pairs = parseInt(event.target.value, 10) || 3;
+            state.totalPairs = pairs;
+            state.currentLevel = findLevelForPairs(pairs);
+            state.autoLevel = false;
+            elements.autoLevel.checked = false;
+            elements.levelSelect.value = String(state.currentLevel);
+            if (state.selectedRule === "auto") {
+                state.activeRule = LEVEL_CONFIG[state.currentLevel].rule;
+            }
+            updateRuleAndLevelUI();
+            saveProgress();
+            startNewGame();
+        });
+
+        elements.ruleSelect.addEventListener("change", (event) => {
+            state.selectedRule = event.target.value;
+            state.activeRule = resolveActiveRule();
+            state.autoLevel = false;
+            elements.autoLevel.checked = false;
+            updateRuleAndLevelUI();
+            saveProgress();
+            startNewGame();
+        });
+
+        elements.autoLevel.addEventListener("change", (event) => {
+            state.autoLevel = event.target.checked;
             if (state.autoLevel) {
-                // Set pairs based on current level
-                const config = LEVEL_CONFIG[state.currentLevel];
-                if (config) {
-                    state.totalPairs = config.pairs;
-                    elements.pairsSelect.value = config.pairs;
-                }
+                state.currentLevel = 1;
+                state.totalPairs = LEVEL_CONFIG[1].pairs;
+                elements.levelSelect.value = "1";
+                elements.pairsSelect.value = String(state.totalPairs);
             }
+            state.activeRule = resolveActiveRule();
+            updateRuleAndLevelUI();
             saveProgress();
-        });
-
-        elements.newGameBtn.addEventListener("click", () => {
             startNewGame();
         });
 
-        elements.playAgainBtn.addEventListener("click", () => {
-            hideWinOverlay();
-            if (state.autoLevel && state.consecutiveWins > 0) {
-                // Try to advance level
-                advanceLevel();
-            }
-            startNewGame();
-        });
+        elements.tableSelect?.addEventListener("change", syncThemeClasses);
+        elements.deckSelect?.addEventListener("change", syncThemeClasses);
+        window.addEventListener("addons:changed", syncThemeClasses);
     }
 
-    // Load saved progress
+    function clampLevel(level) {
+        return Math.max(1, Math.min(7, Number.isFinite(level) ? level : 1));
+    }
+
+    function findLevelForPairs(pairs) {
+        const entry = Object.entries(LEVEL_CONFIG).find(([, config]) => config.pairs === pairs);
+        return entry ? parseInt(entry[0], 10) : 1;
+    }
+
+    function resolveActiveRule() {
+        if (state.selectedRule && state.selectedRule !== "auto") return state.selectedRule;
+        return LEVEL_CONFIG[state.currentLevel].rule;
+    }
+
     function loadProgress() {
         const saved = EducationalUtils.loadProgress("memory-match");
-        if (saved) {
-            state.currentLevel = saved.currentLevel || 3;
-            state.consecutiveWins = saved.consecutiveWins || 0;
-            state.autoLevel = saved.autoLevel !== false;
-            state.levelProgress = saved.levelProgress || {};
-
-            // Set pairs from level or saved value
-            if (state.autoLevel) {
-                const config = LEVEL_CONFIG[state.currentLevel];
-                if (config) {
-                    state.totalPairs = config.pairs;
-                }
-            } else {
-                state.totalPairs = saved.totalPairs || 6;
-            }
-
-            elements.pairsSelect.value = state.totalPairs;
-            elements.autoLevel.checked = state.autoLevel;
-        }
-        updateLevelInfo();
-    }
-
-    // Save progress
-    function saveProgress() {
-        EducationalUtils.saveProgress("memory-match", {
-            currentLevel: state.currentLevel,
-            consecutiveWins: state.consecutiveWins,
-            totalPairs: state.totalPairs,
-            autoLevel: state.autoLevel,
-            levelProgress: state.levelProgress
-        });
-    }
-
-    // Update level info display
-    function updateLevelInfo() {
-        const config = LEVEL_CONFIG[state.currentLevel];
-        if (config) {
-            elements.levelInfo.textContent = `Level ${state.currentLevel}: ${config.pairs} pairs (${config.cols}×${Math.ceil(config.pairs * 2 / config.cols)} grid)`;
-        }
-    }
-
-    // Start a new game
-    function startNewGame() {
-        state.cards = [];
-        state.flippedCards = [];
-        state.matchedPairs = 0;
-        state.moves = 0;
-        state.isProcessing = false;
-
-        generateCards();
-        renderGrid();
-        updateUI();
-    }
-
-    // Generate cards for the game
-    function generateCards() {
-        // Create a pool of cards - use extended deck for 14 pairs (with Knights)
-        const fullDeck = [];
-        const cardValues = state.totalPairs >= 14 ? EXTENDED_VALUES : VALUES;
-
-        for (const suit of SUITS) {
-            for (const val of cardValues) {
-                fullDeck.push(new Card(suit, val));
-            }
-        }
-
-        // Shuffle the deck
-        const shuffled = EducationalUtils.shuffle(fullDeck);
-
-        // Pick the required number of pairs
-        state.cards = [];
-        for (let i = 0; i < state.totalPairs; i++) {
-            const card = shuffled[i];
-            // Add two of each card (for the pair)
-            state.cards.push({ ...card, id: i, matchId: i });
-            state.cards.push({ ...card, id: i + state.totalPairs, matchId: i });
-        }
-
-        // Shuffle the card pairs
-        state.cards = EducationalUtils.shuffle(state.cards);
-    }
-
-    // Render the card grid
-    function renderGrid() {
-        elements.gameGrid.innerHTML = "";
-
-        // Calculate grid dimensions
-        const totalCards = state.cards.length;
-        let cols = 4;
-        for (const config of Object.values(LEVEL_CONFIG)) {
-            if (config.pairs * 2 === totalCards) {
-                cols = config.cols;
-                break;
-            }
-        }
-
-        elements.gameGrid.style.gridTemplateColumns = `repeat(${cols}, var(--edu-card-size))`;
-
-        state.cards.forEach((card, index) => {
-            const cardEl = document.createElement("div");
-            cardEl.className = "edu-card";
-            cardEl.dataset.index = index;
-
-            // Card back (hidden state)
-            const cardBack = document.createElement("div");
-            cardBack.className = "edu-card-back";
-            cardBack.textContent = "?";
-            cardEl.appendChild(cardBack);
-
-            // Actual card (shown when flipped)
-            const cardObj = new Card(card.suit, card.val);
-            const cardVisual = CommonUtils.createCardEl(cardObj);
-            cardVisual.style.display = "none";
-            cardEl.appendChild(cardVisual);
-
-            // Click handler
-            cardEl.addEventListener("click", () => handleCardClick(index));
-
-            elements.gameGrid.appendChild(cardEl);
-        });
-    }
-
-    // Handle card click
-    function handleCardClick(index) {
-        if (state.isProcessing) return;
-
-        const cardEl = elements.gameGrid.children[index];
-        const card = state.cards[index];
-
-        // Ignore if already flipped or matched
-        if (cardEl.classList.contains("flipped") || cardEl.classList.contains("matched")) {
+        if (!saved) {
+            updateRuleAndLevelUI();
+            updateStats();
             return;
         }
 
-        // Flip the card
-        flipCard(cardEl, index);
+        state.currentLevel = clampLevel(saved.currentLevel || 1);
+        state.totalPairs = saved.totalPairs || LEVEL_CONFIG[state.currentLevel].pairs;
+        state.autoLevel = saved.autoLevel !== false;
+        state.selectedRule = saved.selectedRule || "auto";
+        state.activeRule = saved.activeRule || resolveActiveRule();
+        state.bestMoves = saved.bestMoves || {};
+        state.winStreak = saved.winStreak || 0;
 
-        // Add to flipped cards
-        state.flippedCards.push({ index, card });
+        elements.levelSelect.value = String(state.currentLevel);
+        elements.pairsSelect.value = String(state.totalPairs);
+        elements.autoLevel.checked = state.autoLevel;
+        elements.ruleSelect.value = state.selectedRule;
 
-        // Check for match if two cards are flipped
-        if (state.flippedCards.length === 2) {
-            state.moves++;
-            checkForMatch();
+        if (state.autoLevel) {
+            state.currentLevel = 1;
+            state.totalPairs = LEVEL_CONFIG[1].pairs;
+            elements.levelSelect.value = "1";
+            elements.pairsSelect.value = String(state.totalPairs);
         }
 
-        updateUI();
+        state.activeRule = resolveActiveRule();
+        updateRuleAndLevelUI();
+        updateStats();
     }
 
-    // Flip a card
-    function flipCard(cardEl, index) {
-        cardEl.classList.add("flipped");
-        const cardVisual = cardEl.querySelector(".card");
-        if (cardVisual) {
-            cardVisual.style.display = "block";
+    function saveProgress() {
+        EducationalUtils.saveProgress("memory-match", {
+            currentLevel: state.currentLevel,
+            totalPairs: state.totalPairs,
+            autoLevel: state.autoLevel,
+            selectedRule: state.selectedRule,
+            activeRule: state.activeRule,
+            bestMoves: state.bestMoves,
+            winStreak: state.winStreak
+        });
+    }
+
+    function updateRuleAndLevelUI() {
+        const cols = LEVEL_CONFIG[state.currentLevel].cols;
+        const rows = Math.ceil((state.totalPairs * 2) / cols);
+        const rule = RULES[state.activeRule];
+        elements.levelInfo.textContent = `Level ${state.currentLevel} · ${state.totalPairs} pairs · ${cols}x${rows} grid`;
+        elements.ruleCopy.textContent = rule.copy;
+        renderRuleExamples();
+    }
+
+    function renderRuleExamples() {
+        elements.ruleExamples.innerHTML = "";
+        const rule = state.activeRule;
+
+        if (rule === "same-card") {
+            appendExampleSet([new Card("♥", "7"), new Card("♥", "7")], "↔");
+            appendExampleSet([new Card("♣", "K"), new Card("♣", "K")], "↔");
+            return;
         }
-    }
 
-    // Unflip a card
-    function unflipCard(cardEl) {
-        cardEl.classList.remove("flipped");
-        const cardVisual = cardEl.querySelector(".card");
-        if (cardVisual) {
-            cardVisual.style.display = "none";
+        if (rule === "same-color") {
+            appendExampleSet([new Card("♥", "4"), new Card("♦", "Q")], "↔");
+            appendExampleSet([new Card("♣", "8"), new Card("♠", "A")], "↔");
+            return;
         }
+
+        if (rule === "complement-suit") {
+            appendExampleSet([new Card("♥", "9"), new Card("♠", "9")], "↔");
+            appendExampleSet([new Card("♦", "5"), new Card("♣", "5")], "↔");
+            return;
+        }
+
+        if (rule === "sequence") {
+            appendExampleSet([new Card("♥", "7"), new Card("♣", "8")], "+1");
+            appendExampleSet([new Card("♠", "K"), new Card("♦", "A")], "wrap");
+            return;
+        }
+
+        if (rule === "sequence-same-color") {
+            appendExampleSet([new Card("♥", "4"), new Card("♦", "5")], "+1");
+            appendExampleSet([new Card("♠", "Q"), new Card("♣", "K")], "+1");
+            return;
+        }
+
+        if (rule === "sequence-different-color") {
+            appendExampleSet([new Card("♥", "10"), new Card("♣", "J")], "+1");
+            appendExampleSet([new Card("♦", "K"), new Card("♠", "A")], "wrap");
+            return;
+        }
+
+        appendExampleSet([new Card("♣", "K"), new Card("♥", "K")], "↔");
+        appendExampleSet([new Card("♦", "3"), new Card("♠", "3")], "↔");
     }
 
-    // Check if flipped cards match
-    function checkForMatch() {
-        state.isProcessing = true;
+    function appendExampleSet(cards, symbol) {
+        const group = document.createElement("div");
+        group.className = "edu-example-cardset";
 
-        const [first, second] = state.flippedCards;
-        const isMatch = first.card.matchId === second.card.matchId;
+        const leftWrap = document.createElement("span");
+        leftWrap.className = "edu-card-shell";
+        leftWrap.appendChild(CommonUtils.createCardEl(cards[0]));
+        group.appendChild(leftWrap);
+
+        const divider = document.createElement("span");
+        divider.className = "edu-example-divider";
+        divider.textContent = symbol;
+        group.appendChild(divider);
+
+        const rightWrap = document.createElement("span");
+        rightWrap.className = "edu-card-shell";
+        rightWrap.appendChild(CommonUtils.createCardEl(cards[1]));
+        group.appendChild(rightWrap);
+
+        elements.ruleExamples.appendChild(group);
+    }
+
+    function startNewGame() {
+        state.moves = 0;
+        state.matchedPairs = 0;
+        state.lockInput = false;
+        state.flippedIndexes = [];
+        state.activeRule = resolveActiveRule();
+        updateRuleAndLevelUI();
+        generateDeck();
+        renderGrid();
+        setFeedback("");
+        updateStats();
+    }
+
+    function generateDeck() {
+        const builder = RULES[state.activeRule].buildPairs;
+        const pairCards = builder(state.totalPairs);
+        state.cards = EducationalUtils.shuffle(pairCards).map((entry, index) => ({
+            ...entry,
+            boardId: index,
+            flipped: false,
+            matched: false
+        }));
+    }
+
+    function buildSameCardPairs(pairCount) {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const baseDeck = [];
+        for (const suit of SUITS) {
+            for (const val of values) {
+                baseDeck.push(new Card(suit, val));
+            }
+        }
+        const picks = EducationalUtils.pickRandom(baseDeck, pairCount);
+        const cards = [];
+        picks.forEach((card, index) => {
+            cards.push({ card: cloneCard(card), matchKey: `same-${index}` });
+            cards.push({ card: cloneCard(card), matchKey: `same-${index}` });
+        });
+        return cards;
+    }
+
+    function buildColorPairs(pairCount) {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const cards = [];
+        for (let i = 0; i < pairCount; i += 1) {
+            const targetColor = i % 2 === 0 ? "red" : "black";
+            const suits = targetColor === "red" ? ["♥", "♦"] : ["♠", "♣"];
+            const valueA = values[Math.floor(Math.random() * values.length)];
+            const valueB = values[Math.floor(Math.random() * values.length)];
+            cards.push({ card: new Card(suits[0], valueA), matchKey: `color-${i}` });
+            cards.push({ card: new Card(suits[1], valueB), matchKey: `color-${i}` });
+        }
+        return cards;
+    }
+
+    function buildComplementSuitPairs(pairCount) {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const pairs = [["♥", "♠"], ["♦", "♣"]];
+        const cards = [];
+        for (let i = 0; i < pairCount; i += 1) {
+            const pair = pairs[i % pairs.length];
+            const value = values[Math.floor(Math.random() * values.length)];
+            cards.push({ card: new Card(pair[0], value), matchKey: `comp-${i}` });
+            cards.push({ card: new Card(pair[1], value), matchKey: `comp-${i}` });
+        }
+        return cards;
+    }
+
+    function buildSameRankPairs(pairCount) {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const cards = [];
+        for (let i = 0; i < pairCount; i += 1) {
+            const rank = values[Math.floor(Math.random() * values.length)];
+            const suitA = SUITS[Math.floor(Math.random() * SUITS.length)];
+            let suitB = SUITS[Math.floor(Math.random() * SUITS.length)];
+            while (suitB === suitA) {
+                suitB = SUITS[Math.floor(Math.random() * SUITS.length)];
+            }
+            cards.push({ card: new Card(suitA, rank), matchKey: `rank-${i}` });
+            cards.push({ card: new Card(suitB, rank), matchKey: `rank-${i}` });
+        }
+        return cards;
+    }
+
+    function areAdjacentRanks(rankA, rankB) {
+        const diff = Math.abs(rankA - rankB);
+        if (diff === 1) return true;
+        return (rankA === 1 && rankB === 13) || (rankA === 13 && rankB === 1);
+    }
+
+    function getNextValue(value, values) {
+        const currentRank = EducationalUtils.getRank(value);
+        const wrapRank = currentRank === 13 ? 1 : currentRank + 1;
+        return values.find((candidate) => EducationalUtils.getRank(candidate) === wrapRank) || values[0];
+    }
+
+    function buildSequencePairs(pairCount, colorMode = "any") {
+        const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
+        const cards = [];
+
+        for (let i = 0; i < pairCount; i += 1) {
+            const startValue = values[Math.floor(Math.random() * values.length)];
+            const nextValue = getNextValue(startValue, values);
+
+            let suitA = SUITS[Math.floor(Math.random() * SUITS.length)];
+            let suitB = SUITS[Math.floor(Math.random() * SUITS.length)];
+
+            if (colorMode === "same-color") {
+                const pool = EducationalUtils.getCardColor({ suit: suitA }) === "red" ? ["♥", "♦"] : ["♠", "♣"];
+                suitA = pool[Math.floor(Math.random() * pool.length)];
+                suitB = pool[Math.floor(Math.random() * pool.length)];
+            } else if (colorMode === "different-color") {
+                const red = ["♥", "♦"];
+                const black = ["♠", "♣"];
+                suitA = red[Math.floor(Math.random() * red.length)];
+                suitB = black[Math.floor(Math.random() * black.length)];
+                if (Math.random() > 0.5) {
+                    const temp = suitA;
+                    suitA = suitB;
+                    suitB = temp;
+                }
+            }
+
+            cards.push({ card: new Card(suitA, startValue), matchKey: `seq-${i}` });
+            cards.push({ card: new Card(suitB, nextValue), matchKey: `seq-${i}` });
+        }
+
+        return cards;
+    }
+
+    function cloneCard(card) {
+        return new Card(card.suit, card.val);
+    }
+
+    function renderGrid() {
+        elements.grid.innerHTML = "";
+        const cols = LEVEL_CONFIG[state.currentLevel].cols;
+        elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 92px))`;
+
+        state.cards.forEach((entry, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "edu-card-button";
+            button.dataset.index = String(index);
+            button.addEventListener("click", () => onCardTapped(index));
+
+            const shell = document.createElement("span");
+            shell.className = "edu-card-shell";
+
+            if (entry.matched || entry.flipped) {
+                shell.appendChild(CommonUtils.createCardEl(entry.card));
+                if (entry.matched) shell.classList.add("success");
+            } else {
+                const backCard = new Card("♠", "A");
+                backCard.hidden = true;
+                shell.appendChild(CommonUtils.createCardEl(backCard));
+            }
+
+            button.appendChild(shell);
+            elements.grid.appendChild(button);
+        });
+    }
+
+    function onCardTapped(index) {
+        if (state.lockInput) return;
+        const cardEntry = state.cards[index];
+        if (!cardEntry || cardEntry.matched || cardEntry.flipped) return;
+
+        cardEntry.flipped = true;
+        state.flippedIndexes.push(index);
+        renderGrid();
+
+        if (state.flippedIndexes.length < 2) return;
+
+        state.lockInput = true;
+        state.moves += 1;
+        const [leftIndex, rightIndex] = state.flippedIndexes;
+        const left = state.cards[leftIndex];
+        const right = state.cards[rightIndex];
+        const isMatch = RULES[state.activeRule].isMatch(left, right);
 
         if (isMatch) {
-            // Match found!
             setTimeout(() => {
-                const cardEl1 = elements.gameGrid.children[first.index];
-                const cardEl2 = elements.gameGrid.children[second.index];
-                cardEl1.classList.add("matched");
-                cardEl2.classList.add("matched");
-
-                state.matchedPairs++;
-                state.flippedCards = [];
-                state.isProcessing = false;
-
+                left.matched = true;
+                right.matched = true;
+                state.matchedPairs += 1;
+                state.flippedIndexes = [];
+                state.lockInput = false;
+                setFeedback("Great match!", true);
                 CommonUtils.playSound("win");
-                updateUI();
-
-                // Check for win
-                if (state.matchedPairs === state.totalPairs) {
-                    handleWin();
+                updateStats();
+                renderGrid();
+                if (state.matchedPairs >= state.totalPairs) {
+                    onWin();
                 }
-            }, 300);
-        } else {
-            // No match - flip back after delay
-            setTimeout(() => {
-                const cardEl1 = elements.gameGrid.children[first.index];
-                const cardEl2 = elements.gameGrid.children[second.index];
-                unflipCard(cardEl1);
-                unflipCard(cardEl2);
-
-                state.flippedCards = [];
-                state.isProcessing = false;
-
-                CommonUtils.playSound("error");
-            }, 1000);
+            }, 280);
+            return;
         }
+
+        setTimeout(() => {
+            left.flipped = false;
+            right.flipped = false;
+            state.flippedIndexes = [];
+            state.lockInput = false;
+            setFeedback("No match yet. Try another pair.", false);
+            CommonUtils.playSound("error");
+            updateStats();
+            renderGrid();
+        }, 760);
+
+        updateStats();
     }
 
-    // Handle win condition
-    function handleWin() {
-        // Record level progress
-        const pairsKey = state.totalPairs;
-        if (!state.levelProgress[pairsKey] || state.levelProgress[pairsKey] > state.moves) {
-            state.levelProgress[pairsKey] = state.moves;
+    function onWin() {
+        const key = `${state.activeRule}:${state.totalPairs}`;
+        const existing = state.bestMoves[key];
+        if (!existing || state.moves < existing) {
+            state.bestMoves[key] = state.moves;
         }
 
-        // Track consecutive wins for auto-levelling
-        state.consecutiveWins++;
+        state.winStreak += 1;
+        setFeedback(`You cleared the board in ${state.moves} moves!`, true);
+        CommonUtils.playSound("youwin");
 
-        // Show win overlay
-        elements.finalMoves.textContent = state.moves;
-        elements.finalPairs.textContent = state.totalPairs;
-        elements.winOverlay.classList.remove("hidden");
+        if (state.autoLevel) {
+            state.currentLevel = state.currentLevel >= 7 ? 1 : state.currentLevel + 1;
+            state.totalPairs = LEVEL_CONFIG[state.currentLevel].pairs;
+            elements.levelSelect.value = String(state.currentLevel);
+            elements.pairsSelect.value = String(state.totalPairs);
+        }
 
-        CommonUtils.playSound("win");
+        updateStats();
         saveProgress();
     }
 
-    // Hide win overlay
-    function hideWinOverlay() {
-        elements.winOverlay.classList.add("hidden");
+    function setFeedback(message, good) {
+        elements.feedback.textContent = message;
+        elements.feedback.classList.remove("ok", "bad");
+        if (!message) return;
+        elements.feedback.classList.add(good ? "ok" : "bad");
     }
 
-    // Advance to next level
-    function advanceLevel() {
-        if (state.currentLevel < 7 && state.consecutiveWins >= 3) {
-            state.currentLevel++;
-            state.consecutiveWins = 0;
-            const config = LEVEL_CONFIG[state.currentLevel];
-            state.totalPairs = config.pairs;
-            elements.pairsSelect.value = config.pairs;
-            updateLevelInfo();
-        }
+    function updateStats() {
+        elements.moves.textContent = String(state.moves);
+        elements.pairsProgress.textContent = `${state.matchedPairs}/${state.totalPairs}`;
+        const key = `${state.activeRule}:${state.totalPairs}`;
+        elements.bestMoves.textContent = state.bestMoves[key] || "-";
+        elements.winStreak.textContent = String(state.winStreak);
     }
 
-    // Update UI elements
-    function updateUI() {
-        elements.moves.textContent = state.moves;
-        elements.pairs.textContent = `${state.matchedPairs}/${state.totalPairs}`;
+    function syncThemeClasses() {
+        const tableTheme = elements.tableSelect?.value || "felt";
+        const deckTheme = elements.deckSelect?.value || "red";
+
+        Array.from(document.body.classList)
+            .filter(cls => cls.startsWith("table-") || cls.startsWith("deck-"))
+            .forEach(cls => document.body.classList.remove(cls));
+
+        document.body.classList.add(`table-${tableTheme}`);
+        document.body.classList.add(`deck-${deckTheme}`);
     }
 
-    // Start the game when DOM is ready
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", init);
     } else {

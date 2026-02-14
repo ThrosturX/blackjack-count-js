@@ -121,6 +121,35 @@
 
     let state = loadState();
 
+    const applyProfileAutoClaims = () => {
+        const profile = (window.AppProfile && typeof window.AppProfile === 'object') ? window.AppProfile : null;
+        if (!profile || profile.autoClaimAllAddons !== true) return false;
+        const manifest = window.AddonManifest;
+        const addons = manifest && Array.isArray(manifest.addons) ? manifest.addons : [];
+        if (!addons.length) return false;
+        let changed = false;
+        addons.forEach((addon) => {
+            const id = addon && addon.id;
+            if (!id) return;
+            if (state.claims[id]) return;
+            setClaim(id, {
+                ownership: id === 'default-themes' ? 'default' : 'local',
+                source: 'profile-default',
+                updatedAt: nowIso()
+            });
+            changed = true;
+        });
+        return changed;
+    };
+
+    if (applyProfileAutoClaims()) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeState(state)));
+        } catch (err) {
+            // Ignore storage failures.
+        }
+    }
+
     const persist = () => {
         state = normalizeState(state);
         try {

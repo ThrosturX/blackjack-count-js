@@ -44,9 +44,35 @@ const EducationalUtils = {
     getRank: function(val) {
         if (val === 'A') return 1;
         if (val === 'J') return 11;
+        if (val === 'C') return 12;
         if (val === 'Q') return 12;
         if (val === 'K') return 13;
         return parseInt(val, 10);
+    },
+
+    getSuitName: function(suit) {
+        const labels = {
+            '♥': 'Hearts',
+            '♦': 'Diamonds',
+            '♠': 'Spades',
+            '♣': 'Clubs'
+        };
+        return labels[suit] || suit;
+    },
+
+    getValueLabel: function(val) {
+        const labels = {
+            A: 'Ace',
+            J: 'Jack',
+            C: 'Knight',
+            Q: 'Queen',
+            K: 'King'
+        };
+        return labels[val] || String(val);
+    },
+
+    getValueWithRank: function(val) {
+        return `${this.getValueLabel(val)} (${this.getRank(val)})`;
     },
 
     /**

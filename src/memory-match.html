@@ -3,292 +3,121 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-    <title>Memory Match - Card Playing Suite</title>
+    <title>Card Playing Suite - Memory Match</title>
     <link rel="stylesheet" href="styles/core.css">
+    <link rel="stylesheet" href="styles/layout.css">
     <link rel="stylesheet" href="styles/card.css">
-    <style>
-        :root {
-            --edu-card-size: 70px;
-            --edu-gap: 8px;
-            --edu-success: #4caf50;
-            --edu-error: #f44336;
-            --edu-primary: #2196f3;
-            --edu-bg: #1a1a2e;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--edu-bg);
-            color: white;
-            margin: 0;
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .edu-header {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .edu-title {
-            font-size: 1.1rem;
-            color: var(--gold);
-            margin: 0;
-        }
-
-        .edu-stats {
-            display: flex;
-            gap: 16px;
-            font-size: 0.9rem;
-        }
-
-        .edu-stat {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .edu-stat-label {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .edu-stat-value {
-            font-weight: bold;
-            color: var(--gold);
-        }
-
-        .edu-game-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            gap: 20px;
-            overflow: auto;
-        }
-
-        .edu-controls {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .edu-control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .edu-control-group label {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .edu-control-group select {
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(0, 0, 0, 0.4);
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .edu-grid {
-            display: grid;
-            gap: var(--edu-gap);
-            justify-content: center;
-        }
-
-        .edu-card {
-            width: var(--edu-card-size);
-            height: calc(var(--edu-card-size) * 1.4);
-            background: linear-gradient(135deg, #2a2a4a 0%, #1a1a2e 100%);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            transition: all 0.2s ease;
-            position: relative;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .edu-card:active {
-            transform: scale(0.95);
-        }
-
-        .edu-card.flipped {
-            background: white;
-            border-color: var(--gold);
-        }
-
-        .edu-card.matched {
-            background: var(--edu-success);
-            border-color: var(--edu-success);
-            opacity: 0.7;
-        }
-
-        .edu-card .card {
-            transform: scale(0.55);
-            position: absolute;
-        }
-
-        .edu-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #2a2a4a 0%, #1a1a2e 100%);
-            border-radius: 6px;
-            font-size: 1.5rem;
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        .edu-card.flipped .edu-card-back {
-            display: none;
-        }
-
-        .edu-new-game-btn {
-            padding: 10px 20px;
-            font-size: 0.95rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background: var(--edu-primary);
-            color: white;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
-
-        .edu-new-game-btn:active {
-            transform: scale(0.95);
-        }
-
-        .edu-level-info {
-            font-size: 1rem;
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .edu-win-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            gap: 20px;
-        }
-
-        .edu-win-overlay.hidden {
-            display: none;
-        }
-
-        .edu-win-title {
-            font-size: 2rem;
-            color: var(--gold);
-            margin: 0;
-        }
-
-        .edu-win-stats {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.9);
-            text-align: center;
-        }
-
-        .edu-win-stats p {
-            margin: 8px 0;
-        }
-
-        @media (max-width: 500px) {
-            :root {
-                --edu-card-size: 55px;
-                --edu-gap: 6px;
-            }
-
-            .edu-card {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/mobile.css">
+    <link rel="stylesheet" href="styles/educational.css">
 </head>
 
-<body>
-    <header class="edu-header">
-        <h1 class="edu-title">Memory Match</h1>
-        <div class="edu-stats">
-            <div class="edu-stat">
-                <span class="edu-stat-label">Moves:</span>
-                <span class="edu-stat-value" id="moves">0</span>
+<body class="educational-page memory-page" data-addon-toggle-allowlist="classic-faces,worn-cards,premium-effects" data-theme-default-table="ocean" data-theme-default-deck="water" data-no-store-link="true" data-auto-enable-hidden-addons="true" data-addon-default-classic-faces="true">
+    <header>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <h1>Memory Match</h1>
+        <div class="header-toggles">
+            <button id="toggle-game" class="btn-toggle active">Game</button>
+            <button id="toggle-settings" class="btn-toggle">Settings</button>
+            <button id="toggle-addons" class="btn-toggle">Add-ons</button>
+            <button id="toggle-themes" class="btn-toggle">Themes</button>
+            <button id="toggle-stats" class="btn-toggle">Stats</button>
+        </div>
+
+        <div class="game-controls">
+            <div class="controls-section" id="game-area">
+                <button id="memory-new-game" class="game-btn">New Game</button>
             </div>
-            <div class="edu-stat">
-                <span class="edu-stat-label">Pairs:</span>
-                <span class="edu-stat-value" id="pairs">0/0</span>
+
+            <div class="controls-section collapsed" id="settings-area">
+                <div class="stats">Level:
+                    <select id="memory-level-select">
+                        <option value="1">Trivial</option>
+                        <option value="2">Easy</option>
+                        <option value="3">Medium</option>
+                        <option value="4">Hard</option>
+                        <option value="5">Challenging</option>
+                        <option value="6">Advanced</option>
+                        <option value="7">Expert</option>
+                    </select>
+                </div>
+                <div class="stats">Pairs:
+                    <select id="memory-pairs-select">
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="6">6</option>
+                        <option value="8">8</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                        <option value="14">14</option>
+                    </select>
+                </div>
+                <div class="stats">Match Rule:
+                    <select id="memory-rule-select">
+                        <option value="auto">Auto by level</option>
+                        <option value="same-card">Same card pair</option>
+                        <option value="same-color">Same color</option>
+                        <option value="complement-suit">Complement suits</option>
+                        <option value="same-rank">Same rank</option>
+                        <option value="sequence">Sequence (+/-1)</option>
+                        <option value="sequence-same-color">Sequence same color (Expert)</option>
+                        <option value="sequence-different-color">Sequence different color (Expert)</option>
+                    </select>
+                </div>
+                <label class="stats"><input type="checkbox" id="memory-auto-level" checked> Auto-level</label>
+            </div>
+
+            <div class="controls-section collapsed" id="addons-area" data-no-store-link="true">
+                <div class="stats">Add-on settings:
+                    <div class="addon-toggle-list" id="addons-toggle-list"></div>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="theme-area">
+                <div class="stats">Table:
+                    <select id="table-style-select"></select>
+                </div>
+                <div class="stats">Deck:
+                    <select id="deck-style-select"></select>
+                </div>
+            </div>
+
+            <div class="controls-section collapsed" id="stats-area">
+                <div class="stats">Moves: <span id="memory-moves">0</span></div>
+                <div class="stats">Matches: <span id="memory-pairs-progress">0/0</span></div>
+                <div class="stats">Best Moves: <span id="memory-best-moves">-</span></div>
+                <div class="stats">Win Streak: <span id="memory-win-streak">0</span></div>
             </div>
         </div>
     </header>
 
-    <main class="edu-game-area">
-        <div class="edu-controls">
-            <div class="edu-control-group">
-                <label for="pairs-select">Pairs:</label>
-                <select id="pairs-select">
-                    <option value="3">3 Pairs</option>
-                    <option value="4">4 Pairs</option>
-                    <option value="6" selected>6 Pairs</option>
-                    <option value="8">8 Pairs</option>
-                    <option value="10">10 Pairs</option>
-                    <option value="12">12 Pairs</option>
-                    <option value="14">14 Pairs</option>
-                </select>
-            </div>
-            <div class="edu-control-group">
-                <label>
-                    <input type="checkbox" id="auto-level" checked> Auto-level
-                </label>
-            </div>
-            <button class="edu-new-game-btn" id="new-game-btn">New Game</button>
-        </div>
-
-        <div class="edu-level-info" id="level-info">Level 3: 6 pairs (3×4 grid)</div>
-
-        <div class="edu-grid" id="game-grid">
-            <!-- Cards will be generated here -->
-        </div>
-    </main>
-
-    <div class="edu-win-overlay hidden" id="win-overlay">
-        <h2 class="edu-win-title">🎉 You Won!</h2>
-        <div class="edu-win-stats">
-            <p>Moves: <strong id="final-moves">0</strong></p>
-            <p>Pairs: <strong id="final-pairs">6</strong></p>
-        </div>
-        <button class="edu-new-game-btn" id="play-again-btn">Play Again</button>
+    <div class="table-scroll">
+        <main id="table" class="edu-table">
+            <section class="edu-surface edu-surface--plain">
+                <p id="memory-level-info" class="edu-prompt">Level 1 · 3 pairs · 3x2 grid</p>
+                <p id="memory-rule-copy" class="edu-subtle">Match two identical cards.</p>
+                <div id="memory-rule-examples" class="edu-rule-example"></div>
+                <div id="memory-feedback" class="edu-feedback" aria-live="polite"></div>
+            </section>
+            <section class="edu-surface" style="margin-top: 12px;">
+                <div id="memory-grid" class="edu-grid memory-grid" aria-label="Memory match board"></div>
+            </section>
+        </main>
     </div>
 
+    <script src="app-profile.js"></script>
+    <script src="assets.js"></script>
+    <script src="addons/manifest.js"></script>
+    <script src="shared/entitlements.js"></script>
+    <script src="shared/entitlement-sync.js"></script>
+    <script src="addons.js"></script>
+    <script src="themes.js"></script>
     <script src="card.js"></script>
     <script src="common.js"></script>
+    <script src="header.js"></script>
     <script src="shared/educational.js"></script>
     <script src="memory-match.js"></script>
 </body>

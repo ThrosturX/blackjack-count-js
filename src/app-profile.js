@@ -2,10 +2,16 @@
   const profile = Object.freeze({
     id: "solitaire",
     displayName: "Virtue Solitaire Collection",
-    tagline: "Focused solitaire lineup with classic variants, plus an experimental sandbox.",
+    tagline: "Select your favourite Patience game, one of our originals or play in the experimental table top sandbox.",
     launcherGroups: ["solitaire", "sandbox", "educational"],
     storeGameFilter: ["klondike", "freecell", "spider", "pyramid", "tabletop"],
-    storeEnabled: true
+    storeEnabled: true,
+    addonToggleAllowlist: null,
+    themeDefaults: null,
+    addonDefaults: null,
+    autoClaimAllAddons: false,
+    autoEnableHiddenAddons: false,
+    temporaryEducationalInSolitaire: true
   });
 
   global.AppProfile = profile;
