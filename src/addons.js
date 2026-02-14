@@ -1,6 +1,9 @@
 (() => {
     const entitlementStore = window.EntitlementStore;
-    const isAddonClaimed = (id) => entitlementStore ? entitlementStore.isClaimed(id) : id === 'default-themes';
+    const isAddonClaimed = (id) => {
+        if (document.body.classList.contains('educational-page')) return true;
+        return entitlementStore ? entitlementStore.isClaimed(id) : id === 'default-themes';
+    };
 
     const getCurrentGameId = () => {
         const path = (window.location && window.location.pathname) || '';

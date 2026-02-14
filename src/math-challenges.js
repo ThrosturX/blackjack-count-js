@@ -1,4 +1,4 @@
-(function() {
+(function () {
     "use strict";
 
     const CHALLENGE_TYPES = {
@@ -94,6 +94,8 @@
         elements.choices = document.getElementById("math-choices");
         elements.tableSelect = document.getElementById("table-style-select");
         elements.deckSelect = document.getElementById("deck-style-select");
+        elements.resetStats = document.getElementById("math-reset-stats");
+        elements.board = document.getElementById("table");
     }
 
     function bindEvents() {
@@ -118,6 +120,16 @@
         elements.newChallenge.addEventListener("click", nextChallenge);
         elements.tableSelect?.addEventListener("change", syncThemeClasses);
         elements.deckSelect?.addEventListener("change", syncThemeClasses);
+        elements.resetStats?.addEventListener("click", () => {
+            SolitaireCheckModal.showConfirm({
+                title: "Clear Math Stats",
+                message: "This will reset your score and best streak. Continue?",
+                confirmLabel: "Reset",
+                cancelLabel: "Cancel"
+            }).then(confirmed => {
+                if (confirmed) resetStats();
+            });
+        });
         window.addEventListener("addons:changed", syncThemeClasses);
     }
 
@@ -207,7 +219,7 @@
             prompt: "Place cards in ?",
             help: "Drag cards into ? (or tap card, then tap ?).",
             cue: { text: "🧩 Place 2 cards", tone: "blue" },
-            expressionParts: [cardPart(left), symbolPart("+"), unknownPart(), symbolPart("="), numberPart(targetTotal)],
+            expressionParts: [cardPart(left), symbolPart("+"), unknownPart(), symbolPart("+"), unknownPart(), symbolPart("="), numberPart(targetTotal)],
             requiredCards: 2,
             expectedValues,
             choices
@@ -349,8 +361,11 @@
         elements.visualCue.textContent = state.challenge.cue?.text || "🧩 Place card in ?";
         elements.visualCue.dataset.tone = state.challenge.cue?.tone || "blue";
 
+        const oldOverlay = elements.board.querySelector(".edu-solution-overlay");
+        if (oldOverlay) oldOverlay.remove();
+
         elements.expression.innerHTML = "";
-        elements.answerSlot = null;
+        elements.answerSlots = [];
 
         state.challenge.expressionParts.forEach((part) => {
             const node = document.createElement("div");
@@ -361,22 +376,27 @@
             } else if (part.type === "unknown") {
                 node.className = "edu-drop-slot";
                 node.textContent = "?";
-                node.dataset.requiredCards = String(state.challenge.requiredCards || 1);
+                node.dataset.slotIndex = String(elements.answerSlots.length);
                 node.addEventListener("click", () => {
+                    const slotIdx = parseInt(node.dataset.slotIndex, 10);
                     if (state.selectedChoiceId) {
-                        placeChoiceById(state.selectedChoiceId);
+                        placeChoiceInSlot(state.selectedChoiceId, slotIdx);
                         return;
                     }
-                    if (state.placedChoiceIds.length) {
-                        removeLastPlacedChoice();
-                    }
+                    removeChoiceFromSlot(slotIdx);
                 });
-                elements.answerSlot = node;
+                elements.answerSlots.push(node);
             } else if (part.type === "number") {
-                node.className = "edu-pill";
-                node.textContent = String(part.value);
+                node.className = "edu-pill edu-pill--number";
+                const valNode = document.createElement("div");
+                valNode.className = "edu-pill-value";
+                valNode.textContent = String(part.value);
+                node.appendChild(valNode);
+
+                const visualNode = renderVisualTotal(part.value);
+                node.appendChild(visualNode);
             } else {
-                node.className = "edu-pill";
+                node.className = "edu-pill edu-pill--symbol";
                 node.textContent = part.text;
             }
 
@@ -397,6 +417,7 @@
             button.className = "edu-choice-button";
             button.dataset.choiceId = choice.id;
             button.dataset.value = choice.value;
+            button.dataset.rank = String(EducationalUtils.getRank(choice.value));
             button.setAttribute("aria-label", `Answer ${choice.value}`);
 
             button.addEventListener("click", () => {
@@ -411,6 +432,7 @@
 
             const cardWrap = document.createElement("div");
             cardWrap.className = "edu-choice-card";
+            cardWrap.dataset.rankLabel = String(EducationalUtils.getRank(choice.value));
             cardWrap.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), choice.value)));
 
             const label = document.createElement("div");
@@ -434,15 +456,18 @@
         let pointerId = null;
         let startX = 0;
         let startY = 0;
-        let originLeft = 0;
-        let originTop = 0;
+        let cardOffsetX = 0;
+        let cardOffsetY = 0;
         let dragging = false;
         let ghost = null;
 
-        const cleanup = () => {
+        const cleanup = (restoreCard) => {
             if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
             ghost = null;
             pointerId = null;
+            if (restoreCard) {
+                button.classList.remove("dragging-source");
+            }
             dragging = false;
             window.removeEventListener("pointermove", onMove, true);
             window.removeEventListener("pointerup", onUp, true);
@@ -456,19 +481,33 @@
             if (!dragging && Math.hypot(dx, dy) > 8) {
                 dragging = true;
                 state.suppressClickChoiceId = choiceId;
-                ghost = button.cloneNode(true);
-                ghost.classList.add("edu-drag-ghost");
-                ghost.style.position = "fixed";
-                ghost.style.left = `${originLeft}px`;
-                ghost.style.top = `${originTop}px`;
-                ghost.style.pointerEvents = "none";
-                ghost.style.zIndex = "3000";
-                ghost.style.width = `${button.getBoundingClientRect().width}px`;
-                document.body.appendChild(ghost);
+
+                const cardEl = button.querySelector(".card");
+                if (cardEl) {
+                    const cardRect = cardEl.getBoundingClientRect();
+                    ghost = cardEl.cloneNode(true);
+                    ghost.classList.add("edu-drag-ghost");
+                    ghost.style.position = "fixed";
+                    ghost.style.pointerEvents = "none";
+                    ghost.style.zIndex = "3000";
+                    ghost.style.width = `${cardRect.width}px`;
+                    ghost.style.height = `${cardRect.height}px`;
+                    ghost.style.margin = "0";
+                    // Center ghost under pointer
+                    cardOffsetX = cardRect.width / 2;
+                    cardOffsetY = cardRect.height / 2;
+                    ghost.style.left = `${event.clientX - cardOffsetX}px`;
+                    ghost.style.top = `${event.clientY - cardOffsetY}px`;
+                    document.body.appendChild(ghost);
+
+                    // Hide card, show numeric placeholder
+                    button.classList.add("dragging-source");
+                }
             }
 
             if (dragging && ghost) {
-                ghost.style.transform = `translate(${dx}px, ${dy}px)`;
+                ghost.style.left = `${event.clientX - cardOffsetX}px`;
+                ghost.style.top = `${event.clientY - cardOffsetY}px`;
                 highlightSlotForPoint(event.clientX, event.clientY);
             }
         };
@@ -477,9 +516,16 @@
             if (event.pointerId !== pointerId) return;
             if (dragging) {
                 const dropped = tryDropChoiceAtPoint(choiceId, event.clientX, event.clientY);
-                if (!dropped) clearSlotHighlight();
+                if (!dropped) {
+                    clearSlotHighlight();
+                    cleanup(true); // restore card to choices
+                    return;
+                }
+                // Dropped successfully — keep placeholder visible (button stays dragging-source)
+                cleanup(false);
+                return;
             }
-            cleanup();
+            cleanup(true);
         };
 
         button.addEventListener("pointerdown", (event) => {
@@ -487,9 +533,6 @@
             pointerId = event.pointerId;
             startX = event.clientX;
             startY = event.clientY;
-            const rect = button.getBoundingClientRect();
-            originLeft = rect.left;
-            originTop = rect.top;
             window.addEventListener("pointermove", onMove, true);
             window.addEventListener("pointerup", onUp, true);
             window.addEventListener("pointercancel", onUp, true);
@@ -497,22 +540,28 @@
     }
 
     function highlightSlotForPoint(x, y) {
-        if (!elements.answerSlot) return;
+        let overSlot = null;
         const target = document.elementFromPoint(x, y);
-        const onSlot = !!(target && (target === elements.answerSlot || elements.answerSlot.contains(target)));
-        elements.answerSlot.classList.toggle("ready", onSlot);
+        if (target) {
+            overSlot = elements.answerSlots.find(slot => slot === target || slot.contains(target));
+        }
+        elements.answerSlots.forEach(slot => {
+            slot.classList.toggle("ready", slot === overSlot);
+        });
     }
 
     function clearSlotHighlight() {
-        elements.answerSlot?.classList.remove("ready");
+        elements.answerSlots.forEach(slot => slot.classList.remove("ready"));
     }
 
     function tryDropChoiceAtPoint(choiceId, x, y) {
-        if (!elements.answerSlot) return false;
         const target = document.elementFromPoint(x, y);
-        const onSlot = !!(target && (target === elements.answerSlot || elements.answerSlot.contains(target)));
-        if (!onSlot) return false;
-        placeChoiceById(choiceId);
+        if (!target) return false;
+        const slot = elements.answerSlots.find(s => s === target || s.contains(target));
+        if (!slot) return false;
+
+        const slotIdx = parseInt(slot.dataset.slotIndex, 10);
+        placeChoiceInSlot(choiceId, slotIdx);
         return true;
     }
 
@@ -526,7 +575,13 @@
             node.classList.remove("selected");
         });
         choiceButton.classList.add("selected");
-        elements.answerSlot?.classList.add("ready");
+
+        // Highlight all empty slots
+        elements.answerSlots.forEach((slot, idx) => {
+            if (!state.placedChoiceIds[idx]) {
+                slot.classList.add("ready");
+            }
+        });
     }
 
     function getChoiceButton(choiceId) {
@@ -537,86 +592,167 @@
         return state.challenge.choices.find((choice) => choice.id === choiceId) || null;
     }
 
-    function placeChoiceById(choiceId) {
+    function placeChoiceInSlot(choiceId, slotIdx) {
         if (state.answerLocked || !choiceId) return;
         if (state.placedChoiceIds.includes(choiceId)) return;
-        if (state.placedChoiceIds.length >= state.challenge.requiredCards) return;
+
+        // If slot is non-empty, we can either replace or just return.
+        // For simplicity, if slot defined by index in placedChoiceIds is occupied, we don't auto-replace here unless we want to.
+        if (state.placedChoiceIds[slotIdx]) {
+            const oldId = state.placedChoiceIds[slotIdx];
+            const oldButton = getChoiceButton(oldId);
+            if (oldButton) oldButton.disabled = false;
+        }
 
         const choice = getChoiceById(choiceId);
         const button = getChoiceButton(choiceId);
         if (!choice || !button || button.disabled) return;
 
-        state.placedChoiceIds.push(choiceId);
+        state.placedChoiceIds[slotIdx] = choiceId;
         button.disabled = true;
         button.classList.remove("selected");
         state.selectedChoiceId = null;
 
         renderPlacedCards();
 
-        if (state.placedChoiceIds.length >= state.challenge.requiredCards) {
+        const countValid = state.placedChoiceIds.filter(Boolean).length;
+        if (countValid >= state.challenge.requiredCards) {
             evaluatePlacedChoices();
-        } else {
-            elements.answerSlot?.classList.add("ready");
         }
     }
 
-    function removeLastPlacedChoice() {
-        if (state.answerLocked || !state.placedChoiceIds.length) return;
-        const choiceId = state.placedChoiceIds.pop();
+    function removeChoiceFromSlot(slotIdx) {
+        if (state.answerLocked) return;
+        const choiceId = state.placedChoiceIds[slotIdx];
+        if (!choiceId) return;
+
+        state.placedChoiceIds[slotIdx] = null;
         const button = getChoiceButton(choiceId);
         if (button) button.disabled = false;
         renderPlacedCards();
     }
 
     function renderPlacedCards() {
-        if (!elements.answerSlot) return;
-        elements.answerSlot.innerHTML = "";
+        elements.answerSlots.forEach((slot, slotIdx) => {
+            slot.innerHTML = "";
+            const choiceId = state.placedChoiceIds[slotIdx];
+            if (!choiceId) {
+                slot.textContent = "?";
+                slot.classList.remove("success", "fail");
+                return;
+            }
 
-        const placedChoices = state.placedChoiceIds.map((choiceId) => getChoiceById(choiceId)).filter(Boolean);
-        if (!placedChoices.length) {
-            elements.answerSlot.textContent = "?";
-            elements.answerSlot.classList.remove("success", "fail");
-            return;
+            const choice = getChoiceById(choiceId);
+            slot.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), choice.value)));
+            slot.classList.remove("ready");
+        });
+    }
+
+    function renderVisualTotal(value) {
+        const container = document.createElement("div");
+        container.className = "edu-visual-total-container";
+
+        const targetValue = parseInt(value, 10) || 0;
+
+        // 1. Fan of cards (derived from value)
+        const ranks = decomposeValueToRanks(targetValue);
+        container.appendChild(renderFan(ranks));
+
+        // 2. Numeric sum label
+        const sumLabel = document.createElement("div");
+        sumLabel.className = "edu-pill-sum";
+        sumLabel.textContent = String(targetValue);
+        container.appendChild(sumLabel);
+
+        // 3. Dots/Pips
+        container.appendChild(renderPips(targetValue));
+
+        return container;
+    }
+
+    function renderFan(ranks) {
+        const fan = document.createElement("div");
+        fan.className = "edu-card-fan";
+        ranks.forEach(rank => {
+            const fanItem = document.createElement("div");
+            fanItem.className = "edu-fan-card";
+            fanItem.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), rank)));
+            fan.appendChild(fanItem);
+        });
+        return fan;
+    }
+
+    function renderPips(value) {
+        const dotContainer = document.createElement("div");
+        dotContainer.className = "edu-visual-total";
+        const count = Math.min(30, parseInt(value, 10) || 0);
+
+        for (let i = 0; i < count; i += 5) {
+            const group = document.createElement("div");
+            group.className = "edu-dot-group";
+            const groupSize = Math.min(5, count - i);
+            for (let j = 0; j < groupSize; j++) {
+                const dot = document.createElement("div");
+                dot.className = "edu-visual-dot";
+                group.appendChild(dot);
+            }
+            dotContainer.appendChild(group);
+        }
+        return dotContainer;
+    }
+
+    function decomposeValueToRanks(value) {
+        // We want two cards that sum to 'value'
+        // Knights are present in Expert mode, check state.level
+        const hasKnight = state.level === 5;
+        const maxRank = hasKnight ? 14 : 13;
+
+        if (value <= 1) return ["A"];
+
+        // Try to find a pair
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const r1 = Math.floor(Math.random() * Math.min(value, maxRank)) + 1;
+            const r2 = value - r1;
+            if (r2 >= 1 && r2 <= maxRank) {
+                return [rankToValue(r1, hasKnight), rankToValue(r2, hasKnight)];
+            }
         }
 
-        const stack = document.createElement("div");
-        stack.className = "edu-drop-stack";
+        // Fallback: use 3 cards if value is too large for 2
+        if (value > maxRank * 2) {
+            const r1 = maxRank;
+            const r2 = maxRank;
+            const r3 = value - (maxRank * 2);
+            return [rankToValue(r1, hasKnight), rankToValue(r2, hasKnight), rankToValue(r3, hasKnight)];
+        }
 
-        placedChoices.forEach((choice, index) => {
-            const cardEl = CommonUtils.createCardEl(new Card(randomSuit(), choice.value));
-            cardEl.classList.add("edu-drop-stack-card");
-            cardEl.style.left = `${index * 12}px`;
-            cardEl.style.top = `${index * 9}px`;
-            stack.appendChild(cardEl);
-        });
+        // Ultimate fallback
+        return [rankToValue(Math.min(value, maxRank), hasKnight)];
+    }
 
-        elements.answerSlot.appendChild(stack);
-        elements.answerSlot.classList.remove("ready");
+    function rankToValue(rank, hasKnight) {
+        if (rank === 1) return "A";
+        if (rank <= 10) return String(rank);
+        if (rank === 11) return "J";
+        if (rank === 12) return hasKnight ? "C" : "Q";
+        if (rank === 13) return hasKnight ? "Q" : "K";
+        if (rank === 14) return "K";
+        return "10";
     }
 
     function evaluatePlacedChoices() {
         if (state.answerLocked) return;
         state.answerLocked = true;
 
-        const placedValues = state.placedChoiceIds
-            .map((choiceId) => getChoiceById(choiceId))
-            .filter(Boolean)
-            .map((choice) => choice.value)
-            .sort(sortByRankThenLabel);
+        const placedValues = state.placedChoiceIds.map((id) => getChoiceById(id)?.value).filter(Boolean);
 
-        const expectedValues = state.challenge.expectedValues.slice().sort(sortByRankThenLabel);
-        const isCorrect = arraysEqual(placedValues, expectedValues);
-
+        const isCorrect = validateExpression(state.challenge.expressionParts, placedValues);
         recordAnswer(isCorrect);
+        // Correct values text without strict order or specific solution
+        const answerText = isCorrect ? "" : "another combination";
 
-        const placedButtons = state.placedChoiceIds
-            .map((choiceId) => getChoiceButton(choiceId))
-            .filter(Boolean);
-
-        Array.from(elements.choices.querySelectorAll("button")).forEach((node) => {
-            node.disabled = true;
-        });
-
+        const placedButtons = state.placedChoiceIds.map((choiceId) => getChoiceButton(choiceId)).filter(Boolean);
+        Array.from(elements.choices.querySelectorAll("button")).forEach((node) => { node.disabled = true; });
         placedButtons.forEach((button) => {
             const panel = button.querySelector(".edu-choice-card");
             if (panel) panel.classList.add(isCorrect ? "success" : "fail");
@@ -633,11 +769,18 @@
             state.bestStreak = Math.max(state.bestStreak, state.streak);
             setFeedback("Correct! Great placement.", true);
             CommonUtils.playSound("win");
+            setTimeout(nextChallenge, 1050);
         } else {
             state.streak = 0;
-            const answerText = expectedValues.join(" + ");
-            setFeedback(`Try again. Correct was ${answerText}.`, false);
+            setFeedback(`Try again. (Tap to continue)`, false);
             CommonUtils.playSound("error");
+
+            // Highlight incorrect slots
+            elements.answerSlots.forEach(slot => {
+                slot.classList.add("fail");
+            });
+
+            renderSolutionFans();
         }
 
         if (state.autoLevel) {
@@ -645,14 +788,220 @@
             state.level = EducationalUtils.adjustDifficulty(state.level, rate, 1, 5);
             elements.levelSelect.value = String(state.level);
             if (state.level === 5 && rate > 0.85) {
-                state.level = 1;
-                elements.levelSelect.value = "1";
+                state.level = 1; elements.levelSelect.value = "1";
             }
         }
-
         updateStats();
         saveProgress();
-        setTimeout(nextChallenge, 1050);
+    }
+
+    function validateExpression(expressionParts, placedValues) {
+        // Collect all card values involved to establish context (e.g., presence of a Knight)
+        const allCardValues = [
+            ...expressionParts.filter(p => p.type === "card").map(p => p.value),
+            ...placedValues
+        ];
+
+        let placedIdx = 0;
+        const ranks = expressionParts.map(part => {
+            if (part && part.type === "unknown") {
+                const val = placedValues[placedIdx++];
+                return val ? EducationalUtils.getRank(val, allCardValues) : null;
+            }
+            if (part && part.type === "card") return EducationalUtils.getRank(part.value, allCardValues);
+            if (part && part.type === "number") return parseInt(part.value, 10);
+            // Use .text instead of .value for symbols
+            return part ? (part.value !== undefined ? part.value : part.text) : null;
+        });
+
+        const eqIdx = ranks.indexOf("=");
+        if (eqIdx === -1) return false;
+
+        const evalSide = (side) => {
+            if (side.length === 0) return 0;
+            // First item should be a number
+            let total = typeof side[0] === 'number' ? side[0] : NaN;
+            for (let i = 1; i < side.length; i += 2) {
+                const op = side[i];
+                const val = side[i + 1];
+                if (typeof val !== 'number') return NaN;
+                if (op === "+") total += val;
+                else if (op === "-") total -= val;
+            }
+            return total;
+        };
+
+        const leftTotal = evalSide(ranks.slice(0, eqIdx));
+        const rightTotal = evalSide(ranks.slice(eqIdx + 1));
+
+        return !isNaN(leftTotal) && !isNaN(rightTotal) && leftTotal === rightTotal;
+    }
+
+    function resetStats() {
+        state.score = 0; state.streak = 0; state.bestStreak = 0;
+        state.totalPlayed = 0; state.correctAnswers = 0;
+        state.recentAnswers = [];
+        updateStats(); nextChallenge();
+    }
+
+    function renderSolutionFans() {
+        const parts = state.challenge.expressionParts;
+        const eqIdx = parts.findIndex(p => p.text === "=");
+        if (eqIdx === -1) return;
+
+        // --- 1. Calculate Expected Values & Totals ---
+        let expIdx = 0;
+        const mapPartToValues = (part) => {
+            if (part.type === "card") return [part.value];
+            if (part.type === "unknown") {
+                const val = state.challenge.expectedValues[expIdx];
+                // Increment only if we access it, but filter might call this multiple times if we aren't careful.
+                // Better to map first, then sum.
+                return [val];
+            }
+            return [];
+        };
+
+        // We need a stable mapping of unknowns to expected values
+        let unknownCounter = 0;
+        const resolvedParts = parts.map(p => {
+            if (p.type === "unknown") {
+                const val = state.challenge.expectedValues[unknownCounter++];
+                return { ...p, value: val, resolved: true };
+            }
+            return p;
+        });
+
+        const leftParts = resolvedParts.slice(0, eqIdx);
+        const rightParts = resolvedParts.slice(eqIdx + 1);
+
+        // Calculate totals for context (using all cards in play)
+        const allCardValues = resolvedParts
+            .filter(p => p.type === "card" || p.resolved)
+            .map(p => p.value);
+
+        const getPartValue = (p) => {
+            if (p.type === "number") return parseInt(p.value, 10);
+            if (p.type === "card" || p.resolved) return EducationalUtils.getRank(p.value, allCardValues);
+            return 0;
+        };
+
+        // --- 2. Render Equation Visualizer ---
+        const overlay = document.createElement("div");
+        overlay.className = "edu-solution-overlay";
+
+        const title = document.createElement("div");
+        title.className = "edu-subtle";
+        title.textContent = "Correct Logic:";
+        overlay.appendChild(title);
+
+        const fans = document.createElement("div");
+        fans.className = "edu-solution-fans";
+
+        // Helper to render a single part (Stack)
+        const renderPart = (p) => {
+            const container = document.createElement("div");
+            container.className = "edu-solution-stack";
+
+            if (p.type === "symbol") {
+                const sym = document.createElement("div");
+                sym.textContent = p.text;
+                // Add specific class based on symbol content
+                if (p.text === "+") sym.className = "edu-sol-symbol edu-sol-symbol--plus";
+                else if (p.text === "-") sym.className = "edu-sol-symbol edu-sol-symbol--minus";
+                else sym.className = "edu-sol-symbol"; // Fallback/Equals (though equals is handled separately below)
+
+                return sym;
+            }
+
+            let val = 0;
+
+            if (p.type === "number") {
+                val = parseInt(p.value, 10);
+                const ranks = decomposeValueToRanks(val);
+                container.appendChild(renderFan(ranks));
+            } else if (p.type === "card" || p.resolved) {
+                val = EducationalUtils.getRank(p.value, allCardValues);
+                // Card Stack: [Card] [Value Pill] [Pips]
+                const cardDiv = document.createElement("div");
+                cardDiv.className = "edu-solution-card-wrapper";
+                cardDiv.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), p.value)));
+                container.appendChild(cardDiv);
+            }
+
+            // [Value Pill]
+            const pill = document.createElement("div");
+            pill.className = "edu-pill-sum";
+            pill.textContent = String(val);
+            container.appendChild(pill);
+
+            // [Pips]
+            container.appendChild(renderPips(val));
+
+            return container;
+        };
+
+        // Render Left Side
+        const leftContainer = document.createElement("div");
+        leftContainer.className = "edu-solution-side";
+        leftParts.forEach(p => leftContainer.appendChild(renderPart(p)));
+        fans.appendChild(leftContainer);
+
+        // Render Equals
+        const eq = document.createElement("div");
+        eq.textContent = "=";
+        eq.className = "edu-sol-symbol edu-sol-symbol--equals";
+        fans.appendChild(eq);
+
+        // Render Right Side
+        // Special case: If RHS was just a "?", we want to show the CARD result
+        // If RHS was "10 + 2", we show that structure too? 
+        // User requested: "RHS must contain a single card" if the exercise was "?". 
+        // But if the exercise was "Search for total", the structure IS "Card + Card = ?"
+        // The resolvedParts handle this naturally.
+        const rightContainer = document.createElement("div");
+        rightContainer.className = "edu-solution-side";
+        rightParts.forEach(p => rightContainer.appendChild(renderPart(p)));
+        fans.appendChild(rightContainer);
+
+        overlay.appendChild(fans);
+
+        const tap = document.createElement("div");
+        tap.className = "edu-subtle";
+        tap.style.marginTop = "6px";
+        tap.textContent = "(Tap to continue)";
+        overlay.appendChild(tap);
+
+        // Wrap in a backdrop
+        const backdrop = document.createElement("div");
+        backdrop.className = "edu-modal-backdrop";
+        backdrop.appendChild(overlay);
+
+        document.body.appendChild(backdrop);
+
+        // Ensure dismissal removes the backdrop
+        // We attach the listener to the backdrop to catch clicks outside the content too, 
+        // effectively treating the whole screen as the "tap to continue" surface.
+        const dismiss = (e) => {
+            // If the user taps, we dismiss. 
+            // We do NOT want scrolling drags to dismiss, so we stick to 'click'.
+
+            // Optional: check if e.target is the backdrop itself if needed,
+            // but the prompt says "Tap to continue" and "attempting to scroll will close correct answer". 
+            // If the user scrolls, they are doing a touch-move sequence. That's not a click.
+            // So a simple 'click' listener is usually safe. 
+            // However, to be extra safe against accidental taps while scrolling:
+            // Browsers usually suppress 'click' if a scroll occurred.
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            backdrop.removeEventListener("click", dismiss);
+            if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+            nextChallenge();
+        };
+
+        backdrop.addEventListener("click", dismiss);
     }
 
     function recordAnswer(isCorrect) {

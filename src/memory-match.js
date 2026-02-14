@@ -1,4 +1,4 @@
-(function() {
+(function () {
     "use strict";
 
     const RULES = {
@@ -23,26 +23,26 @@
         "same-rank": {
             label: "Same rank",
             copy: "Match cards with the same rank (same number/face value).",
-            isMatch: (a, b) => EducationalUtils.getRank(a.card.val) === EducationalUtils.getRank(b.card.val),
+            isMatch: (a, b) => EducationalUtils.getRank(a.card.val, state.cards) === EducationalUtils.getRank(b.card.val, state.cards),
             buildPairs: buildSameRankPairs
         },
         "sequence": {
             label: "Sequence (+/-1)",
             copy: "Match cards one step apart (A can pair with K).",
-            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val)),
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val, state.cards), EducationalUtils.getRank(b.card.val, state.cards)),
             buildPairs: buildSequencePairs
         },
         "sequence-same-color": {
             label: "Sequence same color",
             copy: "Match one-step sequences with the same color only (A can pair with K).",
-            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val))
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val, state.cards), EducationalUtils.getRank(b.card.val, state.cards))
                 && EducationalUtils.getCardColor(a.card) === EducationalUtils.getCardColor(b.card),
             buildPairs: (count) => buildSequencePairs(count, "same-color")
         },
         "sequence-different-color": {
             label: "Sequence different color",
             copy: "Match one-step sequences with different colors only (A can pair with K).",
-            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val), EducationalUtils.getRank(b.card.val))
+            isMatch: (a, b) => areAdjacentRanks(EducationalUtils.getRank(a.card.val, state.cards), EducationalUtils.getRank(b.card.val, state.cards))
                 && EducationalUtils.getCardColor(a.card) !== EducationalUtils.getCardColor(b.card),
             buildPairs: (count) => buildSequencePairs(count, "different-color")
         }
@@ -118,6 +118,7 @@
         elements.grid = document.getElementById("memory-grid");
         elements.tableSelect = document.getElementById("table-style-select");
         elements.deckSelect = document.getElementById("deck-style-select");
+        elements.resetStats = document.getElementById("memory-reset-stats");
     }
 
     function bindEvents() {
@@ -179,6 +180,16 @@
 
         elements.tableSelect?.addEventListener("change", syncThemeClasses);
         elements.deckSelect?.addEventListener("change", syncThemeClasses);
+        elements.resetStats?.addEventListener("click", () => {
+            SolitaireCheckModal.showConfirm({
+                title: "Reset Progress",
+                message: "Do you want to clear your best moves and win streak for Memory Match?",
+                confirmLabel: "Reset",
+                cancelLabel: "Cancel"
+            }).then(confirmed => {
+                if (confirmed) resetStats();
+            });
+        });
         window.addEventListener("addons:changed", syncThemeClasses);
     }
 
@@ -407,9 +418,9 @@
     }
 
     function getNextValue(value, values) {
-        const currentRank = EducationalUtils.getRank(value);
-        const wrapRank = currentRank === 13 ? 1 : currentRank + 1;
-        return values.find((candidate) => EducationalUtils.getRank(candidate) === wrapRank) || values[0];
+        const currentRank = EducationalUtils.getRank(value, values);
+        const wrapRank = currentRank === (values.includes("C") ? 14 : 13) ? 1 : currentRank + 1;
+        return values.find((candidate) => EducationalUtils.getRank(candidate, values) === wrapRank) || values[0];
     }
 
     function buildSequencePairs(pairCount, colorMode = "any") {
@@ -564,6 +575,16 @@
         const key = `${state.activeRule}:${state.totalPairs}`;
         elements.bestMoves.textContent = state.bestMoves[key] || "-";
         elements.winStreak.textContent = String(state.winStreak);
+    }
+
+    function resetStats() {
+        state.bestMoves = {};
+        state.winStreak = 0;
+        state.moves = 0;
+        state.matchedPairs = 0;
+        updateStats();
+        saveProgress();
+        startNewGame();
     }
 
     function syncThemeClasses() {

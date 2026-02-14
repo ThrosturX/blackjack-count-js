@@ -15,9 +15,12 @@
     <link rel="stylesheet" href="styles/educational.css">
 </head>
 
-<body class="educational-page memory-page" data-addon-toggle-allowlist="classic-faces,worn-cards,premium-effects" data-theme-default-table="ocean" data-theme-default-deck="water" data-no-store-link="true" data-auto-enable-hidden-addons="true" data-addon-default-classic-faces="true">
+<body class="educational-page memory-page" data-addon-toggle-allowlist="classic-faces,worn-cards,premium-effects"
+    data-theme-default-table="ocean" data-theme-default-deck="water" data-no-store-link="true"
+    data-auto-enable-hidden-addons="true" data-addon-default-classic-faces="true">
     <header>
-        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow" aria-hidden="true"></span></a>
+        <a class="back-link" href="index.html" aria-label="Back to home"><span class="back-arrow"
+                aria-hidden="true"></span></a>
         <h1>Memory Match</h1>
         <div class="header-toggles">
             <button id="toggle-game" class="btn-toggle active">Game</button>
@@ -68,6 +71,9 @@
                     </select>
                 </div>
                 <label class="stats"><input type="checkbox" id="memory-auto-level" checked> Auto-level</label>
+                <div class="stats">
+                    <button type="button" class="btn-toggle btn-mini" id="memory-reset-stats">Reset Stats</button>
+                </div>
             </div>
 
             <div class="controls-section collapsed" id="addons-area" data-no-store-link="true">
@@ -118,6 +124,7 @@
     <script src="card.js"></script>
     <script src="common.js"></script>
     <script src="header.js"></script>
+    <script src="shared/solitaire-check-modal.js"></script>
     <script src="shared/educational.js"></script>
     <script src="memory-match.js"></script>
 </body>

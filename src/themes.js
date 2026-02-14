@@ -1,5 +1,6 @@
 (() => {
-    const STORAGE_KEY = 'bj_table.settings';
+    const STORAGE_KEY = document.body.classList.contains('educational-page') ? 'bj_table.edu_settings' : 'bj_table.settings';
+
     const fallbackThemes = {
         core: {
             table: new Map([
@@ -18,7 +19,14 @@
     const loadSettings = () => {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return { addons: {} };
+            if (!raw) {
+                // Special initialization for educational games
+                if (document.body.classList.contains('educational-page')) {
+                    const defaultDeck = Math.random() > 0.5 ? 'old-sun' : 'water';
+                    return { table: 'aurora', deck: defaultDeck, addons: { 'classic-faces': true } };
+                }
+                return { addons: {} };
+            }
             const data = JSON.parse(raw);
             if (!data || typeof data !== 'object') return { addons: {} };
             if (!data.addons || typeof data.addons !== 'object') data.addons = {};

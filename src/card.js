@@ -14,6 +14,22 @@ function getRandomRotation() {
 /* --- CARD CLASS --- */
 class Card {
     constructor(suit, val) {
+        if (!suit || suit === "" || suit === "R") {
+            suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+        } else {
+            let choices = SUITS;
+            if (suit.toLowerCase() == 'red') {
+                choices = SUITS.filter(s => s === '♥' || s === '♦');
+            } else if (suit.toLowerCase() == 'black') {
+                choices = SUITS.filter(s => s === '♠' || s === '♣');
+            }
+            if (choices.indexOf(suit) === -1) {
+                suit = choices[Math.floor(Math.random() * choices.length)];
+            }
+        }
+        if (!val || val === "" || val === "R") {
+            val = VALUES[Math.floor(Math.random() * VALUES.length)];
+        }
         this.suit = suit;
         this.val = val;
         this.hidden = false;
@@ -27,8 +43,15 @@ class Card {
         if (this.val === 'A') return 1;
         if (this.val === 'J') return 11;
         if (this.val === 'C') return 12;
-        if (this.val === 'Q') return 12;
-        if (this.val === 'K') return 13;
+
+        // Context-aware: If we are in an "extended" mode or a Knight is explicitly known.
+        // For simplicity here, we check if global overrides exist or if a flag is set,
+        // but by default, we'll use a heuristic: if we see 'C', we shift Q and K.
+        const useExtended = (typeof window !== 'undefined' && window.__useExtendedRanks === true);
+
+        if (this.val === 'Q') return useExtended ? 13 : 12;
+        if (this.val === 'K') return useExtended ? 14 : 13;
+
         return parseInt(this.val);
     }
     // removed count getter as it is game specific

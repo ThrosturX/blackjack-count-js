@@ -9,7 +9,7 @@ const EducationalUtils = {
      * @param {number} level - Difficulty level (1-5)
      * @returns {Array} Array of Card objects
      */
-    createDeckForLevel: function(level) {
+    createDeckForLevel: function (level) {
         const values = this.getValuesForLevel(level);
         const deck = [];
         for (const suit of SUITS) {
@@ -25,8 +25,8 @@ const EducationalUtils = {
      * @param {number} level - Difficulty level (1-5)
      * @returns {Array} Array of card values
      */
-    getValuesForLevel: function(level) {
-        switch(level) {
+    getValuesForLevel: function (level) {
+        switch (level) {
             case 1: return ['2', '3', '4', '5'];
             case 2: return ['2', '3', '4', '5', '6', '7', '8', '9', '10'];
             case 3: return VALUES.slice(0, 11); // 2 through Q
@@ -41,16 +41,21 @@ const EducationalUtils = {
      * @param {string} val - Card value
      * @returns {number} Numeric rank (1-13)
      */
-    getRank: function(val) {
+    getRank: function (val, context) {
         if (val === 'A') return 1;
         if (val === 'J') return 11;
-        if (val === 'C') return 12;
-        if (val === 'Q') return 12;
-        if (val === 'K') return 13;
+        if (val === 'C') return 12; // Knight
+
+        // Context-aware logic for 56-card deck
+        const hasKnight = val === 'C' || (Array.isArray(context) && context.some(c => (typeof c === 'string' ? c : c.val) === 'C'));
+
+        if (val === 'Q') return hasKnight ? 13 : 12;
+        if (val === 'K') return hasKnight ? 14 : 13;
+
         return parseInt(val, 10);
     },
 
-    getSuitName: function(suit) {
+    getSuitName: function (suit) {
         const labels = {
             '♥': 'Hearts',
             '♦': 'Diamonds',
@@ -60,7 +65,7 @@ const EducationalUtils = {
         return labels[suit] || suit;
     },
 
-    getValueLabel: function(val) {
+    getValueLabel: function (val) {
         const labels = {
             A: 'Ace',
             J: 'Jack',
@@ -71,7 +76,7 @@ const EducationalUtils = {
         return labels[val] || String(val);
     },
 
-    getValueWithRank: function(val) {
+    getValueWithRank: function (val) {
         return `${this.getValueLabel(val)} (${this.getRank(val)})`;
     },
 
@@ -80,7 +85,7 @@ const EducationalUtils = {
      * @param {Array} array - Array to shuffle
      * @returns {Array} New shuffled array
      */
-    shuffle: function(array) {
+    shuffle: function (array) {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -95,7 +100,7 @@ const EducationalUtils = {
      * @param {number} count - Number of items to pick
      * @returns {Array} Array of picked items
      */
-    pickRandom: function(array, count) {
+    pickRandom: function (array, count) {
         const shuffled = this.shuffle(array);
         return shuffled.slice(0, count);
     },
@@ -105,7 +110,7 @@ const EducationalUtils = {
      * @param {Object} card - Card object with suit property
      * @returns {string} 'red' or 'black'
      */
-    getCardColor: function(card) {
+    getCardColor: function (card) {
         return (card.suit === '♥' || card.suit === '♦') ? 'red' : 'black';
     },
 
@@ -114,7 +119,7 @@ const EducationalUtils = {
      * @param {Array} availableDeck - Pool of cards to choose from
      * @returns {Object} Random card object
      */
-    getRandomCard: function(availableDeck) {
+    getRandomCard: function (availableDeck) {
         const idx = Math.floor(Math.random() * availableDeck.length);
         return availableDeck[idx];
     },
@@ -124,7 +129,7 @@ const EducationalUtils = {
      * @param {Array} availableDeck - Pool of cards
      * @returns {Array} Array of two different cards
      */
-    getTwoDifferentCards: function(availableDeck) {
+    getTwoDifferentCards: function (availableDeck) {
         if (availableDeck.length < 2) return [availableDeck[0], availableDeck[0]];
 
         const idx1 = Math.floor(Math.random() * availableDeck.length);
@@ -141,7 +146,7 @@ const EducationalUtils = {
      * @param {Array} recentAnswers - Array of booleans (true = correct)
      * @returns {number} Success rate (0-1)
      */
-    calculateSuccessRate: function(recentAnswers) {
+    calculateSuccessRate: function (recentAnswers) {
         if (!recentAnswers || recentAnswers.length === 0) return 0;
         const correct = recentAnswers.filter(a => a).length;
         return correct / recentAnswers.length;
@@ -155,7 +160,7 @@ const EducationalUtils = {
      * @param {number} maxLevel - Maximum difficulty (default: 5)
      * @returns {number} Adjusted difficulty level
      */
-    adjustDifficulty: function(currentLevel, successRate, minLevel = 1, maxLevel = 5) {
+    adjustDifficulty: function (currentLevel, successRate, minLevel = 1, maxLevel = 5) {
         if (successRate > 0.85 && currentLevel < maxLevel) {
             return currentLevel + 1;
         }
@@ -170,7 +175,7 @@ const EducationalUtils = {
      * @param {string} gameId - Unique game identifier
      * @param {Object} data - Progress data to save
      */
-    saveProgress: function(gameId, data) {
+    saveProgress: function (gameId, data) {
         try {
             const key = `bj_table.edu.${gameId}`;
             const payload = {
@@ -189,7 +194,7 @@ const EducationalUtils = {
      * @param {string} gameId - Unique game identifier
      * @returns {Object|null} Progress data or null if not found
      */
-    loadProgress: function(gameId) {
+    loadProgress: function (gameId) {
         try {
             const key = `bj_table.edu.${gameId}`;
             const raw = localStorage.getItem(key);
@@ -205,7 +210,7 @@ const EducationalUtils = {
      * Resets educational game progress.
      * @param {string} gameId - Unique game identifier
      */
-    resetProgress: function(gameId) {
+    resetProgress: function (gameId) {
         try {
             const key = `bj_table.edu.${gameId}`;
             localStorage.removeItem(key);
@@ -219,7 +224,7 @@ const EducationalUtils = {
      * @param {number} level - Difficulty level
      * @returns {string} Human-readable level name
      */
-    getDifficultyName: function(level) {
+    getDifficultyName: function (level) {
         const names = {
             1: 'Trivial',
             2: 'Easy',
@@ -234,7 +239,7 @@ const EducationalUtils = {
      * Gets all difficulty levels for UI display.
      * @returns {Array} Array of level objects
      */
-    getDifficultyLevels: function() {
+    getDifficultyLevels: function () {
         return [
             { level: 1, name: 'Trivial', description: 'Numbers 2-5 only' },
             { level: 2, name: 'Easy', description: 'Numbers 2-10' },

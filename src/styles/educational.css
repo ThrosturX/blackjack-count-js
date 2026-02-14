@@ -115,6 +115,304 @@
     font-size: 0.92rem;
 }
 
+.edu-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-weight: bold;
+    color: white;
+    min-width: 60px;
+    min-height: 140px;
+}
+
+.edu-pill--number {
+    gap: 12px;
+    padding-top: 16px;
+}
+
+.edu-pill--symbol {
+    min-height: 0;
+    min-width: 40px;
+}
+
+.edu-pill-value {
+    font-size: 1.4em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    line-height: 1;
+}
+
+.edu-pill-sum {
+    font-size: 0.9rem;
+    color: var(--gold);
+    font-weight: 800;
+    margin-top: -4px;
+    text-align: center;
+}
+
+.edu-card-fan {
+    position: relative;
+    width: 80px;
+    height: 70px;
+    margin: 0 auto;
+}
+
+.edu-fan-card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center bottom;
+    pointer-events: none;
+}
+
+.edu-fan-card .card {
+    transform: scale(0.48);
+    margin: -50px 0 0 -35px;
+}
+
+.edu-fan-card:nth-child(1) {
+    transform: translate(-50%, -50%) rotate(-12deg) translateX(-12px);
+}
+
+.edu-fan-card:nth-child(2) {
+    transform: translate(-50%, -50%) rotate(12deg) translateX(12px);
+}
+
+.edu-fan-card:nth-child(3) {
+    transform: translate(-50%, -50%) rotate(0deg) translateY(-8px);
+    z-index: 2;
+}
+
+.edu-dot-group {
+    display: flex;
+    gap: 2px;
+    padding: 1px;
+    width: 32px;
+    justify-content: flex-start;
+    flex-shrink: 0;
+}
+
+.edu-visual-total {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1px;
+    align-items: flex-start;
+    opacity: 0.85;
+    margin-top: 2px;
+    /* 2 groups of 5 per line (32px*2 + gap) = ~65px */
+    width: 70px;
+}
+
+.edu-visual-dot {
+    width: 4px;
+    height: 4px;
+    background: #ffcc00;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(255, 204, 0, 0.4);
+}
+
+/* --- Solution Overlay --- */
+/* --- Solution Overlay & Modal --- */
+
+.edu-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.edu-solution-overlay {
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    margin: auto;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.edu-solution-overlay .edu-subtle:first-child {
+    margin-bottom: 4px;
+    font-size: 1rem;
+    color: var(--gold);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.edu-solution-fans {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    column-gap: 10px;
+    row-gap: 10px;
+    font-weight: 800;
+    color: white;
+    width: 100%;
+    padding: 4px 0;
+}
+
+.edu-solution-side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    row-gap: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 8px 10px;
+    border-radius: 10px;
+    flex: 1 1 auto;
+    min-width: 160px;
+}
+
+.edu-solution-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    min-width: 60px;
+}
+
+.edu-solution-card-wrapper {
+    position: relative;
+    /* Card is ~100px wide, 140px high? 
+       If scale is 0.55:
+       Width = 100 * 0.55 = 55px
+       Height = 140 * 0.55 = 77px
+       Wrapper 72x88 is generous, but margin might be issue.
+       Let's reduce height to tighten it up and prevent 'protrusion' if alignment is off.
+       And crucial: transform-origin center center is default, but let's be explicit and concise.
+    */
+    width: 60px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.edu-solution-card-wrapper .card {
+    transform: scale(0.55);
+    transform-origin: center center;
+    margin: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.edu-solution-stack .edu-pill-sum {
+    margin-top: 2px;
+    font-size: 1rem;
+    color: var(--gold);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1px 6px;
+    border-radius: 8px;
+    z-index: 2;
+    margin-bottom: 2px;
+}
+
+/* --- Solution Symbols --- */
+.edu-sol-symbol {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 4px;
+    align-self: center;
+    /* Vertically center in the flex row */
+    line-height: 1;
+}
+
+.edu-sol-symbol--plus {
+    color: #4cd137;
+    /* Green */
+}
+
+.edu-sol-symbol--minus {
+    color: #e67e22;
+    /* Orange */
+}
+
+.edu-sol-symbol--equals {
+    color: white;
+    margin: 0 6px;
+}
+
+/* --- Drag & Drop Visuals --- */
+
+.edu-drag-ghost {
+    opacity: 0.95;
+    transform: scale(1.05);
+    /* Slightly larger when dragging */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s;
+    pointer-events: none;
+}
+
+.dragging-source .edu-choice-card .card {
+    visibility: hidden;
+}
+
+.dragging-source .edu-choice-card .edu-choice-label,
+.dragging-source .edu-choice-card .edu-choice-help {
+    visibility: hidden;
+}
+
+.dragging-source .edu-choice-card::after {
+    content: attr(data-rank-label);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.55);
+    pointer-events: none;
+}
+
+.dragging-source .edu-choice-card {
+    position: relative;
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+@keyframes edu-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.edu-drop-slot {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.92rem;
+}
+
 .edu-visual-cue {
     margin-top: 10px;
     padding: 8px 12px;
@@ -393,10 +691,6 @@
     transform-origin: top left;
 }
 
-.edu-drag-ghost {
-    opacity: 0.92;
-}
-
 @media (orientation: landscape) and (min-width: 640px) {
     .memory-page .edu-table {
         display: grid;
@@ -405,7 +699,7 @@
         align-items: start;
     }
 
-    .memory-page .edu-table > .edu-surface:first-child {
+    .memory-page .edu-table>.edu-surface:first-child {
         margin-top: 0;
     }
 
@@ -500,5 +794,14 @@
     .edu-drop-stack {
         width: 68px;
         height: 92px;
+    }
+
+    .edu-solution-side {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .edu-visual-total-container {
+        transform: scale(0.9);
     }
 }
