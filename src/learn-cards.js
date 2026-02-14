@@ -1,7 +1,7 @@
-(function() {
+(function () {
     "use strict";
 
-    const BREAK_FACTS_COMMON = [
+    const FALLBACK_BREAK_CARDS_COMMON = [
         {
             text: "The Jack is also called the Knave.",
             buildCards: buildKnaveFactCards
@@ -32,22 +32,31 @@
         }
     ];
 
-    const BREAK_CARD_KNIGHT = {
+    const FALLBACK_BREAK_CARD_KNIGHT = [{
         text: "The Knight appeared in 56-card decks between Knave and Queen.",
         buildCards: () => EducationalUtils.shuffle([
             new Card("♣", "J"),
             new Card("♦", "C"),
             new Card("♥", "Q")
         ])
-    };
+    }];
 
-    const LEVEL_FACTS = {
+    const FALLBACK_LEVEL_FACTS = {
         1: ["Hearts and Diamonds are red.", "Spades and Clubs are black.", "Each suit has 13 cards."],
         2: ["A then 2 to 10, then J-Q-K.", "Suits are shown by symbol.", "Cards can share rank across suits."],
         3: ["Same rank can have many suits.", "Colors are red or black.", "Highest means the biggest rank value."],
         4: ["Find the lowest or highest card by rank.", "Ace is low in this mode.", "Practice makes rank comparison fast."],
         5: ["History breaks appear between drills.", "Knight sits between Knave and Queen in 56-card decks.", "Card symbols evolved over centuries."]
     };
+
+    const sharedFactoids = (typeof CardFactoids === "object" && CardFactoids) ? CardFactoids : null;
+    const BREAK_CARDS_COMMON = sharedFactoids && Array.isArray(sharedFactoids.common) && sharedFactoids.common.length
+        ? sharedFactoids.common
+        : FALLBACK_BREAK_CARDS_COMMON;
+    const BREAK_CARD_KNIGHT = sharedFactoids && Array.isArray(sharedFactoids.knight) && sharedFactoids.knight.length
+        ? sharedFactoids.knight
+        : FALLBACK_BREAK_CARD_KNIGHT;
+    const LEVEL_FACTS = (sharedFactoids && sharedFactoids.levelTips) || FALLBACK_LEVEL_FACTS;
 
     const state = {
         score: 0,
@@ -79,7 +88,8 @@
         feedback: null,
         fact: null,
         tableSelect: null,
-        deckSelect: null
+        deckSelect: null,
+        resetStats: null
     };
 
     function init() {
@@ -108,6 +118,7 @@
         elements.fact = document.getElementById("learn-fact");
         elements.tableSelect = document.getElementById("table-style-select");
         elements.deckSelect = document.getElementById("deck-style-select");
+        elements.resetStats = document.getElementById("learn-reset-stats");
     }
 
     function bindEvents() {
@@ -126,6 +137,17 @@
             state.autoLevel = event.target.checked;
             saveProgress();
             nextQuestion();
+        });
+
+        elements.resetStats?.addEventListener("click", () => {
+            SolitaireCheckModal.showConfirm({
+                title: "Reset Stats",
+                message: "This will clear all your progress and scores in this game. Are you sure?",
+                confirmLabel: "Reset",
+                cancelLabel: "Keep Stats"
+            }).then(confirmed => {
+                if (confirmed) resetStats();
+            });
         });
 
         elements.tableSelect?.addEventListener("change", syncThemeClasses);
@@ -183,6 +205,11 @@
         const deck = EducationalUtils.createDeckForLevel(Math.min(5, state.level + 1));
         const pickCard = () => deck[Math.floor(Math.random() * deck.length)];
 
+        // 10% chance to show style comparison instead of normal question
+        if (Math.random() < 0.1) {
+            return buildComparisonQuestion();
+        }
+
         const builders = {
             1: [questionSuitOnCard, questionColorOnCard, questionFindCardByRank, questionFindSuitGroup],
             2: [questionRankOnCard, questionFindCardByRank, questionFindSuitGroup],
@@ -198,6 +225,20 @@
         const list = builders[state.level] || builders[1];
         const build = list[Math.floor(Math.random() * list.length)];
         return build(pickCard, deck);
+    }
+
+    function buildComparisonQuestion() {
+        const deck = EducationalUtils.createDeckForLevel(5);
+        const card = deck[Math.floor(Math.random() * deck.length)];
+        return {
+            kind: "comparison",
+            prompt: "Card Styles Comparison",
+            cue: { text: "🔍 Style Check", tone: "blue" },
+            card: card,
+            fact: "Classic faces show full pips/art. Simplified faces are for fast reading.",
+            boardCards: [card],
+            choices: []
+        };
     }
 
     function buildExpertQuestion(pickCard, deck) {
@@ -248,9 +289,8 @@
         return 2;
     }
 
-    function getComparableRank(value) {
-        if (value === "C") return 12.5;
-        return EducationalUtils.getRank(value);
+    function getComparableRank(value, context) {
+        return EducationalUtils.getRank(value, context);
     }
 
     function pickDistinctValuesByRank(values, count) {
@@ -260,7 +300,7 @@
 
         shuffled.forEach((value) => {
             if (result.length >= count) return;
-            const rank = getComparableRank(value);
+            const rank = getComparableRank(value, values);
             if (seenRanks.has(rank)) return;
             seenRanks.add(rank);
             result.push(value);
@@ -314,7 +354,7 @@
             boardCards: [card],
             choices: options.map((value) => ({
                 label: EducationalUtils.getValueLabel(value),
-                sublabel: `${getComparableRank(value)}`,
+                sublabel: `${getComparableRank(value, options)}`,
                 isCorrect: value === card.val
             }))
         };
@@ -368,8 +408,8 @@
 
         let targetIndex = 0;
         cards.forEach((card, index) => {
-            const rank = getComparableRank(card.val);
-            const targetRank = getComparableRank(cards[targetIndex].val);
+            const rank = getComparableRank(card.val, cards);
+            const targetRank = getComparableRank(cards[targetIndex].val, cards);
             if (rank > targetRank) targetIndex = index;
         });
 
@@ -390,8 +430,8 @@
 
         let targetIndex = 0;
         cards.forEach((card, index) => {
-            const rank = getComparableRank(card.val);
-            const targetRank = getComparableRank(cards[targetIndex].val);
+            const rank = getComparableRank(card.val, cards);
+            const targetRank = getComparableRank(cards[targetIndex].val, cards);
             if (rank < targetRank) targetIndex = index;
         });
 
@@ -438,10 +478,9 @@
             }
         }
 
-        const sortedByRank = values.slice().sort((left, right) => getComparableRank(left) - getComparableRank(right));
+        const sortedByRank = values.slice().sort((left, right) => getComparableRank(left, values) - getComparableRank(right, values));
         const middleValue = sortedByRank[1];
         const cards = EducationalUtils.shuffle(values.map((value) => new Card(randomSuit(), value)));
-
         return {
             kind: "board",
             prompt: "Tap middle rank",
@@ -452,16 +491,27 @@
     }
 
     function questionDidYouKnowBreak(includeKnight = false) {
-        const item = includeKnight
-            ? BREAK_CARD_KNIGHT
-            : BREAK_FACTS_COMMON[Math.floor(Math.random() * BREAK_FACTS_COMMON.length)];
+        const pool = includeKnight ? BREAK_CARD_KNIGHT : BREAK_CARDS_COMMON;
+        const item = pool[Math.floor(Math.random() * pool.length)];
         return {
             kind: "break",
-            prompt: item.text,
+            prompt: item?.text || "Did you know?",
             cue: { text: "📘 Card Fact", tone: "blue" },
-            boardCards: item.buildCards(),
+            boardCards: buildFactCards(item),
             choices: []
         };
+    }
+
+    function buildFactCards(item) {
+        if (!item) return [];
+        if (typeof item.buildCards === "function") {
+            const cards = item.buildCards();
+            return Array.isArray(cards) ? cards : [];
+        }
+        if (Array.isArray(item.cards)) {
+            return item.cards;
+        }
+        return [];
     }
 
     function pickRandom(list) {
@@ -568,11 +618,55 @@
 
         renderBoard(question);
         renderChoices(question);
-        elements.breakNextButton.style.display = question.kind === "break" ? "inline-flex" : "none";
+        elements.breakNextButton.style.display = (question.kind === "break" || question.kind === "comparison") ? "inline-flex" : "none";
     }
 
     function renderBoard(question) {
         elements.board.innerHTML = "";
+
+        if (question.kind === "comparison") {
+            const container = document.createElement("div");
+            container.className = "edu-row";
+            container.style.gap = "20px";
+            container.style.justifyContent = "center";
+            container.style.width = "100%";
+
+            const left = document.createElement("div");
+            left.style.textAlign = "center";
+            const leftCard = CommonUtils.createCardEl(question.card);
+            left.appendChild(leftCard);
+            const labelL = document.createElement("div");
+            labelL.className = "edu-subtle";
+            labelL.style.marginTop = "8px";
+            labelL.textContent = "Classic (Pips)";
+            left.appendChild(labelL);
+
+            const right = document.createElement("div");
+            right.style.textAlign = "center";
+            const rightCard = CommonUtils.createCardEl(question.card);
+            rightCard.classList.remove("classic-faces-card", "classic-faces-art-card");
+            const suitCenter = rightCard.querySelector(".suit-center");
+            if (suitCenter) {
+                suitCenter.innerHTML = question.card.suit;
+                suitCenter.style.fontSize = "2.5em";
+                suitCenter.style.display = "flex";
+                suitCenter.style.alignItems = "center";
+                suitCenter.style.justifyContent = "center";
+            }
+            right.appendChild(rightCard);
+            const labelR = document.createElement("div");
+            labelR.className = "edu-subtle";
+            labelR.style.marginTop = "8px";
+            labelR.textContent = "Simplified";
+            right.appendChild(labelR);
+
+            container.appendChild(left);
+            container.appendChild(right);
+            elements.board.appendChild(container);
+
+            elements.fact.textContent = question.fact;
+            return;
+        }
 
         question.boardCards.forEach((card, index) => {
             if (question.kind === "board" || question.kind === "break") {
@@ -663,7 +757,7 @@
     }
 
     function advanceBreakQuestion() {
-        if (state.question?.kind !== "break") return;
+        if (state.question?.kind !== "break" && state.question?.kind !== "comparison") return;
         disableInputs();
         nextQuestion();
     }
@@ -688,9 +782,27 @@
             state.streak += 1;
             state.bestStreak = Math.max(state.bestStreak, state.streak);
             CommonUtils.playSound("win");
+            setTimeout(nextQuestion, 920);
         } else {
             state.streak = 0;
             CommonUtils.playSound("error");
+
+            // Interaction pause for incorrect answers
+            const resumeHandler = (e) => {
+                const target = e.target;
+                if (target && (target.closest('.game-controls') || target.closest('header'))) return; // Don't block controls
+                e.preventDefault();
+                e.stopPropagation();
+                window.removeEventListener("click", resumeHandler, true);
+                window.removeEventListener("touchstart", resumeHandler, true);
+                nextQuestion();
+            };
+            setTimeout(() => {
+                window.addEventListener("click", resumeHandler, true);
+                window.addEventListener("touchstart", resumeHandler, true);
+            }, 300);
+
+            message += " (Tap to continue)";
         }
 
         if (state.autoLevel) {
@@ -704,8 +816,16 @@
         setFeedback(message, good);
         updateStats();
         saveProgress();
+    }
 
-        setTimeout(nextQuestion, 920);
+    function resetStats() {
+        state.score = 0;
+        state.streak = 0;
+        state.bestStreak = 0;
+        state.recentAnswers = [];
+        updateStats();
+        saveProgress();
+        nextQuestion();
     }
 
     function setFeedback(message, good) {

@@ -103,6 +103,12 @@ body.deck-sun .card.black {
 }
 
 /* BSR Taxi - Elegant luxury taxi company theme */
+/* 
+    TODO:
+    1. change background color to light sky blue
+    2. add "cloud" to the background near the top
+    3. add "Since 1921" to the background under the logo
+*/
 body.deck-bsr-taxi {
     --card-back-color: #f5f0e6;
     --card-back-pattern-color: #ebe4d4;
