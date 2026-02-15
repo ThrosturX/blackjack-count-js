@@ -493,8 +493,6 @@
             elements.choices.appendChild(button);
         });
 
-        const columns = Math.max(2, Math.min(6, state.challenge.choices.length));
-        elements.choices.style.setProperty("--choice-columns", String(columns));
     }
 
     function attachPointerDrag(button, choiceId) {

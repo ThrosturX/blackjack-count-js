@@ -135,6 +135,9 @@
 
     function bindEvents() {
         elements.newGameButton.addEventListener("click", startNewGame);
+        window.addEventListener("resize", () => {
+            if (state.cards.length > 0) renderGrid();
+        });
 
         elements.levelSelect.addEventListener("change", (event) => {
             state.currentLevel = clampLevel(parseInt(event.target.value, 10));
@@ -506,8 +509,32 @@
 
     function renderGrid() {
         elements.grid.innerHTML = "";
-        const cols = (LEVEL_CONFIG[state.currentLevel] || LEVEL_CONFIG[1]).cols;
-        elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 92px))`;
+        const totalCards = state.cards.length;
+        if (totalCards === 0) return;
+
+        const containerWidth = elements.grid.clientWidth || window.innerWidth - 40;
+        const containerHeight = window.innerHeight - (elements.grid.getBoundingClientRect().top || 200) - 40;
+
+        const cols = calculateOptimalColumns(totalCards, containerWidth, containerHeight);
+
+        // Dynamic scaling for large grids
+        const isUltraCompact = totalCards > 16 && (totalCards / cols > 4);
+        const isCompact = totalCards > 12 || isUltraCompact;
+
+        let shellClass = "edu-card-shell";
+        if (isUltraCompact) shellClass = "edu-card-shell edu-card-shell--ultra-compact";
+        else if (isCompact) shellClass = "edu-card-shell edu-card-shell--compact";
+
+        const cardMinWidth = isUltraCompact ? '50px' : (isCompact ? '70px' : '92px');
+        elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, ${cardMinWidth}))`;
+
+        if (isUltraCompact) {
+            elements.grid.style.gap = "2px";
+        } else if (isCompact) {
+            elements.grid.style.gap = "4px";
+        } else {
+            elements.grid.style.gap = "8px";
+        }
 
         state.cards.forEach((entry, index) => {
             const button = document.createElement("button");
@@ -517,7 +544,7 @@
             button.addEventListener("click", () => onCardTapped(index));
 
             const shell = document.createElement("span");
-            shell.className = "edu-card-shell";
+            shell.className = shellClass;
 
             if (entry.matched || entry.flipped) {
                 shell.appendChild(CommonUtils.createCardEl(entry.card));
@@ -654,6 +681,65 @@
 
         document.body.classList.add(`table-${tableTheme}`);
         document.body.classList.add(`deck-${deckTheme}`);
+    }
+
+    function calculateOptimalColumns(totalCards, maxWidth, maxHeight) {
+        // Find all possible rectangular grids (divisors)
+        const divisors = [];
+        for (let i = 1; i <= totalCards; i++) {
+            if (totalCards % i === 0) divisors.push(i);
+        }
+
+        const cardWidthNormal = 100;
+        const cardHeightNormal = 140;
+        const cardWidthCompact = 76;
+        const cardHeightCompact = 100;
+        const cardWidthUltra = 52;
+        const cardHeightUltra = 74;
+
+        let bestCols = 1;
+        let bestScore = -Infinity;
+
+        divisors.forEach(cols => {
+            const rows = totalCards / cols;
+
+            // Determine which size to test for this column count
+            let w, h;
+            if (cols * cardWidthNormal <= maxWidth) {
+                w = cardWidthNormal; h = cardHeightNormal;
+            } else if (cols * cardWidthCompact <= maxWidth) {
+                w = cardWidthCompact; h = cardHeightCompact;
+            } else {
+                w = cardWidthUltra; h = cardHeightUltra;
+            }
+
+            const gridWidth = cols * w;
+            const gridHeight = rows * h;
+
+            // Must fit in width
+            if (gridWidth > maxWidth + 20) return;
+
+            // Heuristic for "goodness":
+            // 1. Prefer grids that fit in height
+            const fitsHeight = gridHeight <= maxHeight;
+
+            // 2. Prefer aspect ratios closer to the screen aspect ratio
+            const gridAspect = gridWidth / gridHeight;
+            const screenAspect = maxWidth / maxHeight;
+            const aspectScore = 1 - Math.abs(gridAspect - screenAspect) / Math.max(gridAspect, screenAspect);
+
+            let score = aspectScore;
+            if (fitsHeight) score += 10;
+            if (cols > 1) score += 1; // avoid single columns
+            if (cols >= rows) score += 2; // prefer horizontal/balanced
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestCols = cols;
+            }
+        });
+
+        return bestCols;
     }
 
     if (document.readyState === "loading") {

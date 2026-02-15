@@ -22,14 +22,15 @@
     background: rgba(0, 0, 0, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.11);
     border-radius: 14px;
-    padding: 12px;
     box-sizing: border-box;
+    text-align: center;
 }
 
 .edu-surface--plain {
     background: transparent;
     border: 0;
     padding: 4px 2px 10px;
+    text-align: center;
 }
 
 .educational-page #table {
@@ -48,10 +49,9 @@
 }
 
 .edu-row {
-    display: flex;
     flex-wrap: wrap;
-    gap: 10px;
     align-items: center;
+    text-align: center;
 }
 
 #learn-board,
@@ -81,12 +81,13 @@
 }
 
 .edu-prompt {
-    font-size: clamp(1rem, 2.4vw, 1.3rem);
-    line-height: 1.35;
+    font-size: clamp(0.9rem, 2.2vw, 1.15rem);
+    line-height: 1.25;
     margin: 0;
-    min-height: 34px;
+    min-height: 28px;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 .edu-task-label {
@@ -103,11 +104,11 @@
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 6px 10px;
 }
 
 .edu-instruction-panel {
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .edu-subtle {
@@ -116,7 +117,7 @@
 }
 
 .edu-pill {
-    display: flex;
+    display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -128,6 +129,7 @@
     color: white;
     min-width: 60px;
     min-height: 140px;
+    margin: 3px;
 }
 
 .edu-pill--number {
@@ -343,7 +345,7 @@
 }
 
 .edu-sol-symbol--plus {
-    color: #4cd137;
+    color: #278518;
     /* Green */
 }
 
@@ -353,7 +355,7 @@
 }
 
 .edu-sol-symbol--equals {
-    color: white;
+    color: rgb(186, 248, 240);
     margin: 0 6px;
 }
 
@@ -472,10 +474,12 @@
     padding: 4px;
     min-width: 84px;
     min-height: 126px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    margin: 3px;
+    vertical-align: middle;
 }
 
 .edu-card-shell .card {
@@ -486,6 +490,28 @@
 .edu-card-shell.active {
     border-color: #5ea8ff;
     background: rgba(31, 104, 194, 0.22);
+}
+
+.edu-card-shell--compact {
+    min-width: 68px;
+    min-height: 94px;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.edu-card-shell--compact .card {
+    transform: scale(0.6);
+}
+
+.edu-card-shell--ultra-compact {
+    min-width: 48px;
+    min-height: 70px;
+    border-radius: 6px;
+    padding: 1px;
+}
+
+.edu-card-shell--ultra-compact .card {
+    transform: scale(0.42);
 }
 
 .edu-card-shell.success {
@@ -500,45 +526,48 @@
 
 .edu-choice-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+    gap: 4px;
 }
 
 .edu-choice-grid--row {
-    grid-template-columns: repeat(var(--choice-columns, 3), minmax(0, 1fr));
-    gap: 8px;
-    width: min(100%, calc(var(--choice-columns, 3) * 120px));
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 4px;
+    width: 100%;
     margin: 0 auto;
+}
+
+#learn-choices.edu-choice-grid--row {
+    grid-template-columns: repeat(var(--choice-columns, auto-fill), minmax(min(90px, 100%), 1fr));
+    gap: 6px;
 }
 
 .edu-choice-card {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    min-height: 108px;
-    padding: 8px;
+    border-radius: 10px;
+    min-height: 76px;
+    min-width: 70px;
+    padding: 4px;
     color: #fff;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
 }
 
 .edu-choice-grid--row .edu-choice-card {
     min-height: 94px;
-    padding: 8px 6px;
+    padding: 8px 2px;
 }
 
-#learn-choices .edu-choice-card {
-    width: 100%;
+.edu-choice-card--uniform {
+    width: 112px;
     min-width: 112px;
     max-width: 112px;
     min-height: 112px;
     max-height: 112px;
-    margin: 0 auto;
-    box-sizing: border-box;
-    justify-content: center;
 }
 
 #learn-choices .edu-choice-card .edu-choice-label {
@@ -552,16 +581,18 @@
 
 .edu-choice-card .card {
     position: relative;
-    transform: scale(0.66);
+    transform: scale(0.55);
 }
 
 .edu-choice-card .edu-choice-label {
     font-weight: 700;
+    font-size: 0.9rem;
 }
 
 .edu-choice-card .edu-choice-help {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.82);
+    margin-top: -2px;
 }
 
 .edu-choice-card.symbol-only {
@@ -639,7 +670,7 @@
 .edu-drop-slot {
     min-width: 90px;
     min-height: 132px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     border: 2px dashed rgba(255, 255, 255, 0.5);
@@ -753,7 +784,6 @@
 
     .edu-choice-grid--row .edu-choice-card {
         min-height: 82px;
-        padding: 4px;
     }
 
     #learn-choices .edu-choice-card {

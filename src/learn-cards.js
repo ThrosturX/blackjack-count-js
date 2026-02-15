@@ -627,38 +627,52 @@
         if (question.kind === "comparison") {
             const container = document.createElement("div");
             container.className = "edu-row";
-            container.style.gap = "20px";
-            container.style.justifyContent = "center";
             container.style.width = "100%";
+            container.style.textAlign = "center";
 
-            const left = document.createElement("div");
-            left.style.textAlign = "center";
-            const leftCard = CommonUtils.createCardEl(question.card);
-            left.appendChild(leftCard);
-            const labelL = document.createElement("div");
-            labelL.className = "edu-subtle";
-            labelL.style.marginTop = "8px";
-            labelL.textContent = "Classic (Pips)";
-            left.appendChild(labelL);
+            const createComparisonCard = (card, labelText, isClassic) => {
+                const wrapper = document.createElement("div");
+                wrapper.style.display = "inline-block";
+                wrapper.style.margin = "0 10px";
+                wrapper.style.textAlign = "center";
+                wrapper.style.verticalAlign = "top";
 
-            const right = document.createElement("div");
-            right.style.textAlign = "center";
-            const rightCard = CommonUtils.createCardEl(question.card);
-            rightCard.classList.remove("classic-faces-card", "classic-faces-art-card");
-            const suitCenter = rightCard.querySelector(".suit-center");
-            if (suitCenter) {
-                suitCenter.innerHTML = question.card.suit;
-                suitCenter.style.fontSize = "2.5em";
-                suitCenter.style.display = "flex";
-                suitCenter.style.alignItems = "center";
-                suitCenter.style.justifyContent = "center";
-            }
-            right.appendChild(rightCard);
-            const labelR = document.createElement("div");
-            labelR.className = "edu-subtle";
-            labelR.style.marginTop = "8px";
-            labelR.textContent = "Simplified";
-            right.appendChild(labelR);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "edu-card-button";
+                button.addEventListener("click", advanceBreakQuestion);
+
+                const shell = document.createElement("div");
+                shell.className = "edu-card-shell";
+
+                const cardEl = CommonUtils.createCardEl(card);
+                if (!isClassic) {
+                    cardEl.classList.remove("classic-faces-card", "classic-faces-art-card");
+                    const suitCenter = cardEl.querySelector(".suit-center");
+                    if (suitCenter) {
+                        suitCenter.innerHTML = card.suit;
+                        suitCenter.style.fontSize = "2.5em";
+                        suitCenter.style.display = "flex";
+                        suitCenter.style.alignItems = "center";
+                        suitCenter.style.justifyContent = "center";
+                    }
+                }
+
+                shell.appendChild(cardEl);
+                button.appendChild(shell);
+                wrapper.appendChild(button);
+
+                const label = document.createElement("div");
+                label.className = "edu-subtle";
+                label.style.marginTop = "8px";
+                label.textContent = labelText;
+                wrapper.appendChild(label);
+
+                return wrapper;
+            };
+
+            const left = createComparisonCard(question.card, "Classic (Pips)", true);
+            const right = createComparisonCard(question.card, "Simplified", false);
 
             container.appendChild(left);
             container.appendChild(right);
