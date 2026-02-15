@@ -1,0 +1,192 @@
+/* Scorpion Solitaire specific styles */
+:root {
+    --scorpion-tableau-gap: 12px;
+    --scorpion-fan-x: 0px;
+}
+
+.scorpion-layout {
+    --table-shell-max-width: 1400px;
+    position: relative;
+    width: var(--table-shell-width);
+    max-width: max(95vw, calc(var(--table-shell-max-width) * var(--ui-scale)));
+    height: 80vh;
+    margin: 0px auto;
+    background: var(--table-bg);
+    border-radius: calc(40px * var(--ui-scale));
+    border: calc(12px * var(--ui-scale)) solid var(--table-border);
+    box-shadow: var(--table-shadow);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: visible;
+    transition: background 0.5s, border-color 0.5s;
+    overflow-anchor: none;
+    min-width: fit-content;
+}
+
+#scorpion-scroll {
+    overflow-anchor: none;
+}
+
+#scorpion-top-bar {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 30px;
+    min-height: 120px;
+    padding: 0 calc(20px * var(--ui-scale));
+    flex: 0 0 auto;
+}
+
+.stock-slot {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: calc(8px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.2);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    flex: 0 0 auto;
+}
+
+.stock-slot:hover {
+    border-color: var(--gold);
+    background: rgba(242, 201, 76, 0.1);
+}
+
+.stock-slot.empty {
+    opacity: 0.5;
+    cursor: default;
+    border-style: dotted;
+}
+
+.stock-slot .empty-slot {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: bold;
+}
+
+#scorpion-foundations {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.foundation-slot {
+    width: calc(80px * var(--ui-scale));
+    height: calc(110px * var(--ui-scale));
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: calc(8px * var(--ui-scale));
+    background: rgba(0, 0, 0, 0.1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.foundation-slot .card {
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
+#scorpion-info {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    font-style: italic;
+    max-width: 300px;
+    text-align: left;
+}
+
+#scorpion-tableau {
+    display: flex;
+    justify-content: center;
+    gap: var(--scorpion-tableau-gap, calc(15px * var(--ui-scale)));
+    flex: 1;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+}
+
+.tableau-column {
+    width: calc(80px * var(--ui-scale));
+    min-height: calc(300px * var(--ui-scale));
+    position: relative;
+    border: 2px dashed transparent;
+    border-radius: calc(8px * var(--ui-scale));
+    transition: all 0.3s;
+    flex: 0 0 auto;
+}
+
+.tableau-column:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.tableau-column.drop-target {
+    border: 2px solid var(--gold);
+    background: rgba(242, 201, 76, 0.05);
+}
+
+.tableau-column.drag-over-valid {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: var(--green);
+}
+
+.tableau-column.drag-over-invalid {
+    background: rgba(235, 87, 87, 0.15);
+    border-color: var(--red);
+}
+
+.tableau-column .card {
+    position: absolute;
+    left: 0;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-left: 0;
+    top: 0;
+}
+
+/* Dragon/Unit dragging visual polish */
+.drag-layer .card {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+.drag-layer {
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .scorpion-layout {
+        padding: calc(15px * var(--ui-scale));
+    }
+
+    #scorpion-tableau {
+        gap: var(--scorpion-tableau-gap, calc(8px * var(--ui-scale)));
+    }
+
+    .tableau-column {
+        width: calc(70px * var(--ui-scale));
+    }
+
+    .card {
+        width: calc(70px * var(--ui-scale));
+        height: calc(100px * var(--ui-scale));
+    }
+}
+
+@media (max-width: 600px) {
+    #scorpion-info {
+        display: none;
+    }
+
+    .scorpion-layout {
+        padding: 10px;
+        gap: 15px;
+    }
+}

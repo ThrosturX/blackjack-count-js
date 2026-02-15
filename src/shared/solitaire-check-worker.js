@@ -1777,10 +1777,175 @@
             statesExplored: iterations,
             prunedStates: 0,
             durationMs: Date.now() - startedAt,
+        };
+    }
+
+    function normalizeScorpionCheckState(state) {
+        var tableau = state.tableau.map(function (col) { return serializePile(col, true); }).join('|');
+        var foundations = state.foundations.map(function (pile) { return pile.length; }).join(',');
+        return tableau + '#' + foundations;
+    }
+
+    function runScorpionCheck(snapshot, limits) {
+        var startedAt = Date.now();
+        var maxStates = Number.isFinite(limits.maxStates) ? Math.max(1, limits.maxStates) : 50000;
+        var maxDurationMs = Number.isFinite(limits.maxDurationMs) ? Math.max(1, limits.maxDurationMs) : 5000;
+
+        var state = {
+            tableau: snapshot.tableau.map(function (column) { return column.map(function (card) { return Object.assign({}, card); }); }),
+            foundations: (snapshot.foundations || [[], [], [], []]).map(function (pile) { return pile.map(function (card) { return Object.assign({}, card); }); })
+        };
+
+        var initialHidden = countHidden(state.tableau);
+        var initialFoundations = countFoundations(state.foundations);
+        var startKey = normalizeScorpionCheckState(state);
+        var seenStates = new Set([startKey]);
+        var solutionMoves = [];
+        var solutionStateKeys = [startKey];
+        var iterations = 0;
+        var cycleDetected = false;
+
+        while (iterations < maxStates) {
+            if ((Date.now() - startedAt) >= maxDurationMs) {
+                return { solved: false, reason: 'time-limit', statesExplored: iterations, prunedStates: 0, durationMs: Date.now() - startedAt, maxStates: maxStates, maxDurationMs: maxDurationMs };
+            }
+            iterations++;
+
+            // 1. Auto-complete sequences
+            var completedCount = 0;
+            for (var col = 0; col < state.tableau.length; col++) {
+                var pile = state.tableau[col];
+                if (pile.length < 13) continue;
+                for (var i = 0; i <= pile.length - 13; i++) {
+                    var segment = pile.slice(i, i + 13);
+                    if (isCompleteSuitedSequence(segment) && !segment.some(c => c.hidden)) {
+                        var sequence = pile.splice(i, 13);
+                        var slot = state.foundations.findIndex(f => f.length === 0);
+                        if (slot !== -1) {
+                            state.foundations[slot] = sequence;
+                            completedCount++;
+                            if (pile.length > 0 && pile[pile.length - 1].hidden) {
+                                pile[pile.length - 1].hidden = false;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (state.foundations.every(f => f.length === 13)) {
+                return {
+                    solved: true,
+                    reason: 'solved',
+                    statesExplored: iterations,
+                    prunedStates: 0,
+                    durationMs: Date.now() - startedAt,
+                    maxStates: maxStates,
+                    maxDurationMs: maxDurationMs,
+                    solutionMoves: solutionMoves.slice(),
+                    solutionStateKeys: solutionStateKeys.slice()
+                };
+            }
+
+            if (completedCount > 0) {
+                solutionMoves.push({ type: 'complete-sequence' });
+                var afterComplete = normalizeScorpionCheckState(state);
+                if (seenStates.has(afterComplete)) {
+                    cycleDetected = true;
+                    break;
+                }
+                seenStates.add(afterComplete);
+                solutionStateKeys.push(afterComplete);
+                continue;
+            }
+
+            // 2. Try best heuristic move
+            var move = findScorpionHeuristicMove(state);
+            if (move) {
+                var moving = state.tableau[move.from].splice(move.startIndex);
+                state.tableau[move.to].push.apply(state.tableau[move.to], moving);
+                var sourceTop = state.tableau[move.from][state.tableau[move.from].length - 1];
+                if (sourceTop && sourceTop.hidden) {
+                    sourceTop.hidden = false;
+                }
+                solutionMoves.push({ type: 'tableau-to-tableau', from: move.from, to: move.to });
+                var afterMove = normalizeScorpionCheckState(state);
+                if (seenStates.has(afterMove)) {
+                    cycleDetected = true;
+                    break;
+                }
+                seenStates.add(afterMove);
+                solutionStateKeys.push(afterMove);
+                continue;
+            }
+
+            break;
+        }
+
+        var hiddenRevealed = initialHidden - countHidden(state.tableau);
+        var foundationProgress = countFoundations(state.foundations) - initialFoundations;
+        var likely = foundationProgress >= 26 || hiddenRevealed >= 12 || (foundationProgress >= 13 && hiddenRevealed >= 8);
+
+        return {
+            solved: likely,
+            reason: likely ? 'likely-solved' : (cycleDetected ? 'cycle-detected' : (iterations >= maxStates ? 'state-limit' : 'exhausted')),
+            statesExplored: iterations,
+            prunedStates: 0,
+            durationMs: Date.now() - startedAt,
             maxStates: maxStates,
             maxDurationMs: maxDurationMs
         };
     }
+
+    function isCompleteSuitedSequence(pile) {
+        if (!pile || pile.length !== 13) return false;
+        if (pile[0].val !== 'K') return false;
+        var suit = pile[0].suit;
+        for (var i = 1; i < 13; i++) {
+            if (pile[i].suit !== suit || pile[i].rank !== pile[i - 1].rank - 1) return false;
+        }
+        return true;
+    }
+
+    function findScorpionHeuristicMove(state) {
+        var moves = [];
+        for (var fromCol = 0; fromCol < state.tableau.length; fromCol++) {
+            var source = state.tableau[fromCol];
+            if (source.length === 0) continue;
+            for (var startIndex = 0; startIndex < source.length; startIndex++) {
+                var movingCard = source[startIndex];
+                if (movingCard.hidden) continue;
+
+                for (var toCol = 0; toCol < state.tableau.length; toCol++) {
+                    if (fromCol === toCol) continue;
+                    var target = state.tableau[toCol];
+                    var valid = false;
+                    if (target.length === 0) {
+                        valid = movingCard.val === 'K';
+                    } else {
+                        var top = target[target.length - 1];
+                        if (!top.hidden) {
+                            valid = movingCard.suit === top.suit && movingCard.rank === top.rank - 1;
+                        }
+                    }
+
+                    if (valid) {
+                        var score = 0;
+                        if (startIndex > 0 && source[startIndex - 1].hidden) score += 100;
+                        if (target.length === 0) score += 50;
+                        if (movingCard.val === 'K') score += 10;
+
+                        moves.push({ from: fromCol, to: toCol, startIndex: startIndex, score: score });
+                    }
+                }
+            }
+        }
+
+        if (moves.length === 0) return null;
+        moves.sort((a, b) => b.score - a.score);
+        return moves[0];
+    }
+
 
     self.addEventListener('message', function (event) {
         const data = event && event.data ? event.data : {};
@@ -1793,6 +1958,8 @@
                 result = runPyramidCheck(data.snapshot, data.limits || {});
             } else if (data.game === 'spider') {
                 result = runSpiderCheck(data.snapshot, data.limits || {});
+            } else if (data.game === 'scorpion') {
+                result = runScorpionCheck(data.snapshot, data.limits || {});
             } else {
                 result = runFreecellCheck(data.snapshot, data.limits || {});
             }
