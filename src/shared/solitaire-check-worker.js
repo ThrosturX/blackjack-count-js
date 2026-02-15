@@ -1843,7 +1843,8 @@
                     maxStates: maxStates,
                     maxDurationMs: maxDurationMs,
                     solutionMoves: solutionMoves.slice(),
-                    solutionStateKeys: solutionStateKeys.slice()
+                    solutionStateKeys: solutionStateKeys.slice(),
+                    searchMode: limits.mode
                 };
             }
 
@@ -1893,7 +1894,9 @@
             prunedStates: 0,
             durationMs: Date.now() - startedAt,
             maxStates: maxStates,
-            maxDurationMs: maxDurationMs
+            maxDurationMs: maxDurationMs,
+            provenUnsolvable: !likely && !cycleDetected && (iterations < maxStates),
+            searchMode: (limits && limits.mode) || 'unknown'
         };
     }
 

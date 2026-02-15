@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setupScorpionEventListeners();
+    setupScorpionCheckListeners();
     initScorpionThemes();
 
     const restored = scorpionStateManager.load();
@@ -140,6 +141,7 @@ function initScorpionThemes() {
 
 function initScorpionGame() {
     ensureMobileController();
+    resetScorpionCheckState();
 
     const deck = createShuffledDeck();
 
@@ -487,6 +489,7 @@ function updateScorpionStats() {
 }
 
 function recordScorpionMove(moveEntry) {
+    resetScorpionCheckState();
     gameState.moveHistory.push(moveEntry);
     if (gameState.moveHistory.length > MAX_HISTORY) gameState.moveHistory.shift();
     updateScorpionUndoButton();
@@ -802,6 +805,7 @@ function handleScorpionPointerCancel(e) {
 }
 
 function undoScorpionMove() {
+    resetScorpionCheckState();
     if (gameState.moveHistory.length === 0) return;
 
     const lastMove = gameState.moveHistory.pop();
@@ -964,4 +968,242 @@ function showScorpionHint() {
 
 function saveScorpionState() {
     if (scorpionStateManager) scorpionStateManager.save();
+}
+
+// Solver state
+let scorpionCheckWorker = null;
+let scorpionCheckRequestId = 0;
+let scorpionCheckSolvedLocked = false;
+let scorpionCheckUnsolvableLocked = false;
+const SCORPION_CHECK_LIMITS = {
+    quick: { maxStates: 6000, maxDurationMs: 5000 },
+    attempt: { maxStates: 40000, maxDurationMs: 60000 }
+};
+
+function setupScorpionCheckListeners() {
+    const checkBtn = document.getElementById('scorpion-check');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', () => {
+            if (scorpionCheckSolvedLocked || scorpionCheckUnsolvableLocked) return;
+            startScorpionCheckBusyState();
+            runScorpionCheck('quick');
+        });
+    }
+}
+
+function runScorpionCheck(mode) {
+    const limits = Object.assign({ mode }, SCORPION_CHECK_LIMITS[mode] || SCORPION_CHECK_LIMITS.quick);
+    const snapshot = createScorpionCheckSnapshot();
+    const requestId = ++scorpionCheckRequestId;
+
+    runScorpionCheckViaWorker({
+        game: 'scorpion',
+        snapshot,
+        limits,
+        requestId
+    }).then((result) => {
+        if (requestId !== scorpionCheckRequestId) return;
+        handleScorpionCheckResult(mode, result, limits, snapshot);
+    }).catch(() => {
+        releaseScorpionCheckBusyState();
+        showScorpionCheckModal({
+            title: 'Solver Error',
+            message: 'An error occurred while running the solver.',
+            busy: false
+        });
+    });
+
+    showScorpionCheckModal({
+        title: mode === 'attempt' ? 'Prove Solve Running' : 'Quick Check Running',
+        message: 'Searching for a solution...',
+        busy: true
+    });
+}
+
+function runScorpionCheckViaWorker(payload) {
+    return new Promise((resolve, reject) => {
+        if (typeof Worker === 'undefined') {
+            reject(new Error('Web Worker unavailable.'));
+            return;
+        }
+        if (!scorpionCheckWorker) {
+            scorpionCheckWorker = new Worker('shared/solitaire-check-worker.js');
+        }
+        const worker = scorpionCheckWorker;
+        const onMessage = (event) => {
+            const data = event && event.data ? event.data : {};
+            if (data.requestId !== payload.requestId) return;
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            if (data.error) {
+                reject(new Error(data.error));
+                return;
+            }
+            resolve(data.result);
+        };
+        const onError = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupScorpionCheckWorker();
+            reject(new Error('Scorpion worker failed.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        try {
+            worker.postMessage(payload);
+        } catch (err) {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            cleanupScorpionCheckWorker();
+            reject(err);
+        }
+    });
+}
+
+function cleanupScorpionCheckWorker() {
+    scorpionCheckRequestId++;
+    if (!scorpionCheckWorker) return;
+    try {
+        scorpionCheckWorker.terminate();
+    } catch (err) { }
+    scorpionCheckWorker = null;
+}
+
+function handleScorpionCheckResult(mode, result, limits, snapshot) {
+    const isAttempt = mode === 'attempt';
+    if (result.solved) {
+        if (result.reason === 'solved') {
+            lockScorpionChecksAsSolvable();
+            showScorpionCheckModal({
+                title: isAttempt ? 'Prove Solve: SOLVABLE' : 'Quick Check: SOLVABLE',
+                message: `The solver found a guaranteed path to victory (${result.statesExplored} states explored).`,
+                busy: false
+            });
+        } else if (result.reason === 'likely-solved') {
+            markScorpionCheckAsLikely();
+            promptScorpionDeepCheck(result);
+        }
+    } else {
+        if (result.reason === 'exhausted' && result.provenUnsolvable) {
+            lockScorpionChecksAsUnsolvable();
+            showScorpionCheckModal({
+                title: isAttempt ? 'Prove Solve: Unsolvable' : 'Quick Check: No Solution',
+                message: 'This layout has been proven unsolvable from the current state.',
+                busy: false
+            });
+        } else if (mode === 'quick') {
+            promptScorpionDeepCheck(result);
+        } else {
+            releaseScorpionCheckBusyState();
+            const message = result.reason === 'cycle-detected'
+                ? 'The solver got caught in a loop. Try improving the tableau first, then run a deeper solve attempt.'
+                : (result.reason === 'state-limit' || result.reason === 'time-limit'
+                    ? `No immediate solution was found within search limits (${result.statesExplored} states explored, ${result.durationMs}ms). This does not mean the deck is unsolvable, only that the solution is not immediately obvious.`
+                    : `No solution was found (${result.reason}, ${result.statesExplored} states explored).`);
+
+            showScorpionCheckModal({
+                title: isAttempt ? 'Prove Solve Complete' : 'Quick Check Complete',
+                message,
+                busy: false
+            });
+        }
+    }
+}
+
+function createScorpionCheckSnapshot() {
+    return {
+        tableau: gameState.tableau.map(col => col.map(card => ({
+            suit: card.suit,
+            rank: card.rank,
+            val: card.val,
+            hidden: !!card.hidden
+        }))),
+        foundations: gameState.foundations.map(f => f.map(card => ({
+            suit: card.suit,
+            rank: card.rank,
+            val: card.val
+        })))
+    };
+}
+
+function showScorpionCheckModal(options) {
+    if (typeof SolitaireCheckModal !== 'undefined' && SolitaireCheckModal.showInfo) {
+        SolitaireCheckModal.showInfo(options);
+    }
+}
+
+function lockScorpionChecksAsSolvable() {
+    scorpionCheckSolvedLocked = true;
+    scorpionCheckUnsolvableLocked = false;
+    const btn = document.getElementById('scorpion-check');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'SOLVABLE';
+        btn.classList.add('check-solved');
+    }
+}
+
+function lockScorpionChecksAsUnsolvable() {
+    scorpionCheckSolvedLocked = false;
+    scorpionCheckUnsolvableLocked = true;
+    const btn = document.getElementById('scorpion-check');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'UNSOLVABLE';
+        btn.classList.add('check-unsolvable');
+    }
+}
+
+function markScorpionCheckAsLikely() {
+    const btn = document.getElementById('scorpion-check');
+    if (btn) {
+        btn.textContent = 'Likely';
+        btn.classList.add('check-solved');
+    }
+}
+
+function releaseScorpionCheckBusyState() {
+    const btn = document.getElementById('scorpion-check');
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Check';
+        btn.classList.remove('check-solved', 'check-unsolvable');
+    }
+}
+
+function startScorpionCheckBusyState() {
+    const btn = document.getElementById('scorpion-check');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+    }
+}
+
+function promptScorpionDeepCheck(result) {
+    if (typeof SolitaireCheckModal === 'undefined' || !SolitaireCheckModal.showChoice) return;
+
+    let message = 'Quick check found no immediate solution. Run Prove Solve?';
+    if (result.reason === 'likely-solved') {
+        message = 'Quick check sees promising progress. Run Prove Solve for a guaranteed answer?';
+    }
+
+    SolitaireCheckModal.showChoice({
+        title: 'Quick Check Complete',
+        message,
+        confirmLabel: 'Prove Solve',
+        secondaryLabel: 'Close'
+    }).then(choice => {
+        if (choice === 'confirm') {
+            startScorpionCheckBusyState();
+            runScorpionCheck('attempt');
+        } else {
+            releaseScorpionCheckBusyState();
+        }
+    });
+}
+
+function resetScorpionCheckState() {
+    scorpionCheckSolvedLocked = false;
+    scorpionCheckUnsolvableLocked = false;
+    releaseScorpionCheckBusyState();
 }
