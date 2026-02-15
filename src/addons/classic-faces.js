@@ -160,6 +160,10 @@
     const applyClassicToCardEl = (cardEl) => {
         if (!cardEl) return;
         if (!isClassicEnabled()) return;
+        if (cardEl.dataset.noClassicFaces === '1' || cardEl.closest?.('[data-no-classic-faces="1"]')) {
+            resetClassicOnCardEl(cardEl);
+            return;
+        }
         syncClassicSizing(cardEl);
         if (cardEl.dataset.classicFaces === '1') return;
         const val = cardEl.dataset.val;

@@ -262,9 +262,9 @@
 
         return {
             prompt: "Balance both sides",
-            help: "Place 2 cards in ? so both sides are equal.",
+            help: "Place 2 cards in the right side so both sides are equal.",
             cue: { text: "⚖️ Balance equation", tone: "gold" },
-            expressionParts: [cardPart(leftPair[0]), symbolPart("+"), cardPart(leftPair[1]), symbolPart("="), unknownPart()],
+            expressionParts: [cardPart(leftPair[0]), symbolPart("+"), cardPart(leftPair[1]), symbolPart("="), unknownPart(), symbolPart("+"), unknownPart()],
             requiredCards: 2,
             expectedValues,
             choices
@@ -386,6 +386,12 @@
         return { type: "card", value };
     }
 
+    function createStaticCardEl(value) {
+        const card = new Card(randomSuit(), value);
+        card.rotation = 0;
+        return CommonUtils.createCardEl(card);
+    }
+
     function unknownPart() {
         return { type: "unknown" };
     }
@@ -417,7 +423,7 @@
 
             if (part.type === "card") {
                 node.className = "edu-card-shell";
-                node.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), part.value)));
+                node.appendChild(createStaticCardEl(part.value));
             } else if (part.type === "unknown") {
                 node.className = "edu-drop-slot";
                 node.textContent = "?";
@@ -478,7 +484,7 @@
             const cardWrap = document.createElement("div");
             cardWrap.className = "edu-choice-card";
             cardWrap.dataset.rankLabel = String(EducationalUtils.getRank(choice.value));
-            cardWrap.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), choice.value)));
+            cardWrap.appendChild(createStaticCardEl(choice.value));
 
             const label = document.createElement("div");
             label.className = "edu-choice-label";
@@ -644,7 +650,10 @@
         if (state.placedChoiceIds[slotIdx]) {
             const oldId = state.placedChoiceIds[slotIdx];
             const oldButton = getChoiceButton(oldId);
-            if (oldButton) oldButton.disabled = false;
+            if (oldButton) {
+                oldButton.disabled = false;
+                oldButton.classList.remove("dragging-source");
+            }
         }
 
         const choice = getChoiceById(choiceId);
@@ -671,7 +680,10 @@
 
         state.placedChoiceIds[slotIdx] = null;
         const button = getChoiceButton(choiceId);
-        if (button) button.disabled = false;
+        if (button) {
+            button.disabled = false;
+            button.classList.remove("dragging-source");
+        }
         renderPlacedCards();
     }
 
@@ -686,7 +698,7 @@
             }
 
             const choice = getChoiceById(choiceId);
-            slot.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), choice.value)));
+            slot.appendChild(createStaticCardEl(choice.value));
             slot.classList.remove("ready");
         });
     }
@@ -719,7 +731,7 @@
         ranks.forEach(rank => {
             const fanItem = document.createElement("div");
             fanItem.className = "edu-fan-card";
-            fanItem.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), rank)));
+            fanItem.appendChild(createStaticCardEl(rank));
             fan.appendChild(fanItem);
         });
         return fan;
@@ -965,7 +977,7 @@
                 // Card Stack: [Card] [Value Pill] [Pips]
                 const cardDiv = document.createElement("div");
                 cardDiv.className = "edu-solution-card-wrapper";
-                cardDiv.appendChild(CommonUtils.createCardEl(new Card(randomSuit(), p.value)));
+                cardDiv.appendChild(createStaticCardEl(p.value));
                 container.appendChild(cardDiv);
             }
 

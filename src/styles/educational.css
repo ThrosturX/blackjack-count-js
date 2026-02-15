@@ -44,14 +44,17 @@
     border-radius: 22px;
     box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.35);
     background: var(--table-bg);
-    overflow: visible;
+    overflow: auto;
     padding: 12px;
 }
 
 .edu-row {
+    display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     align-items: center;
     text-align: center;
+    gap: 8px;
 }
 
 #learn-board,
@@ -300,7 +303,7 @@
 
 .edu-solution-card-wrapper {
     position: relative;
-    /* Card is ~100px wide, 140px high? 
+    /* Card is ~100px wide, 140px high?
        If scale is 0.55:
        Width = 100 * 0.55 = 55px
        Height = 140 * 0.55 = 77px
@@ -427,6 +430,19 @@
     font-weight: 700;
 }
 
+.edu-cue-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.edu-cue-card .card {
+    transform: rotate(0deg) scale(0.78) !important;
+    margin-left: 0;
+}
+
 .edu-visual-cue[data-tone="gold"] {
     background: rgba(242, 201, 76, 0.2);
     border-color: rgba(242, 201, 76, 0.6);
@@ -450,6 +466,10 @@
 .edu-grid.memory-grid {
     justify-content: center;
     align-content: start;
+}
+
+.memory-page #memory-grid .edu-card-shell {
+    margin: 0;
 }
 
 .edu-card-button,
@@ -582,6 +602,11 @@
 .edu-choice-card .card {
     position: relative;
     transform: scale(0.55);
+}
+
+.edu-card-rank-hidden .val-top,
+.edu-card-rank-hidden .val-bot {
+    display: none;
 }
 
 .edu-choice-card .edu-choice-label {

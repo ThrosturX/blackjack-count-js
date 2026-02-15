@@ -346,18 +346,35 @@
     function questionRankOnCard(pickCard) {
         const card = pickCard();
         const wrong = EducationalUtils.shuffle(VALUES.filter((value) => value !== card.val)).slice(0, 2);
-        const options = EducationalUtils.shuffle([card.val, ...wrong]);
+        const options = EducationalUtils.shuffle([
+            { card: new Card(randomSuit(), card.val), isCorrect: true },
+            ...wrong.map((value) => ({ card: new Card(randomSuit(), value), isCorrect: false }))
+        ]);
         return {
             kind: "choice",
             prompt: "Match rank",
-            cue: { text: `${EducationalUtils.getValueLabel(card.val)} = ?`, tone: "blue" },
+            cue: { text: "Pick same rank", tone: "blue" },
             boardCards: [card],
-            choices: options.map((value) => ({
-                label: EducationalUtils.getValueLabel(value),
-                sublabel: `${getComparableRank(value, options)}`,
-                isCorrect: value === card.val
-            }))
+            hideBoardCardRank: state.level >= 3,
+            disableClassicFacesForChoices: state.level > 1,
+            choices: options
         };
+    }
+
+    function removeClassicFaces(cardEl) {
+        if (!cardEl) return;
+        cardEl.classList.remove("classic-faces-card", "classic-faces-art-card");
+        cardEl.dataset.classicFaces = "";
+        const suitCenter = cardEl.querySelector(".suit-center");
+        if (suitCenter && cardEl.dataset.suit) {
+            suitCenter.textContent = cardEl.dataset.suit;
+        }
+    }
+
+    function markCardAsNoClassic(cardEl) {
+        if (!cardEl) return;
+        cardEl.dataset.noClassicFaces = "1";
+        removeClassicFaces(cardEl);
     }
 
     function questionFindCardByRank() {
@@ -381,6 +398,8 @@
         const choiceCount = getExerciseChoiceCount();
         const targetSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
         const cards = [new Card(targetSuit, pickRandom(getPracticeValues(false)))];
+        const cueCard = new Card(targetSuit, pickRandom(getPracticeValues(false)));
+        cueCard.rotation = 0;
 
         while (cards.length < choiceCount) {
             const nonTargetSuits = SUITS.filter((suit) => suit !== targetSuit);
@@ -394,7 +413,7 @@
         return {
             kind: "board",
             prompt: "Find suit",
-            cue: { text: `${targetSuit} 👆`, tone: "blue" },
+            cue: { text: "Match this suit", tone: "blue", card: cueCard, simplified: true },
             boardCards: shuffledCards,
             boardCheck: (index) => index === targetIndex
         };
@@ -613,8 +632,27 @@
         const question = state.question;
         elements.prompt.textContent = question.prompt;
         const cue = question.cue || { text: "🎯 Match", tone: "blue" };
-        elements.visualCue.textContent = cue.text;
         elements.visualCue.dataset.tone = cue.tone;
+        elements.visualCue.innerHTML = "";
+        if (cue.card) {
+            const label = document.createElement("span");
+            label.textContent = cue.text || "🎯 Match";
+            elements.visualCue.appendChild(label);
+
+            const cueCard = CommonUtils.createCardEl(new Card(cue.card.suit, cue.card.val));
+            cueCard.style.transform = "rotate(0deg) scale(var(--card-scale))";
+            if (cue.simplified) {
+                markCardAsNoClassic(cueCard);
+            }
+
+            const cardWrap = document.createElement("span");
+            cardWrap.className = "edu-cue-card";
+            if (cue.simplified) cardWrap.dataset.noClassicFaces = "1";
+            cardWrap.appendChild(cueCard);
+            elements.visualCue.appendChild(cardWrap);
+        } else {
+            elements.visualCue.textContent = cue.text;
+        }
 
         renderBoard(question);
         renderChoices(question);
@@ -689,7 +727,11 @@
                 button.className = "edu-card-button";
                 const shell = document.createElement("div");
                 shell.className = "edu-card-shell";
-                shell.appendChild(CommonUtils.createCardEl(new Card(card.suit, card.val)));
+                const cardEl = CommonUtils.createCardEl(new Card(card.suit, card.val));
+                if (question.hideBoardCardRank) {
+                    cardEl.classList.add("edu-card-rank-hidden");
+                }
+                shell.appendChild(cardEl);
                 button.appendChild(shell);
 
                 if (question.kind === "board") {
@@ -704,7 +746,11 @@
 
             const shell = document.createElement("div");
             shell.className = "edu-card-shell";
-            shell.appendChild(CommonUtils.createCardEl(new Card(card.suit, card.val)));
+            const cardEl = CommonUtils.createCardEl(new Card(card.suit, card.val));
+            if (question.hideBoardCardRank) {
+                cardEl.classList.add("edu-card-rank-hidden");
+            }
+            shell.appendChild(cardEl);
             elements.board.appendChild(shell);
         });
     }
@@ -727,23 +773,31 @@
             const button = document.createElement("button");
             button.type = "button";
             button.className = "edu-choice-button";
-            button.setAttribute("aria-label", choice.label);
+            const choiceLabel = choice.label || (choice.card ? `${choice.card.val} ${choice.card.suit}` : "Choice");
+            button.setAttribute("aria-label", choiceLabel);
             button.addEventListener("click", () => handleChoiceAnswer(choice, button));
 
             const panel = document.createElement("div");
             panel.className = "edu-choice-card";
             if (choice.symbolOnly) panel.classList.add("symbol-only");
+            if (choice.card) {
+                const cardEl = CommonUtils.createCardEl(choice.card);
+                if (question.disableClassicFacesForChoices) {
+                    markCardAsNoClassic(cardEl);
+                }
+                panel.appendChild(cardEl);
+            } else {
+                const title = document.createElement("div");
+                title.className = "edu-choice-label";
+                title.textContent = choice.label;
+                panel.appendChild(title);
 
-            const title = document.createElement("div");
-            title.className = "edu-choice-label";
-            title.textContent = choice.label;
-            panel.appendChild(title);
-
-            if (choice.sublabel) {
-                const subtitle = document.createElement("div");
-                subtitle.className = "edu-choice-help";
-                subtitle.textContent = choice.sublabel;
-                panel.appendChild(subtitle);
+                if (choice.sublabel) {
+                    const subtitle = document.createElement("div");
+                    subtitle.className = "edu-choice-help";
+                    subtitle.textContent = choice.sublabel;
+                    panel.appendChild(subtitle);
+                }
             }
 
             button.appendChild(panel);
