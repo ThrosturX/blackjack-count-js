@@ -384,12 +384,17 @@
         }));
     }
 
+    function createMemoryCard(suit, value) {
+        const card = new Card(suit, value);
+        return card;
+    }
+
     function buildSameCardPairs(pairCount) {
         const values = pairCount >= 14 ? EXTENDED_VALUES : VALUES;
         const baseDeck = [];
         for (const suit of SUITS) {
             for (const val of values) {
-                baseDeck.push(new Card(suit, val));
+                baseDeck.push(createMemoryCard(suit, val));
             }
         }
         const picks = EducationalUtils.pickRandom(baseDeck, pairCount);
@@ -409,8 +414,8 @@
             const suits = targetColor === "red" ? ["♥", "♦"] : ["♠", "♣"];
             const valueA = values[Math.floor(Math.random() * values.length)];
             const valueB = values[Math.floor(Math.random() * values.length)];
-            cards.push({ card: new Card(suits[0], valueA), matchKey: `color-${i}` });
-            cards.push({ card: new Card(suits[1], valueB), matchKey: `color-${i}` });
+            cards.push({ card: createMemoryCard(suits[0], valueA), matchKey: `color-${i}` });
+            cards.push({ card: createMemoryCard(suits[1], valueB), matchKey: `color-${i}` });
         }
         return cards;
     }
@@ -422,8 +427,8 @@
         for (let i = 0; i < pairCount; i += 1) {
             const pair = pairs[i % pairs.length];
             const value = values[Math.floor(Math.random() * values.length)];
-            cards.push({ card: new Card(pair[0], value), matchKey: `comp-${i}` });
-            cards.push({ card: new Card(pair[1], value), matchKey: `comp-${i}` });
+            cards.push({ card: createMemoryCard(pair[0], value), matchKey: `comp-${i}` });
+            cards.push({ card: createMemoryCard(pair[1], value), matchKey: `comp-${i}` });
         }
         return cards;
     }
@@ -438,8 +443,8 @@
             while (suitB === suitA) {
                 suitB = SUITS[Math.floor(Math.random() * SUITS.length)];
             }
-            cards.push({ card: new Card(suitA, rank), matchKey: `rank-${i}` });
-            cards.push({ card: new Card(suitB, rank), matchKey: `rank-${i}` });
+            cards.push({ card: createMemoryCard(suitA, rank), matchKey: `rank-${i}` });
+            cards.push({ card: createMemoryCard(suitB, rank), matchKey: `rank-${i}` });
         }
         return cards;
     }
@@ -451,8 +456,8 @@
             const rank = values[Math.floor(Math.random() * values.length)];
             const useRed = Math.random() < 0.5;
             const suitPair = useRed ? ["♥", "♦"] : ["♠", "♣"];
-            cards.push({ card: new Card(suitPair[0], rank), matchKey: `rank-color-${i}` });
-            cards.push({ card: new Card(suitPair[1], rank), matchKey: `rank-color-${i}` });
+            cards.push({ card: createMemoryCard(suitPair[0], rank), matchKey: `rank-color-${i}` });
+            cards.push({ card: createMemoryCard(suitPair[1], rank), matchKey: `rank-color-${i}` });
         }
         return cards;
     }
@@ -496,15 +501,15 @@
                 }
             }
 
-            cards.push({ card: new Card(suitA, startValue), matchKey: `seq-${i}` });
-            cards.push({ card: new Card(suitB, nextValue), matchKey: `seq-${i}` });
+            cards.push({ card: createMemoryCard(suitA, startValue), matchKey: `seq-${i}` });
+            cards.push({ card: createMemoryCard(suitB, nextValue), matchKey: `seq-${i}` });
         }
 
         return cards;
     }
 
     function cloneCard(card) {
-        return new Card(card.suit, card.val);
+        return createMemoryCard(card.suit, card.val);
     }
 
     function renderGrid() {
@@ -516,18 +521,24 @@
         const containerHeight = window.innerHeight - (elements.grid.getBoundingClientRect().top || 200) - 40;
 
         const cols = calculateOptimalColumns(totalCards, containerWidth, containerHeight);
+        const rows = Math.max(1, Math.ceil(totalCards / cols));
 
         // Dynamic scaling for large grids
-        const isUltraCompact = totalCards > 16 && (totalCards / cols > 4);
+        const isUltraCompact = totalCards > 16 && (rows > 4);
         const isCompact = totalCards > 12 || isUltraCompact;
 
         let shellClass = "edu-card-shell";
         if (isUltraCompact) shellClass = "edu-card-shell edu-card-shell--ultra-compact";
         else if (isCompact) shellClass = "edu-card-shell edu-card-shell--compact";
 
-        const cardMinWidth = isUltraCompact ? '50px' : (isCompact ? '70px' : '92px');
-        elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, ${cardMinWidth}))`;
-
+        const cardMinWidth = isUltraCompact ? 50 : (isCompact ? 70 : 92);
+        const gapPx = isUltraCompact ? 2 : (isCompact ? 4 : 8);
+        const usableWidth = Math.max(0, containerWidth - gapPx * Math.max(0, cols - 1));
+        const fittedCardWidth = Math.max(
+            isUltraCompact ? 48 : (isCompact ? 66 : 76),
+            Math.floor(usableWidth / cols)
+        );
+        elements.grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, ${Math.min(cardMinWidth, fittedCardWidth)}px))`;
         if (isUltraCompact) {
             elements.grid.style.gap = "2px";
         } else if (isCompact) {
@@ -535,6 +546,7 @@
         } else {
             elements.grid.style.gap = "8px";
         }
+        elements.grid.style.justifyContent = "start";
 
         state.cards.forEach((entry, index) => {
             const button = document.createElement("button");
@@ -550,7 +562,7 @@
                 shell.appendChild(CommonUtils.createCardEl(entry.card));
                 if (entry.matched) shell.classList.add("success");
             } else {
-                const backCard = new Card("♠", "A");
+                const backCard = createMemoryCard("♠", "A");
                 backCard.hidden = true;
                 shell.appendChild(CommonUtils.createCardEl(backCard));
             }
